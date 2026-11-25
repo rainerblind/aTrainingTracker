@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-TST-TRK-P2`  
-**Version**: 1.0.67  
+**Version**: 1.0.69  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 113
+**Total Tests**: 114
 
 ---
 
@@ -2335,6 +2335,21 @@
 
 ---
 
+### TST-FIL-048: **Datum-Invariant 3-State Altitude EKF & Walking-Speed ERTS Slope Regularization Suite (`ATT-9693`)** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-FIL-048` (`REQ-FIL-048.1`–`REQ-FIL-048.3`)
+- **Component**: `KinematicAltitudeSlopeEkf.kt`, `ExtendedRtsAltitudeSlopeSmoother.kt`, `AltitudeAndSlopeDevice_ATTFused.kt`, `ErtsPostWorkoutRecomputer.kt`, `OfflineTelemetryReplayHarness.kt`
+- **Jira**: `ATT-9693` | **Priority**: High | **Type**: Functional | **Verification Method**: Unit, Integration
+- **Test Description**:
+  1. *Live 3-State EKF Datum-Invariant Reference Coupling & Barometer Joseph SPD (`TST-FIL-048.1` — `KinematicAltitudeSlopeEkfTest#testPersistentUrbanDemPlateau_datumInvariantBiasCouplingEliminatesNegativeSlopeTugOfWar_tstFil048_1`, `AltitudeAndSlopeDevice_ATTFusedTest#testSyntheticZumBaecker57Replay_preventsAscentInflation_tstFil026_1`)*:
+     • Verified 7-minute `+12 m` urban SRTM `DEM` plateau on a flat `1.25 m/s` walk (at both `varBaro = 1.5` and `4.0 m²`) keeps live `slopePercent` strictly within `[-3%, +3%]` (eliminating `-7.5%..-25%` tug-of-war), absorbs datum offset cleanly into `baroBias`, maintains symmetric 3×3 SPD covariance under damped `gainScale < 1.0` (`0.75 m/s`) and `3,600`-tick rides, and preserves `ZumBaecker57` ascent (`10..16 m`), thermal drift isolation, corrupted-baro `varBaro > 16.0` bypass (`TST-FIL-040.2`), and barometer-free DEM slope (`TST-FIL-037.1`).
+  2. *ERTS Initial & Delayed QNH Bias Seeding, Baro-Armed DEM Gating & Walking-Speed `q_g` Regularization (`TST-FIL-048.2` — `ExtendedRtsAltitudeSlopeSmootherTest#testWalkingSpeedSlopeRegularization_qnhSeedingAndUrbanDemPlateau_tstFil048_2`, `ErtsPostWorkoutRecomputerTest`)*:
+     • Verified `walkingSpeedSlopeProcessScale()` bounds (`0.0` for `NaN`/`< 0.3`, smooth quadratic ramp over `[0.3, 2.8] m/s`, `1.0` at `>= 2.8`), verified `lowSpeedSlopeGainFactor()` contract (`0.25` at `0.75`, `1.0` at `1.2`, `TST-FIL-033.1`) unchanged, verified flat city walk (`1.2 m/s`) with `108 m` QNH offset, `0.20 m/s` baro noise, and `+12 m` urban DEM plateau stays within `abs(slopePercent) < 5%`, verified Gate 3 Watchpoints 1 & 2 (noisy tick-0 DEM, `Double.NaN` baro dropout, baro reset step, delayed `+121.5 m` tick-1 QNH lock, and pocket baro spike on flat DEM), and verified zero regressions on delayed-anchor, Zum Bäcker, steep-mountain, braking, baro-reset, and pause-gap suites (`ErtsPostWorkoutRecomputerTest 22/22`).
+  3. *Cross-Terrain Climb/Descent Preservation & Offline Pixel 10 Replay (`TST-FIL-048.3` — `KinematicAltitudeSlopeEkfTest#testGenuineHikingClimbAndCyclingDescent_baroAndBaroFreePreserved_tstFil048_3`, `ExtendedRtsAltitudeSlopeSmootherTest#testGenuineHikingClimbAndCyclingDescent_baroAndBaroFree_tstFil048_3`, `OfflineTelemetryReplayHarnessTest`, `./gradlew :app:replayRawTelemetry`)*:
+     • Verified sustained `+12%` hiking climb at `1.2 m/s` (`+14.4 m` over `100 s` / `120 m`) and `-10%` cycling descent at `12.0 m/s` (`-120 m` over `100 s`) converge cleanly to `~+12%` / `~-10%` in both `KinematicAltitudeSlopeEkf` and `ExtendedRtsAltitudeSlopeSmoother` for both barometer-equipped and barometer-free (`rawAltitudeM = Double.NaN`) streams, verified `111/111` PASS across `8` targeted suites, and evaluated `:app:replayRawTelemetry` + production-parity 1-Hz slew-filtered ERTS across all 4 archived Pixel 10 sessions (`2026-11-23_093732`, `_171814`, `_182416`, `2026-11-22_081402`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2525,3 +2540,5 @@
 | `1.0.65` | 2026-11-25 | Lane 3 Author (`ATT-9695`, `--as agent1`) | `ATT-9695` | Promoted `TST-FIL-046` (`.1`–`.3`) to `[Verified]` with 6 verbatim `TestClass#testMethod` citations (`190/190` PASS across `15` targeted suites: `BANALServiceSportInferenceTest 3/3`, `TrackerServiceStateMachineCharacterisationTest 9/9`, `KinematicSportTypeDiscriminatorTest 7/7`, `SmartphoneImuCadenceEstimatorTest 13/13`, `SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest 4/4`, `OfflineTelemetryReplayHarnessTest 12/12` [incl. real Pixel 10 sidecars `2026-11-23_093732`, `2026-11-23_171814`, `2026-11-22_081402`], `SpeedAndLocationDevice_ATTFusedTest 42/42`, `BANALServiceMultisportTransitionTest 4/4`, `PhoneCarriageClassifierTest 21/21`, `OfflineReplayCliTest 4/4`, `TrackerServiceFinalizationTest 36/36`, `TrackerServiceResumeTest 18/18`, `ArchitectureConformanceContractTest 11/11`, `DetailedDesignParityContractTest 3/3`, `InterfaceSignatureDriftContractTest 3/3`; `0` new warnings; live `emulator-5554` smoke `0` crashes + `Rule 8.5` PNG verified; SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-9695/`). |
 | `1.0.66` | 2026-11-25 | Lane 2 Author (`ATT-9694`, `--as agent1`) | `ATT-9694` | Added `[Planned]` `TST-FIL-047` (`.1`–`.3`, symmetric with `REQ-FIL-047`) covering bounded `SportSpeedPriors` clamping & off-main-thread `SportTypes` loading (`SDK_INT == 0` safe), `PhoneCarriageClassifier` & `KinematicSportTypeDiscriminator` walking-speed `BIKE_*` suppression + uphill MTB continuity, symmetric `MultisportTransitionDetector` `BIKE` sliding-window gating, and offline Pixel 10 replay across `2026-11-22_081402`, `2026-11-23_093732`, `2026-11-23_171814`, and `2026-11-23_182416` (`N/A - 0 string changes`). |
 | `1.0.67` | 2026-11-25 | Lane 2 Author (`ATT-9694`, `--as agent1`) | `ATT-9694` | Promoted `TST-FIL-047` (`.1`–`.3`) to `[Verified]` with 9 verbatim `TestClass#testMethod` citations (`140/140` PASS across `15` targeted suites: `SportSpeedPriorsTest 3/3`, `SportSpeedPriorsLoaderTest 2/2`, `PhoneCarriageClassifierTest 22/22`, `KinematicSportTypeDiscriminatorTest 8/8`, `MultisportTransitionDetectorTest 12/12`, `SpeedAndLocationDevice_ATTFusedTest 42/42`, `SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest 4/4`, `BANALServiceMultisportTransitionTest 4/4`, `SportTypeDatabaseManagerStravaTest 4/4`, `SportTypeRealSqliteMigrationTest 3/3`, `OfflineTelemetryReplayHarnessTest 13/13`, `OfflineReplayCliTest 4/4`, `ArchitectureConformanceContractTest 11/11`, `TryWithResourcesCursorAuditTest 5/5`, `InterfaceSignatureDriftContractTest 3/3`; `0` new warnings; `:app:replayRawTelemetry` verified across all 4 Pixel 10 sidecars `093732`/`171814`/`182416`/`081402`; SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-9694/`). |
+| `1.0.68` | 2026-11-25 | Lane 2 Author (`ATT-9693`, `--as agent1`) | `ATT-9693` | Added `[Planned]` `TST-FIL-048` (`.1`–`.3`, symmetric with `REQ-FIL-048`) covering live 3-State `KinematicAltitudeSlopeEkf` datum-invariant `k2 = -k0` + barometer Joseph SPD under 7-min `+12 m` urban DEM plateau, `ExtendedRtsAltitudeSlopeSmoother` initial QNH bias seeding + baro-armed DEM gating + walking-speed `q_g` regularization, sustained `12%` hiking climb / `10%` cycling descent (baro & baro-free), and Pixel 10 `:app:replayRawTelemetry` validation (`N/A - 0 string changes`). |
+| `1.0.69` | 2026-11-25 | Lane 2 Author (`ATT-9693`, `--as agent1`) | `ATT-9693` | Promoted `TST-FIL-048` (`.1`–`.3`) to `[Verified]` with 4 verbatim `TestClass#testMethod` citations (`111/111` PASS across `8` targeted suites: `KinematicAltitudeSlopeEkfTest 19/19`, `ExtendedRtsAltitudeSlopeSmootherTest 13/13`, `AltitudeAndSlopeDevice_ATTFusedTest 26/26`, `ErtsPostWorkoutRecomputerTest 22/22`, `OfflineTelemetryReplayHarnessTest 13/13`, `OfflineReplayCliTest 4/4`, `ArchitectureConformanceContractTest 11/11`, `InterfaceSignatureDriftContractTest 3/3`; `0` new warnings; `:app:replayRawTelemetry` + production-parity 1-Hz slew-filtered ERTS evaluated across all 4 Pixel 10 sidecars `093732`/`171814`/`182416`/`081402`; SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-9693/`). |

@@ -669,4 +669,229 @@ class ExtendedRtsAltitudeSlopeSmootherTest {
             abs(biasSmoothed[allNaNSingleIdx].altitudeM - 500.0) <= 3.0
         )
     }
+
+    // REQ-FIL-048.2 / TST-FIL-048.2: Walking-speed q_g regularization helper bounds, initial >100 m QNH bias seeding,
+    // baro-armed 16 m^2 DEM variance + step gating (incl. Gate 3 Watchpoints 1 & 2), and flat-city walk stability.
+    @Test
+    fun testWalkingSpeedSlopeRegularization_qnhSeedingAndUrbanDemPlateau_tstFil048_2() {
+        // 1. Helper bounds & preservation of lowSpeedSlopeGainFactor (TST-FIL-033.1)
+        assertEquals(0.0, ExtendedRtsAltitudeSlopeSmoother.walkingSpeedSlopeProcessScale(Double.NaN), 1e-12)
+        assertEquals(0.0, ExtendedRtsAltitudeSlopeSmoother.walkingSpeedSlopeProcessScale(Double.POSITIVE_INFINITY), 1e-12)
+        assertEquals(0.0, ExtendedRtsAltitudeSlopeSmoother.walkingSpeedSlopeProcessScale(0.2), 1e-12)
+        assertEquals(0.04, ExtendedRtsAltitudeSlopeSmoother.walkingSpeedSlopeProcessScale(0.3), 1e-9)
+        val scaleAt12 = ExtendedRtsAltitudeSlopeSmoother.walkingSpeedSlopeProcessScale(1.2)
+        assertTrue("Scale at 1.2 m/s must damp strongly (was $scaleAt12)", scaleAt12 in 0.14..0.20)
+        assertEquals(1.0, ExtendedRtsAltitudeSlopeSmoother.walkingSpeedSlopeProcessScale(2.8), 1e-12)
+        assertEquals(1.0, ExtendedRtsAltitudeSlopeSmoother.walkingSpeedSlopeProcessScale(12.0), 1e-12)
+        assertEquals(0.25, ExtendedRtsAltitudeSlopeSmoother.lowSpeedSlopeGainFactor(0.75), 1e-9)
+        assertEquals(1.0, ExtendedRtsAltitudeSlopeSmoother.lowSpeedSlopeGainFactor(1.2), 1e-12)
+
+        // 2. Flat 1.2 m/s city walk (1000 s) with 108 m initial ISA-vs-MSL QNH offset (-10 m baro vs 98 m ref),
+        //    periodic 0.20 m/s baro noise puffs, and a 7-min +12 m urban SRTM DEM plateau (t=420..840)
+        val rng = java.util.Random(42L)
+        val walkSamples = (0 until 1000).map { t ->
+            val puff = if (t % 60 < 10) 0.8 * kotlin.math.sin(2.0 * kotlin.math.PI * (t % 20) / 10.0) else 0.0
+            val baro = -10.0 + puff + rng.nextGaussian() * 0.20
+            val dem = if (t in 420 until 840) 110.0 else 98.0
+            RawAltitudeSample(
+                timestampMs = 40_000_000L + t * 1_000L,
+                rawAltitudeM = baro,
+                referenceAltitudeM = dem,
+                smoothedSpeedMps = 1.2,
+                isStandstill = false,
+                carriageMode = PhoneCarriageMode.WALKING_TRANSITION
+            )
+        }
+        val smoothedWalk = ExtendedRtsAltitudeSlopeSmoother.smooth(walkSamples)
+        assertEquals(1000, smoothedWalk.size)
+        val maxAbsWalkSlope = smoothedWalk.maxOf { abs(it.slopePercent) }
+        assertTrue(
+            "Flat city walk with 108 m QNH offset, 0.20 m/s noise, and +12 m DEM plateau must keep |slope| < 5% (max=$maxAbsWalkSlope%)",
+            maxAbsWalkSlope < 5.0
+        )
+
+        // 3. Gate 3 Watchpoints 1 & 2: noisy tick-0 DEM (+10 m), single-tick baro NaN dropout,
+        //    and baro reset step with concurrent DEM must remain bounded without spurious spikes
+        val edgeSamples = (0 until 80).map { t ->
+            val baro = when {
+                t == 20 -> Double.NaN
+                t >= 45 -> 455.0 // +15 m baro reset step
+                else -> 440.0
+            }
+            val dem = if (t == 0) 450.0 else 440.0
+            RawAltitudeSample(
+                timestampMs = 45_000_000L + t * 1_000L,
+                rawAltitudeM = baro,
+                referenceAltitudeM = dem,
+                smoothedSpeedMps = 1.3,
+                isStandstill = false,
+                carriageMode = PhoneCarriageMode.WALKING_TRANSITION,
+                baroResetStep = (t == 45)
+            )
+        }
+        val smoothedEdge = ExtendedRtsAltitudeSlopeSmoother.smooth(edgeSamples)
+        assertTrue(
+            "Noisy tick-0 DEM, NaN baro dropout, and baro reset step must keep |slope| < 5% (max=${smoothedEdge.maxOf { abs(it.slopePercent) }}%)",
+            smoothedEdge.all { it.slopePercent.isFinite() && abs(it.slopePercent) < 5.0 }
+        )
+
+        // 4. Delayed tick-1 reference arrival with +121.5 m QNH offset (-24.5 m baro vs +97.0 m ref,
+        //    mirroring 2026-11-23_171814) plus transient pocket baro spike on flat DEM must NOT Huber-truncate
+        //    the initial anchor or veto flat DEM.
+        val delayedQnhSamples = (0 until 60).map { t ->
+            val baro = if (t == 25) -16.5 else -24.5 // +8 m single-tick pocket spike on flat DEM
+            val ref = if (t == 0) null else 97.0
+            RawAltitudeSample(
+                timestampMs = 46_000_000L + t * 1_000L,
+                rawAltitudeM = baro,
+                referenceAltitudeM = ref,
+                smoothedSpeedMps = 1.25,
+                isStandstill = false,
+                carriageMode = PhoneCarriageMode.WALKING_TRANSITION
+            )
+        }
+        val smoothedDelayedQnh = ExtendedRtsAltitudeSlopeSmoother.smooth(delayedQnhSamples)
+        assertTrue(
+            "Delayed +121.5 m QNH lock must anchor altitude near 97 m from tick 0 (was ${smoothedDelayedQnh[0].altitudeM})",
+            abs(smoothedDelayedQnh[0].altitudeM - 97.0) <= 3.0
+        )
+        assertTrue(
+            "Delayed +121.5 m QNH lock + pocket baro spike must keep |slope| < 3% (max=${smoothedDelayedQnh.maxOf { abs(it.slopePercent) }}%)",
+            smoothedDelayedQnh.all { it.slopePercent.isFinite() && abs(it.slopePercent) < 3.0 }
+        )
+    }
+
+    // REQ-FIL-048.3 / TST-FIL-048.3: Genuine sustained +12% hiking climb (1.2 m/s, 100 s) and
+    // -10% cycling descent (12.0 m/s, 100 s) converge cleanly in ERTS for both baro-equipped and baro-free phones.
+    @Test
+    fun testGenuineHikingClimbAndCyclingDescent_baroAndBaroFree_tstFil048_3() {
+        for (hasBaro in listOf(true, false)) {
+            // 1. Sustained +12% hiking climb at 1.2 m/s (+14.4 m over 100 s / 120 m)
+            val hikeSamples = (0 until 100).map { t ->
+                val trueAlt = 500.0 + 0.144 * t
+                RawAltitudeSample(
+                    timestampMs = 50_000_000L + t * 1_000L,
+                    rawAltitudeM = if (hasBaro) trueAlt + 30.0 else Double.NaN,
+                    referenceAltitudeM = trueAlt,
+                    smoothedSpeedMps = 1.2,
+                    isStandstill = false,
+                    carriageMode = PhoneCarriageMode.WALKING_TRANSITION
+                )
+            }
+            val smoothedHike = ExtendedRtsAltitudeSlopeSmoother.smooth(hikeSamples)
+            assertTrue(
+                "hasBaro=$hasBaro: ERTS +12% hiking climb at 1.2 m/s must converge to +10..+14% (mid=${smoothedHike[50].slopePercent}%)",
+                smoothedHike[50].slopePercent in 10.0..14.0
+            )
+            assertTrue(
+                "hasBaro=$hasBaro: ERTS +12% hiking climb end slope must stay +10..+14% (end=${smoothedHike.last().slopePercent}%)",
+                smoothedHike.last().slopePercent in 10.0..14.0
+            )
+
+            // 2. Sustained -10% cycling descent at 12.0 m/s (-120 m over 100 s)
+            val descentSamples = (0 until 100).map { t ->
+                val trueAlt = 1000.0 - 1.2 * t
+                RawAltitudeSample(
+                    timestampMs = 60_000_000L + t * 1_000L,
+                    rawAltitudeM = if (hasBaro) trueAlt + 30.0 else Double.NaN,
+                    referenceAltitudeM = trueAlt,
+                    smoothedSpeedMps = 12.0,
+                    isStandstill = false,
+                    carriageMode = PhoneCarriageMode.BIKE_HANDLEBAR
+                )
+            }
+            val smoothedDescent = ExtendedRtsAltitudeSlopeSmoother.smooth(descentSamples)
+            assertTrue(
+                "hasBaro=$hasBaro: ERTS -10% cycling descent at 12 m/s must converge to -12..-8% (mid=${smoothedDescent[50].slopePercent}%)",
+                smoothedDescent[50].slopePercent in -12.0..-8.0
+            )
+        }
+    }
+
+    // REQ-FIL-048.2 / TST-FIL-048.2 (Stage 6 Bounce 1/5): Ref-before-Baro (1-tick & 5-tick delay, 108 m & 140 m QNH,
+    // moving & standstill), both-missing-at-tick-0 (108 m QNH), and multi-tick baro NaN dropout epoch alignment.
+    @Test
+    fun testRefBeforeBaroMissingTick0QnhAndEpochPairedBaroDropout_tstFil048_2() {
+        // 1. Ref-before-Baro across (delayTicks, qnhOffsetM, standstillAtArrival)
+        val refBeforeBaroConfigs = listOf(
+            Triple(1, 108.0, false),
+            Triple(5, 108.0, false),
+            Triple(1, 140.0, false),
+            Triple(5, 140.0, false),
+            Triple(5, 140.0, true)
+        )
+        for ((delayTicks, qnhOffsetM, standstillAtArrival) in refBeforeBaroConfigs) {
+            val samples = (0 until 60).map { t ->
+                val speed = if (standstillAtArrival && t < 10) 0.0 else 1.25
+                RawAltitudeSample(
+                    timestampMs = 70_000_000L + t * 1_000L,
+                    rawAltitudeM = if (t < delayTicks) Double.NaN else 98.0 - qnhOffsetM,
+                    referenceAltitudeM = 98.0,
+                    smoothedSpeedMps = speed,
+                    isStandstill = speed < 0.3,
+                    carriageMode = PhoneCarriageMode.WALKING_TRANSITION
+                )
+            }
+            val smoothed = ExtendedRtsAltitudeSlopeSmoother.smooth(samples)
+            val maxAbsSlope = smoothed.maxOf { abs(it.slopePercent) }
+            val maxAltErr = smoothed.maxOf { abs(it.altitudeM - 98.0) }
+            assertTrue(
+                "Ref-before-Baro(delay=$delayTicks, qnh=$qnhOffsetM, stat=$standstillAtArrival): |slope| must stay < 1.0% (max=$maxAbsSlope%)",
+                maxAbsSlope < 1.0
+            )
+            assertTrue(
+                "Ref-before-Baro(delay=$delayTicks, qnh=$qnhOffsetM, stat=$standstillAtArrival): alt error must stay <= 0.5 m (max=$maxAltErr m)",
+                maxAltErr <= 0.5
+            )
+        }
+
+        // 2. Both rawAltitudeM and referenceAltitudeM missing at tick 0 (and ticks 0..2), 108 m QNH offset
+        for (missingPrefix in listOf(1, 3)) {
+            val samples = (0 until 60).map { t ->
+                RawAltitudeSample(
+                    timestampMs = 75_000_000L + t * 1_000L,
+                    rawAltitudeM = if (t < missingPrefix) Double.NaN else -10.0,
+                    referenceAltitudeM = if (t < missingPrefix) null else 98.0,
+                    smoothedSpeedMps = 1.25,
+                    isStandstill = false,
+                    carriageMode = PhoneCarriageMode.WALKING_TRANSITION
+                )
+            }
+            val smoothed = ExtendedRtsAltitudeSlopeSmoother.smooth(samples)
+            val maxAbsSlope = smoothed.maxOf { abs(it.slopePercent) }
+            val maxAltErr = smoothed.maxOf { abs(it.altitudeM - 98.0) }
+            assertTrue(
+                "Both-missing(prefix=$missingPrefix, qnh=108 m): |slope| must stay < 1.0% (max=$maxAbsSlope%)",
+                maxAbsSlope < 1.0
+            )
+            assertTrue(
+                "Both-missing(prefix=$missingPrefix, qnh=108 m): alt error must stay <= 0.5 m (max=$maxAltErr m)",
+                maxAltErr <= 0.5
+            )
+        }
+
+        // 3. Multi-tick baro NaN dropout during a climb: epoch-paired lastRefBaroAltM must reset to NaN during
+        //    dropout so post-dropout reference recovery never compares a stale pre-dropout baro against new DEM.
+        val dropoutClimb = (0 until 80).map { t ->
+            val trueAlt = 500.0 + 0.144 * t // +12% climb at 1.2 m/s
+            val baro = if (t in 25..49) Double.NaN else trueAlt + 30.0
+            RawAltitudeSample(
+                timestampMs = 80_000_000L + t * 1_000L,
+                rawAltitudeM = baro,
+                referenceAltitudeM = trueAlt,
+                smoothedSpeedMps = 1.2,
+                isStandstill = false,
+                carriageMode = PhoneCarriageMode.WALKING_TRANSITION
+            )
+        }
+        val smoothedDropout = ExtendedRtsAltitudeSlopeSmoother.smooth(dropoutClimb)
+        assertTrue(
+            "Post-dropout recovery on genuine +12% climb must stay near true altitude (t=55 err=${abs(smoothedDropout[55].altitudeM - (500.0 + 0.144 * 55))})",
+            abs(smoothedDropout[55].altitudeM - (500.0 + 0.144 * 55)) <= 2.0
+        )
+        assertTrue(
+            "Post-dropout +12% climb slope must remain smooth and positive (t=60=${smoothedDropout[60].slopePercent}%)",
+            smoothedDropout[60].slopePercent in 8.0..15.0
+        )
+    }
 }

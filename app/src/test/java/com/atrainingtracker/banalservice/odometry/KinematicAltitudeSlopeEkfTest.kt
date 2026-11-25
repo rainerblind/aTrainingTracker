@@ -635,6 +635,99 @@ class KinematicAltitudeSlopeEkfTest {
         )
     }
 
+    // REQ-FIL-048.1 / TST-FIL-048.1: Datum-invariant k2=-k0 in 3-State updateReferenceAltitude eliminates
+    // persistent -12%..-25% negative-slope tug-of-war under 7-min +12 m urban DEM plateaus while keeping
+    // 3x3 Joseph SPD covariance intact across damped low-speed barometer updates and long rides.
+    @Test
+    fun testPersistentUrbanDemPlateau_datumInvariantBiasCouplingEliminatesNegativeSlopeTugOfWar_tstFil048_1() {
+        for (walkBaroVar in listOf(1.5, 4.0)) {
+            val f = KinematicAltitudeSlopeEkf(is3StateMode = true)
+            f.updateReferenceAltitude(440.0, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+            f.updateBarometer(470.0, varBaro = walkBaroVar, isStandstill = false, speedMps = 1.25)
+
+            // 420 s flat city walk warmup, followed by 420 s (7 min) urban SRTM DEM +12 m plateau
+            // while barometer remains flat within +/-0.4 m (reproducing 2026-11-23_171814 rows 420..840)
+            var minSlopePct = 0.0
+            var maxSlopePct = 0.0
+            for (t in 0 until 840) {
+                val baro = 470.0 + 0.3 * kotlin.math.sin(t * 0.25)
+                val dem = if (t < 420) 440.0 else 452.0
+                f.predict(1.0, 1.25)
+                f.updateBarometer(baro, varBaro = walkBaroVar, isStandstill = false, speedMps = 1.25)
+                f.updateReferenceAltitude(dem, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+                assertSymmetricSpd3x3(f)
+                if (t >= 420) {
+                    minSlopePct = minOf(minSlopePct, f.slopePercent)
+                    maxSlopePct = maxOf(maxSlopePct, f.slopePercent)
+                }
+            }
+            assertTrue(
+                "varBaro=$walkBaroVar: 7-min +12 m DEM plateau must keep live slope within [-3%, +3%] (got [$minSlopePct%, $maxSlopePct%])",
+                minSlopePct >= -3.0 && maxSlopePct <= 3.0
+            )
+            assertTrue(
+                "varBaro=$walkBaroVar: baroBias must absorb datum shift smoothly (bias=${f.baroBias}, alt=${f.altitude})",
+                kotlin.math.abs((f.altitude + f.baroBias) - 470.0) <= 1.5
+            )
+        }
+
+        // Verify exact 3x3 Joseph SPD in updateBarometer under damped low-speed gainScale < 1.0 (0.75 m/s)
+        // and multi-hour bounded covariance stability (3,600 ticks)
+        val longRun = KinematicAltitudeSlopeEkf(is3StateMode = true)
+        longRun.updateReferenceAltitude(440.0, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+        longRun.updateBarometer(470.0, varBaro = 1.5, isStandstill = false, speedMps = 0.75)
+        for (t in 1..3600) {
+            val v = if (t <= 120) 0.75 else 5.0
+            longRun.predict(1.0, v)
+            longRun.updateBarometer(470.0, varBaro = 1.5, isStandstill = false, speedMps = v)
+            longRun.updateReferenceAltitude(440.0, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+            if (t <= 120 || t % 100 == 0) {
+                assertSymmetricSpd3x3(longRun)
+            }
+        }
+        assertTrue("Long-run p00 must stay bounded (was ${longRun.p00})", longRun.p00 in 1e-6..5.0)
+        assertTrue("Long-run p22 must stay bounded (was ${longRun.p22})", longRun.p22 in 1e-6..5.0)
+    }
+
+    // REQ-FIL-048.3 / TST-FIL-048.3: Genuine sustained +12% hiking climb (1.2 m/s, 100 s) and
+    // -10% cycling descent (12.0 m/s, 100 s) converge cleanly on both barometer-equipped and barometer-free streams.
+    @Test
+    fun testGenuineHikingClimbAndCyclingDescent_baroAndBaroFreePreserved_tstFil048_3() {
+        for (hasBaro in listOf(true, false)) {
+            // 1. Sustained +12% hiking climb at 1.2 m/s (+14.4 m over 100 s / 120 m)
+            val hike = KinematicAltitudeSlopeEkf(is3StateMode = true)
+            hike.updateReferenceAltitude(500.0, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+            if (hasBaro) hike.updateBarometer(530.0, varBaro = 1.5, isStandstill = false, speedMps = 1.2)
+            for (t in 1..100) {
+                val trueAlt = 500.0 + 0.144 * t
+                hike.predict(1.0, 1.2)
+                if (hasBaro) hike.updateBarometer(trueAlt + 30.0, varBaro = 1.5, isStandstill = false, speedMps = 1.2)
+                hike.updateReferenceAltitude(trueAlt, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+                assertSymmetricSpd3x3(hike)
+            }
+            assertTrue(
+                "hasBaro=$hasBaro: +12% hiking climb at 1.2 m/s must converge near +12% (got ${hike.slopePercent}%)",
+                hike.slopePercent in 9.5..14.0
+            )
+
+            // 2. Sustained -10% cycling descent at 12.0 m/s (-120 m over 100 s)
+            val descent = KinematicAltitudeSlopeEkf(is3StateMode = true)
+            descent.updateReferenceAltitude(1000.0, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+            if (hasBaro) descent.updateBarometer(1030.0, varBaro = 0.25, isStandstill = false, speedMps = 12.0)
+            for (t in 1..100) {
+                val trueAlt = 1000.0 - 1.2 * t
+                descent.predict(1.0, 12.0)
+                if (hasBaro) descent.updateBarometer(trueAlt + 30.0, varBaro = 0.25, isStandstill = false, speedMps = 12.0)
+                descent.updateReferenceAltitude(trueAlt, KinematicAltitudeSlopeEkf.DEFAULT_VAR_DEM)
+                assertSymmetricSpd3x3(descent)
+            }
+            assertTrue(
+                "hasBaro=$hasBaro: -10% cycling descent at 12 m/s must converge near -10% (got ${descent.slopePercent}%)",
+                descent.slopePercent in -12.0..-8.5
+            )
+        }
+    }
+
     private fun assertSymmetricSpd3x3(filter: KinematicAltitudeSlopeEkf) {
         assertEquals("p01/p10 must be symmetric", filter.p01, filter.p10, 1e-12)
         assertEquals("p02/p20 must be symmetric", filter.p02, filter.p20, 1e-12)

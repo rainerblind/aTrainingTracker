@@ -64,6 +64,7 @@ class KinematicAltitudeSlopeEkf(
         const val DEM_INNOVATION_HUBER_K = 2.5 // Innovation-based Huber variance-inflation threshold (REQ-FIL-037.2)
         const val DEM_HIGH_PRECISION_VAR_THRESHOLD = 1.0 // Bypass DEM step gating for high-precision anchors (REQ-FIL-037.2)
         const val DEM_BARO_TRUST_VAR_THRESHOLD = 16.0 // Max raw baro variance trusted for DEM step gating (REQ-FIL-040.2)
+        const val DEM_DATUM_BLEND_THRESHOLD_M = 1.5 // Reference discrepancy ceiling for full datum-invariant k2=-k0 blend (REQ-FIL-048.1)
         const val DEFAULT_STANDSTILL_THRESHOLD_MPS = 0.3
         const val LOW_SPEED_SLOPE_THRESHOLD_MPS = 1.2 // Low-speed slope damping ceiling (REQ-FIL-023.3)
         const val MAX_PHYSICAL_SLOPE = 0.35 // +/-35% grade clamp (REQ-FIL-023.3)
@@ -426,19 +427,8 @@ class KinematicAltitudeSlopeEkf(
             slope = clampPhysicalSlope(slope + k1Eff * yH)
             baroBias += k2 * yH
 
-            val v0 = p00 + p20
-            val v1 = p01 + p21
-            val v2 = p02 + p22
-
-            p00 = max(1e-6, p00 - k0 * v0)
-            p01 -= k0 * v1
-            p02 -= k0 * v2
-            p10 = p01
-            p11 = max(1e-8, p11 - k1Eff * v1)
-            p12 -= k1Eff * v2
-            p20 = p02
-            p21 = p12
-            p22 = max(1e-6, p22 - k2 * v2)
+            // Exact symmetric 3x3 Joseph SPD covariance update for H = [1, 0, 1] (REQ-FIL-048.1)
+            josephUpdate3x3Baro(k0, k1Eff, k2, effectiveVarBaro)
         }
     }
 
@@ -569,8 +559,19 @@ class KinematicAltitudeSlopeEkf(
             slope = clampPhysicalSlope(slope + k1Eff * yEff)
             josephUpdate2x2(k0, k1Eff, effectiveVarRef)
         } else {
-            // In 3-State mode: z = h (H = [1, 0, 0])
-            val k2 = p20 / s
+            // In 3-State mode: z = h (H = [1, 0, 0]).
+            // When a trusted barometer is active, smoothly blend k2 from optimal p20/s (when baro & DEM agree,
+            // preserving tight p00/p22 on smooth terrain) to datum-invariant -k0 (when |y| >= 1.5 m, enforcing
+            // delta(altitude + baroBias) = 0 so persistent DEM plateaus never project negative slope into
+            // updateBarometer(); REQ-FIL-048.1).
+            val k2Opt = p20 / s
+            val k2 = if (baroTrusted) {
+                val ratio = min(1.0, abs(y) / DEM_DATUM_BLEND_THRESHOLD_M)
+                val datumBlend = ratio * ratio
+                k2Opt + datumBlend * (-k0 - k2Opt)
+            } else {
+                k2Opt
+            }
             altitude += k0 * yEff
             slope = clampPhysicalSlope(slope + k1Eff * yEff)
             baroBias += k2 * yEff
@@ -662,6 +663,45 @@ class KinematicAltitudeSlopeEkf(
         val newP11 = max(1e-8, m10 * b + m11 + k1 * k1 * rVar)
         val newP12 = m10 * c + m12 + k1 * k2 * rVar
         val newP22 = max(1e-6, m20 * c + m22 + k2 * k2 * rVar)
+
+        p00 = newP00
+        p01 = newP01
+        p10 = newP01
+        p02 = newP02
+        p20 = newP02
+        p11 = newP11
+        p12 = newP12
+        p21 = newP12
+        p22 = newP22
+    }
+
+    /**
+     * Exact symmetric 3x3 Joseph SPD covariance update for H = [1, 0, 1], K = [k0, k1, k2]^T, R = rVar
+     * so damped low-speed slope gains (`gainScale < 1.0`) preserve strict symmetry and SPD (REQ-FIL-048.1).
+     */
+    private fun josephUpdate3x3Baro(k0: Double, k1: Double, k2: Double, rVar: Double) {
+        val a00 = 1.0 - k0
+        val a02 = -k0
+        val a10 = -k1
+        val a12 = -k1
+        val a20 = -k2
+        val a22 = 1.0 - k2
+
+        val m00 = a00 * p00 + a02 * p20
+        val m01 = a00 * p01 + a02 * p21
+        val m02 = a00 * p02 + a02 * p22
+        val m10 = a10 * p00 + p10 + a12 * p20
+        val m11 = a10 * p01 + p11 + a12 * p21
+        val m12 = a10 * p02 + p12 + a12 * p22
+        val m20 = a20 * p00 + a22 * p20
+        val m22 = a20 * p02 + a22 * p22
+
+        val newP00 = max(1e-6, m00 * a00 + m02 * a02 + k0 * k0 * rVar)
+        val newP01 = m00 * a10 + m01 + m02 * a12 + k0 * k1 * rVar
+        val newP02 = m00 * a20 + m02 * a22 + k0 * k2 * rVar
+        val newP11 = max(1e-8, m10 * a10 + m11 + m12 * a12 + k1 * k1 * rVar)
+        val newP12 = m10 * a20 + m12 * a22 + k1 * k2 * rVar
+        val newP22 = max(1e-6, m20 * a20 + m22 * a22 + k2 * k2 * rVar)
 
         p00 = newP00
         p01 = newP01

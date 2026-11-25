@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.replay.OfflineTelemetryReplayHarnessTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-11-25T10:58:32.858Z" hostname="rainer-HP-EliteBook-850-G5" time="93.172">
+  <properties/>
+  <testcase name="writeCsv_emitsDotDecimalOneHzRowsWithCanonicalHeader" classname="com.atrainingtracker.banalservice.replay.OfflineTelemetryReplayHarnessTest" time="0.804"/>
+  <testcase name="diff_compareBaselineAndCandidate_computesExactQuantitativeDeltas" classname="com.atrainingtracker.banalservice.replay.OfflineTelemetryReplayHarnessTest" time="0.781"/>
+  <testcase name="replay_phoneOnlyWalkAndCyclingBakeryStop_emitsWalkCadenceStridesAndSuppressesBakeryWalk_tstFil046_3" classname="com.atrainingtracker.banalservice.replay.OfflineTelemetryReplayHarnessTest" time="16.974"/>
+  <testcase name="replay_syntheticRunningWorkout_pairedPhoneAndPolar_isBitExactDeterministicAcrossRuns" classname="com.atrainingtracker.banalservice.replay.OfflineTelemetryReplayHarnessTest" time="1.641"/>
+  <testcase name="replay_syntheticRunningWorkout_phoneOnly_computesCarriageCadenceEkfAndErtsMetrics" classname="com.atrainingtracker.banalservice.replay.OfflineTelemetryReplayHarnessTest" time="0.376"/>
+  <testcase name="replay_walkingWithDinnerStopAndArchivedPixel10Sessions_zeroPhantomBikeLocksAndCyclingPreserved_tstFil047_3" classname="com.atrainingtracker.banalservice.replay.OfflineTelemetryReplayHarnessTest" time="70.462"/>
+  <testcase name="replay_syntheticRunningWorkout_polarOnly_computesH10AndVerityCadenceAndDynamics" classname="com.atrainingtracker.banalservice.replay.OfflineTelemetryReplayHarnessTest" time="0.423"/>
+  <testcase name="replay_mixedGnssAndDivergentGnssFused_autoAndGpsIsolateRawGpsWhileFusedSelectsFused_TST_EXP_047_3" classname="com.atrainingtracker.banalservice.replay.OfflineTelemetryReplayHarnessTest" time="0.564"/>
+  <testcase name="replay_veritySenseGyroOnlySidecar_preservesUnscaledDegPerSecAndRoutesSenseModel" classname="com.atrainingtracker.banalservice.replay.OfflineTelemetryReplayHarnessTest" time="0.094"/>
+  <testcase name="polarMetadataAndReader_executeOnPureJvmWithoutRobolectric" classname="com.atrainingtracker.banalservice.replay.OfflineTelemetryReplayHarnessTest" time="0.012"/>
+  <testcase name="replay_gnssFusedOnlySidecar_autoFallsBackToGnssFused_TST_EXP_047_3" classname="com.atrainingtracker.banalservice.replay.OfflineTelemetryReplayHarnessTest" time="0.42"/>
+  <testcase name="groundTruth_verify_passesWithinBoundsAndReportsExplicitViolationsOnRegression" classname="com.atrainingtracker.banalservice.replay.OfflineTelemetryReplayHarnessTest" time="0.315"/>
+  <testcase name="replay_legacyV1DuplicateGnssRowsWithInterleavedImu_deduplicatesCleanlyAndMatchesCleanReplay_TST_EXP_047_3" classname="com.atrainingtracker.banalservice.replay.OfflineTelemetryReplayHarnessTest" time="0.305"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

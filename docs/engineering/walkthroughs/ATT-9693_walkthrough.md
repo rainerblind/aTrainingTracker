@@ -1,0 +1,31 @@
+# Stage 5 Walkthrough — ATT-9693: Datum-Invariant 3-State Altitude EKF & Walking-Speed ERTS Slope Regularization
+
+- **Ticket**: `ATT-9693` (`3 SP`, Bug, `tier-a`, `severity-major`, Epic `ATT-166`) | **Target Release**: `V5.0.0` | **Gate 3**: `ATT-9704` (`PASS`)
+- **Traceability**: `REQ-FIL-048` (`.1`–`.3`) `[Verified]` <-> `TST-FIL-048` (`.1`–`.3`) `[Verified]` (`SYSREQ-TRK-003`, `SYSREQ-TRK-004`, `SYSREQ-TRK-005`)
+- **Evidence Bundle**: [`docs/engineering/test_evidence/tickets/ATT-9693/`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/engineering/test_evidence/tickets/ATT-9693/evidence_summary.json) | **UI/Schema/Strings**: `0` (`N/A - 0 string changes`)
+
+## 1. Summary of Changes & Gate 3 Watchpoints
+
+| File | LoC / Cap | Summary |
+|---|---|---|
+| `KinematicAltitudeSlopeEkf.kt` | `737 / 1,500` | Added exact symmetric 3×3 Joseph SPD covariance update `josephUpdate3x3Baro` (`H = [1, 0, 1]`) in 3-State `updateBarometer()`; added smooth quadratic innovation-blended datum invariance (`DEM_DATUM_BLEND_THRESHOLD_M = 1.5 m`: blends `k2` from optimal `p20 / s` at `|y| == 0` to `-k0` at `|y| >= 1.5 m` when `baroTrusted`) in `updateReferenceAltitude()`, eliminating persistent `-12%..-25%` negative-slope tug-of-war on urban DEM plateaus while keeping `p00`/`p22` tight on smooth terrain (`ZumBaecker57` preserved) and leaving corrupted-baro (`> 16.0 m²`) & baro-free paths untouched. |
+| `ExtendedRtsAltitudeSlopeSmoother.kt` | `825 / 1,500` | Seeded tick-0 QNH offset `x[2] = firstSample.rawAltitudeM - initialAlt`, matched tick-0 baro-armed `p[0][0] = BARO_EQUIPPED_VAR_DEM (16.0)` (Watchpoint 1), un-Hubered both the first delayed Baro-before-Ref anchor (`!hasSeenReference`) and the first finite barometer lock (`hasSeenBarometer` / `isInitialBaroLock` with `k1 = 0.0` in moving & un-Hubered standstill, Bounce 1/5) so `> 100 m` ISA-to-MSL offsets never saturate into `-35%` slope pins, applied `k2 = -k0` + DEM-jump-only step gating with epoch-paired `lastRefBaroAltM` (Watchpoint 2 & Bounce 1/5), and added orthogonal `walkingSpeedSlopeProcessScale(v)` (`[0.04, 1.0]` over `[0.3, 2.8] m/s`, preserving `lowSpeedSlopeGainFactor()` `TST-FIL-033.1`). |
+| `KinematicAltitudeSlopeEkfTest.kt` & `ExtendedRtsAltitudeSlopeSmootherTest.kt` | test-only | Added `TST-FIL-048.1`–`.3` unit tests: 7-min `+12 m` urban DEM plateau (`varBaro = 1.5 & 4.0`), `3,600`-tick SPD stability, `108 m` / `+121.5 m` delayed QNH, Ref-before-Baro (`108 m` & `140 m`, 1/5-tick delay, moving/standstill), both-missing-at-tick-0 (`108 m`), multi-tick baro `NaN` dropout epoch alignment, pocket baro spike + `0.20 m/s` walking noise + Watchpoints 1 & 2, and sustained `+12%` hiking climb (`1.2 m/s`) / `-10%` cycling descent (`12 m/s`) for both baro-equipped and baro-free phones. |
+
+## 2. Targeted Verification Results (`127/127 PASS`, `0` Failures, `0` New Warnings)
+
+Executed via `tools/parallel_sprint_lock.py` (`./gradlew -Pkotlin.daemon.jvmargs=-Xmx3072m :app:testDebugUnitTest --rerun --tests ...`):
+- `KinematicAltitudeSlopeEkfTest` `19/19`, `ExtendedRtsAltitudeSlopeSmootherTest` `14/14` (incl. Stage 6 Bounce 1/5 Ref-before-Baro / missing-tick-0 / epoch-paired dropout suite), `ExtendedRtsOdometrySmootherTest` `15/15`, `AltitudeAndSlopeDevice_ATTFusedTest` `26/26`, `ErtsPostWorkoutRecomputerTest` `22/22`, `OfflineTelemetryReplayHarnessTest` `13/13`, `OfflineReplayCliTest` `4/4`, `ArchitectureConformanceContractTest` `11/11`, `InterfaceSignatureDriftContractTest` `3/3`.
+
+## 3. Offline Pixel 10 Replay Validation (`./gradlew :app:replayRawTelemetry` & Production 1-Hz Slew Parity)
+
+| Archived Session | Activity | Raw `:app:replayRawTelemetry` ERTS Slope (Before -> After) | Production 1-Hz Slew-Filtered ERTS Slope (Before -> After, `p95|s|`) |
+|---|---|---|---|
+| `2026-11-23_093732` | 1.4 km flat walk (`108 m` QNH offset) | `[-35.0%, +35.0%]` (`72.4 m` asc) -> `[-16.8%, +20.2%]` (`41.9 m` asc) | `[-35.0%, +3.6%]` (`35.0%`) -> **`[-3.4%, +7.6%]`** (**`3.7%`**) |
+| `2026-11-23_171814` | 1.4 km flat walk (`121.5 m` delayed QNH) | `[-23.3%, +21.0%]` -> `[-23.8%, +23.1%]` (raw `63 m` unbucketed pocket pump) | `[-35.0%, +9.7%]` (`35.0%`) -> **`[-2.7%, +6.8%]`** (**`4.9%`**) |
+| `2026-11-23_182416` | `Essen gehen` walk + 2h dinner (`141 m` QNH) | `[-22.0%, +29.0%]` -> `[-30.2%, +26.1%]` (raw unbucketed pocket pump) | `[-35.0%, +11.1%]` (`7.9%`) -> **`[-4.7%, +9.3%]`** (**`1.9%`**) |
+| `2026-11-22_081402` | Cycling errand + bakery stop (hilly) | `[-20.5%, +17.2%]` -> **`[-15.5%, +16.2%]`** | `[-10.9%, +12.9%]` (`10.9%`) -> **`[-11.1%, +14.0%]`** (**`12.3%`**) |
+
+- Note on raw `:app:replayRawTelemetry`: the test harness feeds unbucketed/unslewed `12-Hz` raw `BARO` (`±36–63 m` stride pocket pumping) directly into `altitudeEkf` & `rawAltitude1Hz` without `BarometricBucketDispersion`/`BarometricAltitudeFilter.filterSlewOnly` (which production `AltitudeAndSlopeDevice_ATTFused` & `ErtsPostWorkoutRecomputer` run). On production-parity 1-Hz slew-filtered telemetry, ERTS flat-walk `p95|slope|` drops from **`35.0%` -> `1.9%–4.9%`** while hilly cycling (`081402`) and `+12%` hiking / `-10%` cycling climbs remain crisp.
+- Non-UI odometry/smoother ticket (`0` Compose/Activity/Manifest/resource edits); live emulator UI smoke not applicable. Governance `verify_requirement_governance.py --base-ref sprint/2026-11-25_01_Früh`: EXIT `0`.
+- **Rule 1.3 Documented Deviation (`auto_gate.py` 6-suite dependent batch)**: `5/6` dependent suites passed (`AltitudeAndSlopeDevice_ATTFusedTest 26/26`, `ExtendedRtsAltitudeSlopeSmootherTest 14/14`, `ExtendedRtsOdometrySmootherTest 15/15`, `KinematicAltitudeSlopeEkfTest 19/19`, `ErtsPostWorkoutRecomputerTest 22/22` = **`96/96` tests**), and `MeasuredNfrBenchmarkTest.testNfr001` (EKF timing benchmark) passed; the single failure (`MeasuredNfrBenchmarkTest.testNfr014_cockpitTelemetryThrottling_measuredMaxOneHzOverFiveSeconds` + `@AfterClass classMethod`) is a pre-existing out-of-scope baseline bug on `sprint/2026-11-25_01_Früh` (already tracked as Bug **`ATT-9639`**) and is excluded per Coordinator `Rule 1.3` confirmation. Evidence bundle rebuilt to `PASS` over all `9` freshly executed passing suites (`127/127` tests, `10` SHA-256 hashed files).

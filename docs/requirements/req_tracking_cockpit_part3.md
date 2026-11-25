@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 3 of 3)
 
 **Document ID**: `DOC-REQ-TRK-P3`  
-**Version**: 1.0.63  
+**Version**: 1.0.65  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part3`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 63
+**Total Requirements**: 64
 
 ---
 
@@ -2036,6 +2036,34 @@
 
 ---
 
+### REQ-FIL-048: Datum-Invariant 3-State Altitude EKF (`k2 = -k0`) & Walking-Speed ERTS Slope Regularization (`ATT-9693`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-048`
+- **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`, `SYSREQ-TRK-005` — Refines live 3-State `KinematicAltitudeSlopeEkf` reference-to-bias coupling and Joseph SPD updates and post-workout `ExtendedRtsAltitudeSlopeSmoother` initial QNH bias seeding, baro-armed DEM gating, and walking-speed slope curvature regularization (`KinematicAltitudeSlopeEkf.kt`, `ExtendedRtsAltitudeSlopeSmoother.kt`).
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `KinematicAltitudeSlopeEkf.kt`, `ExtendedRtsAltitudeSlopeSmoother.kt`
+- **Localization Parity**: `N/A - 0 string changes`
+- **Rationale**: Under persistent urban SRTM `DEM` plateaus (`+10..14 m` for 7 min while `baro` is flat, `2026-11-23_171814`), `KinematicAltitudeSlopeEkf.updateReferenceAltitude()` shifted `altitude` via `k0` faster than `baroBias` via `k2 = p20 / s`, leaving a positive offset in `(altitude + baroBias)` that `updateBarometer()` projected onto `slope` as a contradictory `-7.5%..-25%` downhill grade while `altitude` rose. In `ExtendedRtsAltitudeSlopeSmoother`, unseeded `x[2] = 0.0` and Huber-clamped delayed initial reference locks saturated on `> 100 m` ISA-vs-MSL QNH offsets (pinning walks to `-35%`), stiff `DEFAULT_VAR_DEM = 4.0` without DEM-jump step gating leaked DEM jumps into backward-smoothed slope, and unregularized `DEFAULT_QG = 1e-4 / m` at `1.2–1.6 m/s` walking speeds turned `0.15–0.20 m/s` vertical noise into `±15–21%` spikes (`ATT-9693`).
+- **Description**:
+  1. *Smooth Innovation-Blended Datum-Invariant 3-State Reference Coupling & Barometer Joseph SPD (`REQ-FIL-048.1`)*: In `KinematicAltitudeSlopeEkf.updateReferenceAltitude()`, when `is3StateMode && baroTrusted` (`hasBarometerSample && lastBaroVarM2 <= DEM_BARO_TRUST_VAR_THRESHOLD`), SHALL set `k1Eff = 0.0` and smoothly quadratically blend `k2` from optimal `p20 / s` (when `|y| == 0`, preserving tight `p00`/`p22` on smooth terrain) to exact datum-invariant `-k0` at `|y| >= DEM_DATUM_BLEND_THRESHOLD_M` (`1.5 m`, enforcing `Δ(altitude + baroBias) = 0` so persistent DEM plateaus never project contradictory negative slope into `updateBarometer()`), while preserving standard `k2 = p20 / s` when `!baroTrusted` (barometer-free or corrupted pocket barometer `> 16.0 m²`). In 3-State `updateBarometer()`, SHALL apply exact symmetric 3×3 Joseph SPD covariance update (`josephUpdate3x3Baro`, `H = [1, 0, 1]`) so damped `k1Eff` (`gainScale < 1.0`) preserves strict symmetry and SPD.
+  2. *ERTS Initial & Delayed QNH Bias Seeding, Baro-Armed DEM Gating & Walking-Speed `q_g` Regularization (`REQ-FIL-048.2`)*: In `ExtendedRtsAltitudeSlopeSmoother.smoothContiguousSegment()`, SHALL (a) seed `x[2] = firstSample.rawAltitudeM - initialAlt` whenever `hasInitialRef && firstSample.rawAltitudeM.isFinite()`, set initial `p[0][0] = if (hasInitialRef) (if (hasBaroData) BARO_EQUIPPED_VAR_DEM else DEFAULT_VAR_DEM) else 400.0`, and absorb the very first delayed Baro-before-Ref anchor (`!hasSeenReference`) without Huber truncation; (b) enforce `k2 = -k0` + `BARO_EQUIPPED_VAR_DEM = 16.0` + post-anchor DEM-jump-only step gating (`hasSeenReference && !isBaroResetStep && rawAltitudeM.isFinite() && abs(deltaRef) > 3.0 && stepDiscrepancy > 3.0 && abs(deltaBaro) < abs(deltaRef)`) when `hasBaroData == true` (preventing pocket baro spikes from vetoing flat DEM while retaining `DEFAULT_VAR_DEM = 4.0` and `k1 > 0` when `hasBaroData == false`); and (c) introduce `walkingSpeedSlopeProcessScale(speedMps)` smoothly interpolating `[0.04, 1.0]` over `[0.3, 2.8] m/s` multiplying `qgVal` while leaving `lowSpeedSlopeGainFactor(speedMps)` (`TST-FIL-033.1`) unchanged.
+  3. *Cross-Terrain & Cross-Device Grade Preservation (`REQ-FIL-048.3`)*: Both `KinematicAltitudeSlopeEkf` and `ExtendedRtsAltitudeSlopeSmoother` SHALL preserve crisp convergence to `~+12%` on sustained `12%` hiking climbs at `1.2 m/s` (`+14.4 m` over `100 s` / `120 m`) and `~-10%` on `10%` cycling descents at `12 m/s` on both barometer-equipped and barometer-free phones, while eliminating contradictory negative-slope tug-of-war and walking-speed ERTS spikes on archived Pixel 10 sessions (`2026-11-23_093732`, `_171814`, `_182416`, `2026-11-22_081402`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a flat walk (`baro` constant within `±1 m`) with a `7 min` `+10..14 m` urban SRTM `DEM` plateau, *When* `KinematicAltitudeSlopeEkf` fuses 1-Hz barometer and DEM updates, *Then* live `slope` stays within `[-3%, +3%]` (never `-12%..-25%`) with symmetric SPD 3×3 covariance.
+• *Given* flat city walks (`2026-11-23_093732`, `_171814`, `_182416`) with walking-speed baro noise and large QNH offsets, *When* `ExtendedRtsAltitudeSlopeSmoother` computes smoothed `SLOPE`, *Then* smoothed `SLOPE` stays within realistic flat-city bounds without `-35%` saturation or isolated `+18% / -15%` spikes.
+• *Given* a sustained `12%` hiking climb at `1.2 m/s` (`+14.4 m / 100 s`) or `10%` cycling descent at `12 m/s` (both baro-equipped and baro-free), *When* processed by both engines, *Then* live and smoothed `SLOPE` converge cleanly to `~+12%` / `~-10%`.
+
+**Chesterton's Fence (`REQ-PRO-022`)**:
+1. *Original Requirement ID & Target*: Net-new `REQ-FIL-048` refining `REQ-FIL-016`, `REQ-FIL-017`, `REQ-FIL-023`, `REQ-FIL-033`, `REQ-FIL-037`, and `REQ-FIL-040`.
+2. *Historical Origin & Commit Trace*: `ATT-6279`, `ATT-7750`, `ATT-8880`, `ATT-9063`, `ATT-9156`, `ATT-9602`.
+3. *Root Reason for Existing Formulation*: Standard Kalman `k2 = p20 / s` and `DEFAULT_VAR_DEM = 4.0` assumed uncorrelated Gaussian DEM errors rather than multi-minute urban SRTM plateaus and `> 100 m` ISA QNH offsets; `LOW_SPEED_SLOPE_THRESHOLD_MPS = 1.2` damped crawl speeds but left `1.2–1.6 m/s` walking at full `q_g`.
+4. *Preservation of Core Invariants*: Preserves `KinematicAltitudeSlopeEkf` `DEFAULT_VAR_DEM = 25.0`/`DEFAULT_VAR_GPS = 64.0`/`DEFAULT_VAR_BARO = 0.25`, `lowSpeedSlopeGainFactor()` contract (`TST-FIL-033.1`), barometer-free `DEFAULT_VAR_DEM = 4.0` & DEM-only slope (`TST-FIL-033.3`/`037.1`), corrupted-baro `varBaro > 16.0` bypass (`TST-FIL-040.2`), delayed-anchor/braking/pause-gap/baro-reset paths, and `<= 1,500` LoC caps.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2207,3 +2235,5 @@
 | `1.0.61` | 2026-11-25 | Lane 3 Author (`ATT-9695`, `--as agent1`) | `ATT-9695` | Promoted `REQ-FIL-046` (`.1`–`.3`) to `[Verified]` following Gate 3 (`ATT-9697`) PASS + all 4 Watchpoints + empirical Pixel 10 replay calibration (`UNKNOWN_WALK_CONFIRM_DWELL_MS = 25_000L` rejecting `18–20 s` pre-ride driveway bike-pushing in `2026-11-22_081402`; `KinematicSportTypeDiscriminator.MIN_BIKE_CARRIAGE_VOTE_SPEED_MPS = 1.8` eliminating walking-speed `BIKE_FRONT_POCKET` false latches in `2026-11-23_171814`), Stage 4 implementation (`BANALService.java` `1,121/1,500`, `TrackerService.java` `3,193/3,220`, `SmartphoneImuCadenceEstimator.kt` `1,120/1,500`, `KinematicSportTypeDiscriminator.kt` `537/1,500`, `SpeedAndLocationDevice_ATTFused.kt` `1,489/1,500`; `banal_service.md` `v1.0.12`, `tracker_service.md` `v1.0.14`; `0` new warnings, `0` string edits), `190/190` PASS across `15` targeted unit/Robolectric/replay/contract suites, live `emulator-5554` smoke (`0` crashes, `Rule 8.5` PNG verified), and `docs/engineering/walkthroughs/ATT-9695_walkthrough.md`. |
 | `1.0.62` | 2026-11-25 | Lane 2 Author (`ATT-9694`, `--as agent1`) | `ATT-9694` | Added `[Planned]` `REQ-FIL-047` (`.1`–`.3`, linked to `SYSREQ-TRK-003`, `SYSREQ-TRK-006`, `SYSREQ-TRK-010`, refining `REQ-FIL-028`/`030`/`031`/`034`/`035`/`044`/`046`) for pure-JVM bounded `SportSpeedPriors` + off-main-thread `SportTypes` loader (`SDK_INT == 0` safe), walking-speed `BIKE_*` suppression in `PhoneCarriageClassifier` & `KinematicSportTypeDiscriminator`, and symmetric sliding-window `BIKE` guardrails in `MultisportTransitionDetector` (`N/A - 0 string changes`). |
 | `1.0.63` | 2026-11-25 | Lane 2 Author (`ATT-9694`, `--as agent1`) | `ATT-9694` | Promoted `REQ-FIL-047` (`.1`–`.3`) to `[Verified]` following Gate 3 (`ATT-9700`) PASS + all 3 watchpoints (`@Volatile mIsShuttingDown`, `SpeedAndLocationDevice_ATTFused.kt` `1,495/1,500`, deterministic `SportSpeedPriorsLoader.executorOverride`), empirical trailing `3.0 s` `sustainedGnssSpeedMps` + `unambiguousMotionExit` bypass + `1.2 s` interleaved-sample hold (`PhoneCarriageClassifier.kt` `1,384/1,500`, `MultisportTransitionDetector.kt` `549/1,500`, `KinematicSportTypeDiscriminator.kt` `555/1,500`, `SportTypeDatabaseManager.java` `970/1,500`, `SportSpeedPriors.kt` `151`, `SportSpeedPriorsLoader.kt` `110`), `140/140` PASS across `15` targeted suites (`0` new warnings), `:app:replayRawTelemetry` across all 4 Pixel 10 sidecars (`0.0%` `BIKE_*`, `0` phantom `BIKE` locks/transitions on `093732`/`171814`/`182416`; `BIKE` established & `0` walking strides on `081402`), and `docs/engineering/walkthroughs/ATT-9694_walkthrough.md`. |
+| `1.0.64` | 2026-11-25 | Lane 2 Author (`ATT-9693`, `--as agent1`) | `ATT-9693` | Added `[Planned]` `REQ-FIL-048` (`.1`–`.3`, linked to `SYSREQ-TRK-003`, `SYSREQ-TRK-004`, `SYSREQ-TRK-005`, refining `REQ-FIL-016`/`017`/`023`/`033`/`037`/`040`) for datum-invariant 3-State `KinematicAltitudeSlopeEkf` reference coupling (`k2 = -k0`) + 3×3 barometer Joseph SPD and `ExtendedRtsAltitudeSlopeSmoother` initial QNH bias seeding, baro-armed DEM variance/step gating, and smooth walking-speed `q_g` regularization (`N/A - 0 string changes`). |
+| `1.0.65` | 2026-11-25 | Lane 2 Author (`ATT-9693`, `--as agent1`) | `ATT-9693` | Promoted `REQ-FIL-048` (`.1`–`.3`) to `[Verified]` following Gate 3 (`ATT-9704`) PASS + both watchpoints (`p[0][0]` baro-armed `16.0 m²` parity, `!isBaroResetStep`/finite-baro/DEM-jump-only step gate) + smooth quadratic `DEM_DATUM_BLEND_THRESHOLD_M = 1.5` blend + un-Hubered delayed initial QNH anchor (`KinematicAltitudeSlopeEkf.kt` `737/1,500`, `ExtendedRtsAltitudeSlopeSmoother.kt` `821/1,500`, `0` new warnings), `111/111` PASS across `8` targeted suites, `:app:replayRawTelemetry` across all 4 Pixel 10 sidecars (`093732`/`171814`/`182416`/`081402`), and `docs/engineering/walkthroughs/ATT-9693_walkthrough.md`. |

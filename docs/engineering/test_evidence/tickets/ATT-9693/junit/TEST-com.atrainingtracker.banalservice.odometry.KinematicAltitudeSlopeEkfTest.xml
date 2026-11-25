@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" tests="19" skipped="0" failures="0" errors="0" timestamp="2026-11-25T10:58:32.773Z" hostname="rainer-HP-EliteBook-850-G5" time="0.059">
+  <properties/>
+  <testcase name="testStandstillSlopeDecay_decaysP12SymmetricallyInThreeStateMode_tstFil023_2" classname="com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" time="0.003"/>
+  <testcase name="testPersistentUrbanDemPlateau_datumInvariantBiasCouplingEliminatesNegativeSlopeTugOfWar_tstFil048_1" classname="com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" time="0.039"/>
+  <testcase name="testHuberDownweighting_rejectsGrossBarometricSpike" classname="com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" time="0.001"/>
+  <testcase name="testThreeStateBaroBeforeRef_anchorsAndAbsorbs130mWeatherOffsetAtStandstill" classname="com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" time="0.0"/>
+  <testcase name="testGenuineHikingClimbAndCyclingDescent_baroAndBaroFreePreserved_tstFil048_3" classname="com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" time="0.004"/>
+  <testcase name="testCorruptedBaroDispersion_doesNotVetoFlatDemAndRecoversCleanly_TST_FIL_040_2" classname="com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" time="0.001"/>
+  <testcase name="testThreeStateRefBeforeBaro_andTwoStateGuard_preservesP00AndClearsFlags" classname="com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" time="0.0"/>
+  <testcase name="testCoherentVarianceRetuningAndBaroSlopeDecouplingWithJosephSpd_tstFil037_1" classname="com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" time="0.001"/>
+  <testcase name="testLowSpeedBaroChatter_dampedWithout29PercentSpike_tstFil023_3" classname="com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" time="0.001"/>
+  <testcase name="testConcurrency_predictAndUpdateWithoutCorruption" classname="com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" time="0.003"/>
+  <testcase name="testThreeStateGpsBeforeDem_recoversFromCoarseGpsAnchorWithoutBiasFreeze" classname="com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" time="0.001"/>
+  <testcase name="testConstantSlopeTracking_reachesTargetSlopeAndAltitude" classname="com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" time="0.0"/>
+  <testcase name="testTwoStateToThreeStateTransition_resetsUnanchoredP00AndReanchorsCleanly" classname="com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" time="0.001"/>
+  <testcase name="testPredict_clampsLargeDtSec" classname="com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" time="0.0"/>
+  <testcase name="testAdaptiveJitterVariance_dampsCyclicOscillationsAndPreservesSteadyClimb_tstFil026_2" classname="com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" time="0.001"/>
+  <testcase name="testStepDiscrepancyGatingTrackerAdvancementHuberAndHighPrecisionGuard_tstFil037_2" classname="com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" time="0.001"/>
+  <testcase name="testStandstillSlopeDecay_clearsPreStopSlopeAndPreservesBaroBias_tstFil023_2" classname="com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" time="0.001"/>
+  <testcase name="testStandstillClamping_producesZeroClimbAndNoSlopeOscillation" classname="com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" time="0.0"/>
+  <testcase name="testThreeStateMode_isolatesThermalWeatherDrift_anchoredByDem" classname="com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
