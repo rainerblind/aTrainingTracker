@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManagerDeduplicationTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-25T07:30:41.904Z" hostname="rainer-HP-EliteBook-850-G5" time="3.926">
+  <properties/>
+  <testcase name="testGetAllSegmentSummaries_deduplicatesDuplicateRows" classname="com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManagerDeduplicationTest" time="1.425"/>
+  <testcase name="testInsertSegmentStreams_clearsExistingStreamsBeforeInserting" classname="com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManagerDeduplicationTest" time="1.238"/>
+  <testcase name="testAddOrUpdateSegment_whenLegacyDuplicatesExist_prunesSecondaryRows" classname="com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManagerDeduplicationTest" time="1.263"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

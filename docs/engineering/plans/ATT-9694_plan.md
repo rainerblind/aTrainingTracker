@@ -1,0 +1,46 @@
+# Stage 3 Implementation Plan — ATT-9694: Walking-Speed `BIKE` Gating & Bounded User `SportTypes` Speed Priors
+
+- **Ticket**: `ATT-9694` (`3 SP`, Bug, `tier-a`, `severity-major`, Epic `ATT-166`) | **Target Release**: `V5.0.0` | **Risk Rating**: `HIGH`
+- **Traceability**: `REQ-FIL-047` (`REQ-FIL-047.1`–`.3`, `SYSREQ-TRK-003`/`006`/`010`) <-> `TST-FIL-047` (`TST-FIL-047.1`–`.3`)
+- **Database / Schema / UI / String Impact**: `0` SQLite schema migrations; `0` UI/resource edits (`Localization Parity: N/A - 0 string changes`).
+
+## 1. SWE.2 Architectural Decomposition & Concurrency Model
+
+- **Layer 1 — Pure-JVM `SportSpeedPriors.kt` (`banalservice/odometry/`, new `~110` LoC) + `SportTypeDatabaseManager.java` (`921 -> ~965 / 1,500`) + `SportSpeedPriorsLoader.kt` (`banalservice/devices/`, new `~75` LoC)**:
+  - `SportSpeedBand(bSportType, minSpeedMps, maxSpeedMps, gcName, stravaName, tcxName)` and `SportSpeedPriors(maxWalkSpeedMps, minBikeSpeedMps, maxRunSpeedMps)` live in pure-JVM `banalservice.odometry` (zero Android/SQLite imports; `clamped()` enforces `[1.5, 2.5]`, `[1.8, 3.5]`, `[3.5, 6.5]`, defaults `2.0`, `2.5`, `5.5`, replacing non-finite inputs with defaults; `fromBands()` filters invalid/`<= 0.0` bands and matches walk/hike metadata or low-speed `RUN` `[min<=1.0, max<=2.8]`).
+  - `SportTypeDatabaseManager.getActiveSportTypeSpeedBands()` runs a single read-only query (`IS_PLACEHOLDER = 0`) inside `try (Cursor cursor = ...)` (`TryWithResourcesCursorAuditTest` compliant; zero `Cursor` leaks).
+  - `SportSpeedPriorsLoader.loadAsync(context, onLoaded)`: synchronously checks `sdkInt == 0` (`Build.VERSION.SDK_INT`) and returns immediately without spawning any thread on plain-JVM unit tests (`Coding Standards §5.5`). On Android/Robolectric (`sdkInt > 0`), submits onto a single-thread daemon `ExecutorService` (`Thread.isDaemon = true`), catches all `Throwable` safely to `SportSpeedPriors.DEFAULT`, and invokes `onLoaded(priors)`.
+- **Layer 2 — `PhoneCarriageClassifier.kt` (`1,312 -> ~1,355 / 1,500`) & `KinematicSportTypeDiscriminator.kt` (`537 -> ~560 / 1,500`)**:
+  - Add `@JvmOverloads` `sportSpeedPriors: SportSpeedPriors = SportSpeedPriors.DEFAULT` constructor arg (or field) + `@Synchronized fun setSportSpeedPriors(priors: SportSpeedPriors)` on both classes (clamped via `priors.clamped()`, retained across `reset()`).
+  - In `PhoneCarriageClassifier.evaluateRawCandidate()` (`@Synchronized`):
+    - `bikeLowSpeedFloorMps = when { confirmedNoFootstrikes && (committedMode.isCyclingMode() || sportHint == SportContextHint.CYCLING) -> SportSpeedPriors.MIN_BIKE_SPEED_FLOOR_MPS (1.8); confirmedNoFootstrikes -> minOf(priors.minBikeSpeedMps, maxOf(1.8, priors.maxWalkSpeedMps)); else -> priors.minBikeSpeedMps }`.
+    - `runCyclingMaskSpeedMps = maxOf(RUN_CYCLING_MASK_SPEED_MPS, priors.maxRunSpeedMps)`.
+    - `suppressCyclingForLowSpeed = !wheelActiveMoving && effectiveSpeed != null && effectiveSpeed < bikeLowSpeedFloorMps`; include in `suppressCycling`.
+    - Update `suppressWalkForNoFootstrikeClimb` speed guard from `CONFIRMED_NO_FOOTSTRIKE_WALK_SUPPRESS_SPEED_MPS (1.6)` to `bikeLowSpeedFloorMps`.
+    - Right after the `< RUN_MIN_SPEED_MPS` floor (`:661`), if `suppressCyclingForLowSpeed && !hasActiveRunningCadence && !easyRunSuppressWalk`, return `RawEvaluation(PhoneCarriageMode.WALKING_TRANSITION, unambiguousMotionExit)` so low-speed non-wheel walking never falls through into all-`-Infinity` `RUN_WAIST_HIP`.
+  - In `KinematicSportTypeDiscriminator.evaluateIfDue()` (`@Synchronized`): compute `bikeCarriageVoteFloorMps = minOf(priors.minBikeSpeedMps, maxOf(MIN_BIKE_CARRIAGE_VOTE_SPEED_MPS, priors.maxWalkSpeedMps))` and `highBikeSpeedMps = priors.maxRunSpeedMps.coerceIn(HIGH_BIKE_SPEED_MPS, 6.5)` replacing hardcoded `:189-190` checks.
+- **Layer 3 — `MultisportTransitionDetector.kt` (`496 -> ~550 / 1,500`, `@Synchronized`)**:
+  - Add `@JvmOverloads` `sportSpeedPriors: SportSpeedPriors = SportSpeedPriors.DEFAULT` + `@Synchronized fun setSportSpeedPriors(priors)` (retained across `reset()`).
+  - Add `evaluateBikeWindow(window, currentActiveMs, currentAnchor, spanMs, hasActiveBikeHardware)` mirroring `evaluateRunWindow`: returns `head.anchor` when `windowActiveMs >= spanMs` AND (`hasActiveBikeHardware || spanMs <= 0L` OR (`windowActiveSec > 0.0 && windowDistM >= minBikeSpeed * (spanMs / 1000.0) && windowAvgSpeedMps >= minBikeSpeed`)).
+  - Wire `evaluateBikeWindow` into Phase 1 (`:242-245`, `establishWindowMs`) and Phase 2 (`:326-339`, `confirmationWindowMs`), updating `enterAnchor = candidateWindow.peekFirst()?.anchor ?: enterAnchor` for both `RUN` and `BIKE` so slow starts recover cleanly while preserving `exitAnchor`.
+- **Layer 4 — `SpeedAndLocationDevice_ATTFused.kt` (`1,489 -> <= 1,497 / 1,500`, zero nested locks)**:
+  - Call `refreshSportSpeedPriorsAsync()` from `init` and `onAccumulatorsReset()` delegating to `SportSpeedPriorsLoader.loadAsync(mContext) { if (!mIsShuttingDown) applySportSpeedPriors(it) }` where `applySportSpeedPriors` updates `carriageClassifier`, `sportDiscriminator`, and `multisportDetector` independently (zero nested locks; `<= 8` net lines added to keep `SpeedAndLocationDevice_ATTFused.kt <= 1,500` LoC).
+- **Layer 5 — Offline Replay Harness & Verification**:
+  - Wire `MultisportTransitionDetector` into `OfflineTelemetryReplayHarness.kt` / `OfflineReplayModels.kt` (exposing `multisportEstablishedSport` and `multisportTransitionCount`) so `./gradlew :app:replayRawTelemetry` and `OfflineTelemetryReplayHarnessTest` validate all 4 archived Pixel 10 sessions end-to-end.
+
+## 2. Atomic Implementation Steps
+
+| Step | Target File(s) | Atomic Change | Req / Test |
+|---|---|---|---|
+| **1** | `SportSpeedPriors.kt` (new), `SportTypeDatabaseManager.java`, `SportSpeedPriorsLoader.kt` (new) | Create pure-JVM `SportSpeedBand`/`SportSpeedPriors` with biomechanical clamping & band aggregation; add try-with-resources `getActiveSportTypeSpeedBands()`; create `SDK_INT == 0`-safe daemon `SportSpeedPriorsLoader`. | `REQ-FIL-047.1` / `TST-FIL-047.1` |
+| **2** | `PhoneCarriageClassifier.kt`, `KinematicSportTypeDiscriminator.kt` | Wire `SportSpeedPriors`, add low-speed `BIKE_*` suppression + `WALKING_TRANSITION` short-circuit + `bikeLowSpeedFloorMps` walk-suppress alignment + `runCyclingMaskSpeedMps` floor; update `KinematicSportTypeDiscriminator` carriage-vote floor and `highBikeSpeedMps`. | `REQ-FIL-047.2` / `TST-FIL-047.2` |
+| **3** | `MultisportTransitionDetector.kt`, `SpeedAndLocationDevice_ATTFused.kt` | Add symmetric sliding-window `evaluateBikeWindow` in Phase 1 & Phase 2 with `enterAnchor` head tracking and `hasActiveBikeHardware` bypass; wire `SportSpeedPriorsLoader.loadAsync` in `SpeedAndLocationDevice_ATTFused` `init`/`onAccumulatorsReset()` keeping LoC `<= 1,500`. | `REQ-FIL-047.1`, `REQ-FIL-047.3` / `TST-FIL-047.1`, `TST-FIL-047.3` |
+| **4** | `SportSpeedPriorsTest.kt` (new), `SportSpeedPriorsLoaderTest.kt` (new), `PhoneCarriageClassifierTest.kt`, `KinematicSportTypeDiscriminatorTest.kt`, `MultisportTransitionDetectorTest.kt`, `SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest.kt`, `OfflineTelemetryReplayHarness.kt`, `OfflineReplayModels.kt`, `OfflineTelemetryReplayHarnessTest.kt` | Author full `TST-FIL-047.1`–`.3` pure-JVM & Robolectric suites, wire multisport metrics in `OfflineTelemetryReplayHarness`, and run offline replay across all 4 archived Pixel 10 raw telemetry sessions via `./gradlew :app:replayRawTelemetry`. | `TST-FIL-047.1`–`.3` |
+
+## 3. Invariants, Rollback & Stage 4 Verification Commands
+
+- **Existing Users & Invariants**: Walks (`0.2–2.0 m/s`) never emit `BIKE_*` or lock `'Rad'`, eliminating phantom `Rad -> Wechsel -> Laufen` splits; custom `SportTypes` speed bands take effect automatically on session start within safe clamped bounds. Steep uphill MTB (`2.0 m/s` `TST-FIL-034.4`), established cycling climbs (`>= 1.8 m/s`), active bike hardware bypasses, `5.0–5.6 m/s` sprints (`TST-FIL-035.1`/`034.4`), phone-only duathlon `RUN -> T1 -> BIKE` carryover, `BANALService.getAuthoritativeBSportType()` anti-circularity, `SDK_INT == 0` plain-JVM isolation, and all `<= 1,500` LoC caps remain strictly preserved. Clean git revert restores baseline.
+- **Stage 4 Targeted Unit & Contract Command**:
+  `./gradlew :app:testDebugUnitTest --rerun --tests "*SportSpeedPriors*" --tests "*PhoneCarriageClassifierTest*" --tests "*MultisportTransitionDetectorTest*" --tests "*KinematicSportTypeDiscriminatorTest*" --tests "*SpeedAndLocationDevice_ATTFusedTest*" --tests "*SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest*" --tests "*BANALServiceMultisportTransitionTest*" --tests "*OfflineTelemetryReplayHarnessTest*" --tests "*OfflineReplayCliTest*" --tests "*ArchitectureConformanceContractTest*" --tests "*TryWithResourcesCursorAuditTest*" --tests "*InterfaceSignatureDriftContractTest*"`
+- **Stage 4 Offline Replay Command** (repeated for `2026-11-22_081402`, `2026-11-23_093732`, `2026-11-23_171814`, `2026-11-23_182416`):
+  `./gradlew :app:replayRawTelemetry -PphoneRaw=/home/rainer/AndroidStudioProjects/aTrainingTracker_raw_telemetry/<SESSION>.phone_raw.csv.gz -Ptruth=/home/rainer/AndroidStudioProjects/aTrainingTracker_raw_telemetry/<SESSION>.truth.json`

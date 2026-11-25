@@ -36,6 +36,7 @@ import androidx.core.content.res.ResourcesCompat;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BSportType;
+import com.atrainingtracker.banalservice.odometry.SportSpeedBand;
 import com.atrainingtracker.database.DatabaseConstants;
 import com.atrainingtracker.util.CursorUtils;
 import com.atrainingtracker.util.EnumUtils;
@@ -469,6 +470,54 @@ public class SportTypeDatabaseManager extends BaseDatabaseManager<SportTypeDatab
         }
 
         return sensors;
+    }
+
+    /**
+     * Returns speed-band projections for all active (non-placeholder) sport types
+     * for off-main-thread odometry prior derivation ({@code REQ-FIL-047.1}, {@code ATT-9694}).
+     */
+    @NonNull
+    public List<SportSpeedBand> getActiveSportTypeSpeedBands() {
+        List<SportSpeedBand> bands = new ArrayList<>();
+        String[] columns = new String[]{
+                SportType.BASE_SPORT_TYPE,
+                SportType.MIN_AVG_SPEED,
+                SportType.MAX_AVG_SPEED,
+                SportType.GOLDEN_CHEETAH_NAME,
+                SportType.STRAVA_NAME,
+                SportType.TCX_NAME
+        };
+        try (Cursor cursor = getDatabase().query(
+                SportType.TABLE,
+                columns,
+                SportType.IS_PLACEHOLDER + "=0",
+                null, null, null, null)) {
+            if (cursor != null) {
+                int baseCol = cursor.getColumnIndex(SportType.BASE_SPORT_TYPE);
+                int minCol = cursor.getColumnIndex(SportType.MIN_AVG_SPEED);
+                int maxCol = cursor.getColumnIndex(SportType.MAX_AVG_SPEED);
+                int gcCol = cursor.getColumnIndex(SportType.GOLDEN_CHEETAH_NAME);
+                int stravaCol = cursor.getColumnIndex(SportType.STRAVA_NAME);
+                int tcxCol = cursor.getColumnIndex(SportType.TCX_NAME);
+                while (cursor.moveToNext()) {
+                    if (baseCol < 0 || minCol < 0 || maxCol < 0
+                            || cursor.isNull(minCol) || cursor.isNull(maxCol)) {
+                        continue;
+                    }
+                    BSportType baseSport = EnumUtils.safeValueOf(
+                            BSportType.class, cursor.getString(baseCol), BSportType.UNKNOWN, TAG);
+                    bands.add(new SportSpeedBand(
+                            baseSport,
+                            cursor.getDouble(minCol),
+                            cursor.getDouble(maxCol),
+                            gcCol >= 0 ? cursor.getString(gcCol) : null,
+                            stravaCol >= 0 ? cursor.getString(stravaCol) : null,
+                            tcxCol >= 0 ? cursor.getString(tcxCol) : null
+                    ));
+                }
+            }
+        }
+        return bands;
     }
 
     /**

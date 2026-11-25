@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-TST-TRK-P2`  
-**Version**: 1.0.65  
+**Version**: 1.0.67  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 112
+**Total Tests**: 113
 
 ---
 
@@ -2320,6 +2320,21 @@
 
 ---
 
+### TST-FIL-047: **Walking-Speed `BIKE` Classification & Multisport Gating + Bounded `SportTypes` Speed Priors Suite (`ATT-9694`)** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-FIL-047` (`REQ-FIL-047.1`–`REQ-FIL-047.3`)
+- **Component**: `SportSpeedPriors.kt`, `SportSpeedPriorsLoader.kt`, `SportTypeDatabaseManager.java`, `PhoneCarriageClassifier.kt`, `KinematicSportTypeDiscriminator.kt`, `MultisportTransitionDetector.kt`, `SpeedAndLocationDevice_ATTFused.kt`, `OfflineTelemetryReplayHarness.kt`
+- **Jira**: `ATT-9694` | **Priority**: High | **Type**: Functional | **Verification Method**: Unit, Integration
+- **Test Description**:
+  1. *Bounded `SportSpeedPriors`, Off-Main-Thread Loader & `ATTFused` Wiring (`TST-FIL-047.1` — `SportSpeedPriorsTest#fromBands_userConfiguredSportTypes_reflectsExactBoundedBands_tstFil047_1`, `SportSpeedPriorsTest#fromBands_extremeAndInvalidRows_clampedToSafeBiomechanicalBounds_tstFil047_1`, `SportSpeedPriorsTest#fromBands_customLocalizedWalkWithoutEnglishMetadata_recognizedBySpeedBand_tstFil047_1`, `SportSpeedPriorsLoaderTest#loadAsync_executesOffMainThread_excludesPlaceholders_andPropagatesIntoAttFused_tstFil047_1`, `SportSpeedPriorsLoaderTest#loadAsync_skipsBackgroundDispatchWhenSdkIntIsZero_andIgnoresLateCallbackAfterShutdown_tstFil047_1`, `TryWithResourcesCursorAuditTest`, `ArchitectureConformanceContractTest`)*:
+     • Verified `SportSpeedPriors` clamps extreme/misconfigured DB bands to `[1.5, 2.5]`, `[1.8, 3.5]`, and `[3.5, 6.5]` m/s, ignores placeholder/`0.0`/non-finite rows, excludes `"run"/"Run"/"Running"` metadata from walk matching, maps user `Spaziergang [0.1, 2.0]` + `Einkaufen [2.78, 5.56]` accurately, loads off-main-thread via Robolectric `SportTypeDatabaseManager.getActiveSportTypeSpeedBands()` into `SpeedAndLocationDevice_ATTFused` on `init`/`onAccumulatorsReset()`, honors `@Volatile mIsShuttingDown` & `SDK_INT == 0` plain-JVM skip, and passes cursor hygiene & `<= 1,500` LoC caps.
+  2. *`PhoneCarriageClassifier` & `KinematicSportTypeDiscriminator` Walking-Speed `BIKE_*` Gating (`TST-FIL-047.2` — `PhoneCarriageClassifierTest#testWalkingSpeedBikeSuppressionAndBoundedSportSpeedPriors_tstFil047_2`, `KinematicSportTypeDiscriminatorTest#boundedSportSpeedPriors_gateCarriageVotesAndHighSpeedThresholdAndSurviveReset_tstFil047_2`)*:
+     • Verified walking speeds `0.55–1.95 m/s` (without active wheel sensor) emit `0%` `BIKE_*` and `0%` `RUN_*` -> `WALKING_TRANSITION`, custom `SportSpeedPriors` bounds, `wheelActiveMoving` bypass at `1.2 m/s`, `2.0 m/s` steep uphill MTB (`TST-FIL-034.4`) & `1.85 m/s` established cycling climb continuity, `<= 1.0 s` `STATIONARY` fast-exit (`TST-FIL-043.1`–`.3`), `runCyclingMaskSpeedMps >= 5.5` sprint mask, and `KinematicSportTypeDiscriminator` priors + `reset()` retention.
+  3. *Symmetric `MultisportTransitionDetector` `BIKE` Window Gating & Offline Pixel 10 Replay (`TST-FIL-047.3` — `MultisportTransitionDetectorTest#testBikeEstablishmentAndRunToBikeGuardrails_blockWalkingSpeedsAndRespectPriorsAndHardware_tstFil047_3`, `OfflineTelemetryReplayHarnessTest#replay_walkingWithDinnerStopAndArchivedPixel10Sessions_zeroPhantomBikeLocksAndCyclingPreserved_tstFil047_3`, `./gradlew :app:replayRawTelemetry`)*:
+     • Verified `evaluateBikeWindow` rejects `0.53–2.5 m/s` walking/sub-threshold motion in Phase 1 & Phase 2, honors `hasActiveBikeHardware` bypass, recovers cleanly from slow starts advancing `enterAnchor` while preserving `exitAnchor` and pause immunity, preserves genuine `RUN -> T1 -> BIKE` (`4.5 m/s`) & duathlon carryover, and verified `140/140` PASS across `15` targeted suites plus `:app:replayRawTelemetry` on all 4 archived Pixel 10 sidecars (`2026-11-23_093732`, `2026-11-23_171814`, `2026-11-23_182416`: `0.0%` `BIKE_*`, `established=UNKNOWN`, `0` transitions; `2026-11-22_081402`: `established=BIKE`, `inferred=BIKE`, `0` transitions, `0` walking strides).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2508,3 +2523,5 @@
 | `1.0.63` | 2026-11-25 | Lane 2 Author (`ATT-8446`, `--as agent1`) | `ATT-8446` | Promoted `TST-CON-064` (`.1`–`.3`) to `[Verified]` with 6 verbatim `TestClass#testMethod` citations (`117/117` PASS across 14 targeted suites: `HrmSensorCapabilityHelperTest 5/5`, `DeviceTypeSensorMappingTest 3/3`, `DevicesDatabaseManagerTest 18/18`, `SensorSourceDialogPriorityTest 8/8`, `SensorSourceDialogContractTest 15/15`, `MySensorManagerPriorityTest 8/8`, `MySensorManagerCadenceArbitrationTest 3/3`, `EditSensorFieldViewModelTest 28/28`, `ArchitectureConformanceContractTest 11/11`, `InterfaceSignatureDriftContractTest 3/3`, `SourceTextReadingAuditContractTest 6/6`, `SystemLiveTrackingRequirementsContractTest 4/4`, `ComposeSafePainterContractTest 2/2`, `SensorSourceColorContractTest 3/3`; `0` new warnings; live `emulator-5554` `CADENCE` `SensorSourceDialog` smoke `0` crashes + `3` `Rule 8.5` PNGs inspected). |
 | `1.0.64` | 2026-11-25 | Lane 3 Author (`ATT-9695`, `--as agent1`) | `ATT-9695` | Added `[Planned]` `TST-FIL-046` (`.1`–`.3`, symmetric with `REQ-FIL-046`) covering `BANALService` Tier-4 `mResolvedBSportType` precedence & reset, `TrackerService` propagation, `SmartphoneImuCadenceEstimator` `6.0 s` sustained unclassified walking dwell & cycling/`OTHER`/`STATIONARY` suppression, `SpeedAndLocationDevice_ATTFused` Robolectric integration, pure-JVM replay on synthetic + Pixel 10 walk/bakery-stop logs, and LoC/SWE.3 contracts (`N/A - 0 string changes`). |
 | `1.0.65` | 2026-11-25 | Lane 3 Author (`ATT-9695`, `--as agent1`) | `ATT-9695` | Promoted `TST-FIL-046` (`.1`–`.3`) to `[Verified]` with 6 verbatim `TestClass#testMethod` citations (`190/190` PASS across `15` targeted suites: `BANALServiceSportInferenceTest 3/3`, `TrackerServiceStateMachineCharacterisationTest 9/9`, `KinematicSportTypeDiscriminatorTest 7/7`, `SmartphoneImuCadenceEstimatorTest 13/13`, `SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest 4/4`, `OfflineTelemetryReplayHarnessTest 12/12` [incl. real Pixel 10 sidecars `2026-11-23_093732`, `2026-11-23_171814`, `2026-11-22_081402`], `SpeedAndLocationDevice_ATTFusedTest 42/42`, `BANALServiceMultisportTransitionTest 4/4`, `PhoneCarriageClassifierTest 21/21`, `OfflineReplayCliTest 4/4`, `TrackerServiceFinalizationTest 36/36`, `TrackerServiceResumeTest 18/18`, `ArchitectureConformanceContractTest 11/11`, `DetailedDesignParityContractTest 3/3`, `InterfaceSignatureDriftContractTest 3/3`; `0` new warnings; live `emulator-5554` smoke `0` crashes + `Rule 8.5` PNG verified; SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-9695/`). |
+| `1.0.66` | 2026-11-25 | Lane 2 Author (`ATT-9694`, `--as agent1`) | `ATT-9694` | Added `[Planned]` `TST-FIL-047` (`.1`–`.3`, symmetric with `REQ-FIL-047`) covering bounded `SportSpeedPriors` clamping & off-main-thread `SportTypes` loading (`SDK_INT == 0` safe), `PhoneCarriageClassifier` & `KinematicSportTypeDiscriminator` walking-speed `BIKE_*` suppression + uphill MTB continuity, symmetric `MultisportTransitionDetector` `BIKE` sliding-window gating, and offline Pixel 10 replay across `2026-11-22_081402`, `2026-11-23_093732`, `2026-11-23_171814`, and `2026-11-23_182416` (`N/A - 0 string changes`). |
+| `1.0.67` | 2026-11-25 | Lane 2 Author (`ATT-9694`, `--as agent1`) | `ATT-9694` | Promoted `TST-FIL-047` (`.1`–`.3`) to `[Verified]` with 9 verbatim `TestClass#testMethod` citations (`140/140` PASS across `15` targeted suites: `SportSpeedPriorsTest 3/3`, `SportSpeedPriorsLoaderTest 2/2`, `PhoneCarriageClassifierTest 22/22`, `KinematicSportTypeDiscriminatorTest 8/8`, `MultisportTransitionDetectorTest 12/12`, `SpeedAndLocationDevice_ATTFusedTest 42/42`, `SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest 4/4`, `BANALServiceMultisportTransitionTest 4/4`, `SportTypeDatabaseManagerStravaTest 4/4`, `SportTypeRealSqliteMigrationTest 3/3`, `OfflineTelemetryReplayHarnessTest 13/13`, `OfflineReplayCliTest 4/4`, `ArchitectureConformanceContractTest 11/11`, `TryWithResourcesCursorAuditTest 5/5`, `InterfaceSignatureDriftContractTest 3/3`; `0` new warnings; `:app:replayRawTelemetry` verified across all 4 Pixel 10 sidecars `093732`/`171814`/`182416`/`081402`; SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-9694/`). |

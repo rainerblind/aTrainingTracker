@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutClusterMapperTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-25T07:23:41.153Z" hostname="rainer-HP-EliteBook-850-G5" time="2.06">
+  <properties/>
+  <testcase name="testWorkoutClusterRepository_fromCursorBatchKeys" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterMapperTest" time="0.212"/>
+  <testcase name="testEquipmentDataProvider_delegatesToWorkoutEquipmentDto" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterMapperTest" time="0.205"/>
+  <testcase name="testClusterWorkoutCandidateDto_fromCursor_extractsAllFields" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterMapperTest" time="0.202"/>
+  <testcase name="testClusterWorkoutCandidateDto_fromCursor_handlesNullStrings" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterMapperTest" time="0.212"/>
+  <testcase name="testWorkoutEquipmentDto_fromCursor_extractsSportAndEquipmentId" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterMapperTest" time="0.201"/>
+  <testcase name="testWorkoutBoundsDto_fromCursor_extractsNonNullCoordinates" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterMapperTest" time="0.206"/>
+  <testcase name="testSourceCodeContract_zeroManualCursorExtractionsInTargetClasses" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterMapperTest" time="0.203"/>
+  <testcase name="testWorkoutCluster_fromCursor_extractsAllFields" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterMapperTest" time="0.233"/>
+  <testcase name="testWorkoutBoundsDto_fromCursor_handlesNullCoordinates" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterMapperTest" time="0.194"/>
+  <testcase name="testWorkoutBatchKey_fromCursor_singleRowSymmetry" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterMapperTest" time="0.192"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

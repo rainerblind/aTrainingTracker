@@ -31,7 +31,7 @@ import kotlin.math.sin
  * 9 [PhoneCarriageMode] states, transition hysteresis, glance detection, `Zum Bäcker`
  * dismount timeline, and missing-sensor fallback (REQ-FIL-028.1, TST-FIL-028.1, ATT-8890).
  */
-// Linked test specs: TST-FIL-028, TST-FIL-034, TST-FIL-035, TST-FIL-039, TST-FIL-043, TST-FIL-044
+// Linked test specs: TST-FIL-028, TST-FIL-034, TST-FIL-035, TST-FIL-039, TST-FIL-043, TST-FIL-044, TST-FIL-047
 class PhoneCarriageClassifierTest {
 
     private fun quaternionFromEulerXDeg(tiltDeg: Double): FloatArray {
@@ -2130,5 +2130,208 @@ class PhoneCarriageClassifierTest {
                 }
             }
         }
+    }
+
+    // REQ-FIL-047.2 / TST-FIL-047.2: Walking-speed BIKE_* suppression (< bikeLowSpeedFloorMps without wheel),
+    // zero all-(-Infinity) RUN_WAIST_HIP leak, custom SportSpeedPriors bounds, wheel/established-climb continuity & sprint mask.
+    @Test
+    fun testWalkingSpeedBikeSuppressionAndBoundedSportSpeedPriors_tstFil047_2() {
+        // 1. Brisk walking at 1.75–1.95 m/s with pocket swing & confirmedNoFootstrikes == true (zero STEP events,
+        //    low 2.1–4.2 Hz impact RMS) under SportContextHint.UNKNOWN must NEVER emit BIKE_* or RUN_WAIST_HIP!
+        for (speedMps in listOf(0.55, 1.44, 1.75, 1.95)) {
+            val walker = PhoneCarriageClassifier()
+            walker.setSportContext(SportContextHint.UNKNOWN)
+            walker.setStepDetectorRegistered(false)
+            for (t in 0L..8_000L step 20L) {
+                val sec = t / 1000.0
+                val phase = 2.0 * PI * 1.25 * sec // cycling-like pocket swing frequency
+                walker.ingestRotationVector(quaternionFromEulerXDeg(58.0 + 24.0 * sin(phase)), t)
+                walker.ingestGyro(0.75 * sin(phase), 0.75, t)
+                walker.ingestAccelerometer(0.2 * sin(phase), 0.2 * cos(phase), 9.81 + 0.4 * sin(phase), t)
+                if (t % 200L == 0L) walker.ingestBarometerAltitude(420.0 + 0.45 * sin(PI * sec), t)
+                if (t % 1_000L == 0L) {
+                    walker.ingestGnssSpeed(speedMps, bearingDeg = 90.0, accuracyMeters = 4.0, timestampMs = t)
+                    val mode = walker.classify(t)
+                    assertFalse("Walking at $speedMps m/s must never emit BIKE_* (was $mode at t=$t)", mode.isCyclingMode())
+                    assertFalse("Walking at $speedMps m/s must never leak to RUN_* (was $mode at t=$t)", mode.isRunningMode())
+                }
+            }
+            assertEquals("Walking at $speedMps m/s must resolve to WALKING_TRANSITION", PhoneCarriageMode.WALKING_TRANSITION, walker.currentMode)
+        }
+
+        // 2. Custom user SportSpeedPriors (Spaziergang max=2.2, Einkaufen min=2.78, Run max=6.2):
+        //    - Suppresses BIKE_* at 2.15 m/s without wheel, preserves 2.25 m/s steep uphill MTB with confirmedNoFootstrikes,
+        //    - Preserves wheelActiveMoving bypass at 1.2 m/s,
+        //    - Preserves already-established cycling session slowing to 1.85 m/s on steep climb (confirmedNoFootstrikes),
+        //    - Raises Sport=RUN cycling mask up to 6.2 m/s and retains priors across reset().
+        val customPriors = SportSpeedPriors(maxWalkSpeedMps = 2.2, minBikeSpeedMps = 2.78, maxRunSpeedMps = 6.2)
+
+        val briskCustom = PhoneCarriageClassifier(sportSpeedPriors = customPriors)
+        for (t in 0L..7_000L step 20L) {
+            val sec = t / 1000.0
+            val phase = 2.0 * PI * 1.2 * sec
+            briskCustom.ingestRotationVector(quaternionFromEulerXDeg(58.0 + 22.0 * sin(phase)), t)
+            briskCustom.ingestGyro(0.70 * sin(phase), 0.70, t)
+            briskCustom.ingestAccelerometer(0.2, 0.2, 9.81 + 0.3 * sin(phase), t)
+            if (t % 200L == 0L) briskCustom.ingestBarometerAltitude(420.0 + 0.45 * sin(PI * sec), t)
+            if (t % 1_000L == 0L) {
+                briskCustom.ingestGnssSpeed(2.15, bearingDeg = 90.0, accuracyMeters = 4.0, timestampMs = t)
+                briskCustom.classify(t)
+            }
+        }
+        assertEquals(PhoneCarriageMode.WALKING_TRANSITION, briskCustom.currentMode)
+
+        // Wheel sensor bypasses low-speed floor cleanly at 1.2 m/s
+        val wheelClimb = PhoneCarriageClassifier(sportSpeedPriors = customPriors)
+        feedWindow50Hz(
+            classifier = wheelClimb,
+            startMs = 0L,
+            durationMs = 6_000L,
+            basePitchDeg = 55.0,
+            pitchAmpDeg = 22.0,
+            oscFreqHz = 1.15,
+            yawAmpRadPerSec = 0.70,
+            baroAmpM = 0.45,
+            speedMps = 1.2,
+            wheelSpeedMps = 1.2
+        )
+        assertTrue("Active wheel sensor at 1.2 m/s must still classify BIKE_*", wheelClimb.currentMode.isCyclingMode())
+
+        // Already-established cycling session slowing to 1.85 m/s on steep climb (confirmedNoFootstrikes) stays BIKE_*
+        val establishedClimb = PhoneCarriageClassifier(sportSpeedPriors = customPriors)
+        for (t in 0L..6_000L step 20L) {
+            val sec = t / 1000.0
+            val phase = 2.0 * PI * 1.2 * sec
+            establishedClimb.ingestRotationVector(quaternionFromEulerXDeg(56.0 + 20.0 * sin(phase)), t)
+            establishedClimb.ingestGyro(0.68 * sin(phase), 0.68, t)
+            establishedClimb.ingestAccelerometer(0.2, 0.2, 9.81 + 0.3 * sin(phase), t)
+            if (t % 200L == 0L) establishedClimb.ingestBarometerAltitude(500.0 + 0.45 * sin(PI * sec), t)
+            if (t % 1_000L == 0L) {
+                establishedClimb.ingestGnssSpeed(6.0, bearingDeg = 90.0, accuracyMeters = 4.0, timestampMs = t)
+                establishedClimb.classify(t)
+            }
+        }
+        assertTrue("Expected established BIKE_* at 6.0 m/s", establishedClimb.currentMode.isCyclingMode())
+        for (t in 6_020L..12_000L step 20L) {
+            val sec = t / 1000.0
+            val phase = 2.0 * PI * 1.0 * sec
+            establishedClimb.ingestRotationVector(quaternionFromEulerXDeg(56.0 + 18.0 * sin(phase)), t)
+            establishedClimb.ingestGyro(0.62 * sin(phase), 0.62, t)
+            establishedClimb.ingestAccelerometer(0.2, 0.2, 9.81 + 0.3 * sin(phase), t)
+            if (t % 200L == 0L) establishedClimb.ingestBarometerAltitude(500.0 + 0.45 * sin(PI * sec), t)
+            if (t % 1_000L == 0L) {
+                establishedClimb.ingestGnssSpeed(1.85, bearingDeg = 90.0, accuracyMeters = 4.0, timestampMs = t)
+                establishedClimb.classify(t)
+            }
+        }
+        assertTrue("Established cycling climbing at 1.85 m/s with confirmedNoFootstrikes must hold BIKE_*", establishedClimb.currentMode.isCyclingMode())
+
+        // Fast runner with maxRunSpeedMps = 6.2 masks BIKE_* at 5.8 m/s; low DB avg (4.0) still preserves >= 5.5 mask
+        val fastRunMask = PhoneCarriageClassifier(sportSpeedPriors = customPriors)
+        fastRunMask.setSportContext(SportContextHint.RUNNING)
+        for (t in 0L..6_000L step 20L) {
+            val sec = t / 1000.0
+            val phase = 2.0 * PI * 1.25 * sec
+            fastRunMask.ingestRotationVector(quaternionFromEulerXDeg(58.0 + 24.0 * sin(phase)), t)
+            fastRunMask.ingestGyro(0.70 * sin(phase), 0.70, t)
+            if (t % 1_000L == 0L) {
+                fastRunMask.ingestGnssSpeed(5.8, bearingDeg = 90.0, accuracyMeters = 4.0, timestampMs = t)
+                assertFalse("Sport=RUN at 5.8 m/s < maxRunSpeedMps(6.2) must mask BIKE_*", fastRunMask.classify(t).isCyclingMode())
+            }
+        }
+        fastRunMask.reset()
+        assertEquals("reset() must retain loaded SportSpeedPriors", customPriors, fastRunMask.currentSportSpeedPriors)
+    }
+
+    // REQ-FIL-047.2 / TST-FIL-047.2 (Stage 6 Bounce 1/5 regression): Fresh-install SportTypes.db priors
+    // (MTB=[4.0, 5.5] -> clamped minBike=3.5 m/s) must suppress BIKE_* up to 3.49 m/s WITHOUT forcing
+    // 2.01-3.49 m/s auto-detect (UNKNOWN) runners into WALKING_TRANSITION when !confirmedNoFootstrikes.
+    @Test
+    fun testFreshInstallPriors_autoDetectRunnerAtThreeMpsWithAcfDip_classifiesAsRunNotWalking_tstFil047_2() {
+        val freshInstallPriors = SportSpeedPriors.fromBands(
+            listOf(SportSpeedBand(com.atrainingtracker.banalservice.BSportType.BIKE, 4.0, 5.5, "MTB", "MTB", "mountain_biking"))
+        )
+        assertEquals(3.5, freshInstallPriors.minBikeSpeedMps, 1e-6)
+        assertEquals(2.0, freshInstallPriors.maxWalkSpeedMps, 1e-6)
+
+        // Sub-case 1: Auto-detect (UNKNOWN) runner at 3.0 m/s with stepDetectorRegistered=true entering
+        // a 6 s uneven-trail step-batching gap + ACF dip (in-band chirped impact RMS >= 2.2 m/s^2 ->
+        // !confirmedNoFootstrikes, !hasActiveRunningCadence, suppressCyclingForLowSpeed=true at 3.0 < 3.5).
+        // Must stay RUN_* (never drop to WALKING_TRANSITION or BIKE_*).
+        val trailGapClf = PhoneCarriageClassifier(sportSpeedPriors = freshInstallPriors)
+        trailGapClf.setSportContext(SportContextHint.UNKNOWN)
+        trailGapClf.setStepDetectorRegistered(true)
+        var lastStepMs = -400L
+        for (t in 0L..5_000L step 20L) {
+            val sec = t / 1000.0
+            val phase = 2.0 * PI * 1.35 * sec
+            trailGapClf.ingestRotationVector(quaternionFromEulerXDeg(76.0 + 16.0 * sin(phase)), t)
+            trailGapClf.ingestGyro(0.55 * sin(phase), 0.55, t)
+            trailGapClf.ingestAccelerometer(0.3, 0.2, 9.81 + 4.0 * sin(2.0 * PI * 2.7 * sec), t)
+            if (t % 200L == 0L) trailGapClf.ingestBarometerAltitude(450.0 + 0.25 * sin(PI * sec), t)
+            if (t - lastStepMs >= 370L) { trailGapClf.ingestStepEvent(t); lastStepMs = t }
+            if (t % 1_000L == 0L) {
+                trailGapClf.ingestGnssSpeed(3.0, bearingDeg = 90.0, accuracyMeters = 4.0, timestampMs = t)
+                trailGapClf.classify(t)
+            }
+        }
+        assertTrue("Expected initial RUN_* lock before trail gap, got ${trailGapClf.currentMode}", trailGapClf.currentMode.isRunningMode())
+        for (t in 5_020L..11_000L step 20L) {
+            val sec = t / 1000.0
+            val phase = 2.0 * PI * 1.35 * sec
+            trailGapClf.ingestRotationVector(quaternionFromEulerXDeg(76.0 + 16.0 * sin(phase)), t)
+            trailGapClf.ingestGyro(0.55 * sin(phase), 0.55, t)
+            val trailAccelZ = 9.81 + 3.8 * sin(2.0 * PI * 2.4 * sec + 2.2 * sin(1.7 * sec)) + 2.4 * cos(2.0 * PI * 3.55 * sec)
+            trailGapClf.ingestAccelerometer(0.4, -0.3, trailAccelZ, t)
+            if (t % 200L == 0L) trailGapClf.ingestBarometerAltitude(450.0 + 0.25 * sin(PI * sec), t)
+            if (t % 1_000L == 0L) {
+                trailGapClf.ingestGnssSpeed(3.0, bearingDeg = 90.0, accuracyMeters = 4.0, timestampMs = t)
+                val mode = trailGapClf.classify(t)
+                assertTrue(
+                    "Uneven-trail 3.0 m/s runner under minBike=3.5 must remain RUN_* at t=$t (was $mode)",
+                    mode.isRunningMode()
+                )
+            }
+        }
+
+        // Sub-case 2: Cold-start auto-detect (UNKNOWN) runner at 3.0 m/s with TYPE_STEP_DETECTOR absent/denied
+        // and in-band chirped high-impact accel (!confirmedNoFootstrikes, !hasActiveRunningCadence).
+        val noStepClf = PhoneCarriageClassifier(sportSpeedPriors = freshInstallPriors)
+        noStepClf.setSportContext(SportContextHint.UNKNOWN)
+        noStepClf.setStepDetectorRegistered(false)
+        for (t in 0L..7_000L step 20L) {
+            val sec = t / 1000.0
+            val phase = 2.0 * PI * 1.35 * sec
+            noStepClf.ingestRotationVector(quaternionFromEulerXDeg(76.0 + 16.0 * sin(phase)), t)
+            noStepClf.ingestGyro(0.55 * sin(phase), 0.55, t)
+            val trailAccelZ = 9.81 + 3.8 * sin(2.0 * PI * 2.4 * sec + 2.2 * sin(1.7 * sec)) + 2.4 * cos(2.0 * PI * 3.55 * sec)
+            noStepClf.ingestAccelerometer(0.4, -0.3, trailAccelZ, t)
+            if (t % 200L == 0L) noStepClf.ingestBarometerAltitude(450.0 + 0.25 * sin(PI * sec), t)
+            if (t % 1_000L == 0L) {
+                noStepClf.ingestGnssSpeed(3.0, bearingDeg = 90.0, accuracyMeters = 4.0, timestampMs = t)
+                val mode = noStepClf.classify(t)
+                assertFalse("No-step-detector 3.0 m/s runner must not classify BIKE_* (was $mode at t=$t)", mode.isCyclingMode())
+            }
+        }
+        assertTrue(
+            "No-step-detector 3.0 m/s auto-detect runner with minBike=3.5 must resolve to RUN_*, got ${noStepClf.currentMode}",
+            noStepClf.currentMode.isRunningMode()
+        )
+
+        // Sub-case 3: Brisk walk at 1.8 m/s (<= maxWalk=2.0 m/s) under same fresh-install priors still resolves WALKING_TRANSITION
+        val walkClf = PhoneCarriageClassifier(sportSpeedPriors = freshInstallPriors)
+        walkClf.setSportContext(SportContextHint.UNKNOWN)
+        for (t in 0L..7_000L step 20L) {
+            val sec = t / 1000.0
+            val phase = 2.0 * PI * 0.90 * sec
+            walkClf.ingestRotationVector(quaternionFromEulerXDeg(72.0 + 12.0 * sin(phase)), t)
+            walkClf.ingestGyro(0.28 * sin(phase), 0.28, t)
+            walkClf.ingestAccelerometer(0.2, 0.2, 9.81 + 0.35 * sin(phase), t)
+            if (t % 1_000L == 0L) {
+                walkClf.ingestGnssSpeed(1.8, bearingDeg = 90.0, accuracyMeters = 4.0, timestampMs = t)
+                assertFalse("1.8 m/s walk must never classify BIKE_*", walkClf.classify(t).isCyclingMode())
+            }
+        }
+        assertEquals(PhoneCarriageMode.WALKING_TRANSITION, walkClf.currentMode)
     }
 }

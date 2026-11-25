@@ -50,6 +50,7 @@ import kotlin.math.sin
  *
  * Intentionally runs on plain JVM without Robolectric to enforce zero Android runtime dependency.
  */
+// Linked test specs: TST-EXP-046, TST-EXP-047, TST-FIL-046, TST-FIL-047
 class OfflineTelemetryReplayHarnessTest {
 
     @get:Rule
@@ -531,6 +532,103 @@ class OfflineTelemetryReplayHarnessTest {
             dedupedResult.scorecard.phoneEventsProcessed + dedupedResult.scorecard.polarEventsProcessed,
             dedupedResult.scorecard.totalEventsProcessed
         )
+    }
+
+    // REQ-FIL-047.3 / TST-FIL-047.3: Synthetic walk + stationary dinner + walk back produces 0 phantom BIKE locks/transitions;
+    // when local Pixel 10 raw telemetry archive is present, verifies all 4 real sessions end-to-end.
+    @Test
+    fun replay_walkingWithDinnerStopAndArchivedPixel10Sessions_zeroPhantomBikeLocksAndCyclingPreserved_tstFil047_3() {
+        // 1. Always-on synthetic walk (0.8–1.85 m/s) -> stationary stop -> walk back (0.9–1.5 m/s) with pocket IMU
+        val syntheticRows = ArrayList<PhoneRawTelemetryRow>(12_000)
+        val baseEpochMs = 1_760_000_000_000L
+        var lat = 48.1351
+        val lon = 11.5820
+        val metersPerDegLat = 111_111.0
+        for (tMs in 0L..120_000L step 20L) {
+            val sec = tMs / 1000.0
+            val tNs = tMs * 1_000_000L
+            val isStop = tMs in 40_000L..80_000L
+            val spd = when {
+                isStop -> 0.0
+                tMs < 15_000L -> 0.75
+                tMs < 40_000L -> 1.80
+                else -> 1.35
+            }
+            val swing = if (isStop) 0.1 else 20.0 * sin(2.0 * PI * 1.15 * sec)
+            val pitchRad = Math.toRadians(60.0 + swing)
+            val qx = sin(pitchRad / 2.0)
+            val qw = cos(pitchRad / 2.0)
+            syntheticRows.add(PhoneRawTelemetryRow(tNs, baseEpochMs + tMs, PhoneRawChannel.ROTVEC, qx, 0.0, 0.0, qw))
+            syntheticRows.add(
+                PhoneRawTelemetryRow(
+                    tNs, baseEpochMs + tMs, PhoneRawChannel.GYRO,
+                    if (isStop) 0.01 else 0.65 * sin(2.0 * PI * 1.15 * sec), 0.0, 0.0
+                )
+            )
+            syntheticRows.add(
+                PhoneRawTelemetryRow(
+                    tNs, baseEpochMs + tMs, PhoneRawChannel.ACC,
+                    0.15, 0.15, 9.81 + if (isStop) 0.02 else 0.4 * sin(2.0 * PI * 1.65 * sec)
+                )
+            )
+            if (tMs % 1_000L == 0L) {
+                lat += spd / metersPerDegLat
+                syntheticRows.add(PhoneRawTelemetryRow(tNs, baseEpochMs + tMs, PhoneRawChannel.GNSS, lat, lon, 450.0, spd, 0.0, 4.0))
+            }
+        }
+        val synResult = OfflineTelemetryReplayHarness.replayParsed(
+            syntheticRows,
+            emptyList(),
+            ReplayConfig(
+                enableErtsSmoothing = false,
+                sportSpeedPriors = com.atrainingtracker.banalservice.odometry.SportSpeedPriors(2.0, 2.78, 4.0)
+            )
+        )
+        val synBikePct = (synResult.scorecard.carriageModeDistributionPct[PhoneCarriageMode.BIKE_HANDLEBAR] ?: 0.0) +
+            (synResult.scorecard.carriageModeDistributionPct[PhoneCarriageMode.BIKE_JERSEY_BACK] ?: 0.0) +
+            (synResult.scorecard.carriageModeDistributionPct[PhoneCarriageMode.BIKE_FRONT_POCKET] ?: 0.0)
+        assertEquals("Synthetic walk+stop must emit 0% BIKE_* carriage modes", 0.0, synBikePct, 1e-6)
+        assertFalse(
+            "Synthetic walk+stop must never establish BIKE",
+            synResult.scorecard.multisportEstablishedSport == BSportType.BIKE
+        )
+        assertEquals("Synthetic walk+stop must emit 0 multisport transitions", 0, synResult.scorecard.multisportTransitionCount)
+
+        // 2. Archived Pixel 10 field recordings (if present locally on dev workstation)
+        val archiveDir = File("/home/rainer/AndroidStudioProjects/aTrainingTracker_raw_telemetry")
+        val userPriors = com.atrainingtracker.banalservice.odometry.SportSpeedPriors(2.0, 2.78, 4.0)
+        val walkFiles = listOf("2026-11-23_093732", "2026-11-23_171814", "2026-11-23_182416")
+            .map { File(archiveDir, "$it.phone_raw.csv.gz") }
+            .filter { it.exists() }
+        for (walkFile in walkFiles) {
+            val res = OfflineTelemetryReplayHarness.replay(
+                ReplayInputs(
+                    phoneRawFile = walkFile,
+                    config = ReplayConfig(enableErtsSmoothing = false, sportSpeedPriors = userPriors)
+                )
+            )
+            assertFalse(
+                "Archived walk ${walkFile.name} must never establish BIKE (was ${res.scorecard.multisportEstablishedSport})",
+                res.scorecard.multisportEstablishedSport == BSportType.BIKE
+            )
+            assertEquals(
+                "Archived walk ${walkFile.name} must emit 0 phantom multisport transitions",
+                0,
+                res.scorecard.multisportTransitionCount
+            )
+        }
+        val bikeFile = File(archiveDir, "2026-11-22_081402.phone_raw.csv.gz")
+        if (bikeFile.exists()) {
+            val bikeRes = OfflineTelemetryReplayHarness.replay(
+                ReplayInputs(
+                    phoneRawFile = bikeFile,
+                    config = ReplayConfig(enableErtsSmoothing = false, sportSpeedPriors = userPriors)
+                )
+            )
+            assertEquals("Cycling errand 2026-11-22_081402 must establish BIKE", BSportType.BIKE, bikeRes.scorecard.multisportEstablishedSport)
+            assertEquals("Cycling errand 2026-11-22_081402 must infer BIKE", BSportType.BIKE, bikeRes.scorecard.inferredSport)
+            assertEquals("Cycling errand 2026-11-22_081402 must emit 0 multisport transitions", 0, bikeRes.scorecard.multisportTransitionCount)
+        }
     }
 
     companion object {

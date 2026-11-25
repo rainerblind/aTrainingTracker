@@ -59,10 +59,11 @@ enum class SportContextHint {
  * `TYPE_GAME_ROTATION_VECTOR`, `TYPE_GYROSCOPE`, `TYPE_PRESSURE`) or permissions are absent.
  */
 @Suppress("MagicNumber", "TooManyFunctions", "ComplexMethod", "ReturnCount")
-class PhoneCarriageClassifier(
+class PhoneCarriageClassifier @JvmOverloads constructor(
     private val windowMs: Long = DEFAULT_WINDOW_MS,
     private val mountHysteresisMs: Long = DEFAULT_MOUNT_HYSTERESIS_MS,
-    private val dismountHysteresisMs: Long = DEFAULT_DISMOUNT_HYSTERESIS_MS
+    private val dismountHysteresisMs: Long = DEFAULT_DISMOUNT_HYSTERESIS_MS,
+    sportSpeedPriors: SportSpeedPriors = SportSpeedPriors.DEFAULT
 ) {
     companion object {
         const val DEFAULT_WINDOW_MS = 6_000L
@@ -117,6 +118,8 @@ class PhoneCarriageClassifier(
         private const val WAIST_TO_HANDHELD_HYSTERESIS_MIN_MS = 10_000L
         private const val WALK_MIN_SPEED_MPS = 0.35
         private const val WALK_MAX_SPEED_MPS = 2.50
+        private const val BIKE_SPEED_FLOOR_WINDOW_MS = 3_000L
+        private const val INTERLEAVED_HIGH_SPEED_HOLD_MS = 1_200L
         private const val SCORE_MARGIN = 0.85
     }
 
@@ -124,6 +127,7 @@ class PhoneCarriageClassifier(
     private data class GyroSample(val timestampMs: Long, val yawResidualRadPerSec: Double, val rawMagRadPerSec: Double)
     private data class BaroSample(val timestampMs: Long, val altitudeM: Double)
     private data class PositionSample(val timestampMs: Long, val lat: Double, val lon: Double)
+    private data class SpeedSample(val timestampMs: Long, val speedMps: Double)
     private data class AccelFootstrikeEval(
         val footstrikeFreqHz: Double?,
         val confirmedNoFootstrikes: Boolean,
@@ -138,6 +142,7 @@ class PhoneCarriageClassifier(
     private val gyroSamples = ArrayDeque<GyroSample>()
     private val baroSamples = ArrayDeque<BaroSample>()
     private val positionSamples = ArrayDeque<PositionSample>()
+    private val gnssSpeedSamples = ArrayDeque<SpeedSample>()
     private val stepTimestampsMs = ArrayDeque<Long>()
     private val glanceTimestampsMs = ArrayDeque<Long>()
 
@@ -159,6 +164,7 @@ class PhoneCarriageClassifier(
     private var lastWheelTimestampMs: Long = Long.MIN_VALUE
 
     private var sportHint: SportContextHint = SportContextHint.UNKNOWN
+    private var sportSpeedPriors: SportSpeedPriors = sportSpeedPriors.clamped()
     private var firstSampleTimestampMs: Long = Long.MIN_VALUE
     private var lastEventTimestampMs: Long = Long.MIN_VALUE
 
@@ -176,6 +182,14 @@ class PhoneCarriageClassifier(
         sportHint = hint
     }
 
+    val currentSportSpeedPriors: SportSpeedPriors
+        @Synchronized get() = sportSpeedPriors
+
+    @Synchronized
+    fun setSportSpeedPriors(priors: SportSpeedPriors) {
+        sportSpeedPriors = priors.clamped()
+    }
+
     /**
      * Records whether hardware `TYPE_STEP_DETECTOR` is actively registered (distinguishing
      * `stepDetectorActiveAndZero` from permission-denied/absent `stepDetectorUnavailable`; REQ-FIL-034.4).
@@ -191,6 +205,7 @@ class PhoneCarriageClassifier(
         gyroSamples.clear()
         baroSamples.clear()
         positionSamples.clear()
+        gnssSpeedSamples.clear()
         stepTimestampsMs.clear()
         glanceTimestampsMs.clear()
         accResampler.reset()
@@ -320,6 +335,7 @@ class PhoneCarriageClassifier(
             lastGnssSpeedMps = speedMps
             lastGnssTimestampMs = timestampMs
             lastGnssAccuracyMeters = accuracyMeters
+            gnssSpeedSamples.addLast(SpeedSample(timestampMs, speedMps))
         }
         if (isAccuracyTrusted(accuracyMeters) &&
             latitude != null && longitude != null &&
@@ -603,16 +619,37 @@ class PhoneCarriageClassifier(
         val stepDetectorActiveAndZero = stepDetectorRegistered && effectiveRunStepFreqHz == null && !highRunningImpact
         val confirmedNoFootstrikes = stepDetectorActiveAndZero || accelEval.confirmedNoFootstrikes
 
-        // Cycling guardrails: mask BIKE_* during Sport = RUN (< 5.5 m/s, no wheel) OR whenever active running
-        // footstrikes (>= 2.25 Hz) hold without a moving wheel sensor (REQ-FIL-035.1, REQ-FIL-039.1)
+        // Cycling guardrails: mask BIKE_* during Sport = RUN (< runCyclingMaskSpeedMps, no wheel),
+        // whenever active running footstrikes (>= 2.25 Hz) hold without a moving wheel sensor, OR
+        // when non-wheel effective speed sits below the bounded low-speed cycling floor (REQ-FIL-035.1, REQ-FIL-039.1, REQ-FIL-047.2).
+        val priors = sportSpeedPriors
         val noMovingWheel = !wheelActiveMoving && (wheelSpeed == null || wheelSpeed <= RUN_CYCLING_MASK_WHEEL_MAX_MPS)
         val hasActiveRunningCadence = effectiveRunStepFreqHz != null &&
             effectiveRunStepFreqHz >= ACTIVE_FOOTSTRIKE_MIN_HZ
+        val isEstablishedCycling = committedMode.isCyclingMode() || sportHint == SportContextHint.CYCLING
+        val bikeLowSpeedFloorMps = when {
+            confirmedNoFootstrikes && isEstablishedCycling -> SportSpeedPriors.MIN_BIKE_SPEED_FLOOR_MPS
+            confirmedNoFootstrikes -> minOf(
+                priors.minBikeSpeedMps,
+                maxOf(SportSpeedPriors.MIN_BIKE_SPEED_FLOOR_MPS, priors.maxWalkSpeedMps)
+            )
+            else -> priors.minBikeSpeedMps
+        }
+        val runCyclingMaskSpeedMps = maxOf(RUN_CYCLING_MASK_SPEED_MPS, priors.maxRunSpeedMps)
+        val sustainedBikeSpeedMps = sustainedGnssSpeedMps(nowMs) ?: effectiveSpeed
+        val bikeSpeedEvalMps = when {
+            effectiveSpeed == null -> null
+            unambiguousMotionExit -> maxOf(effectiveSpeed, sustainedBikeSpeedMps ?: effectiveSpeed)
+            else -> sustainedBikeSpeedMps ?: effectiveSpeed
+        }
         val suppressCyclingForRun = sportHint == SportContextHint.RUNNING &&
             noMovingWheel &&
-            (effectiveSpeed == null || effectiveSpeed < RUN_CYCLING_MASK_SPEED_MPS)
+            (effectiveSpeed == null || effectiveSpeed < runCyclingMaskSpeedMps)
         val suppressCyclingForFootstrikes = noMovingWheel && hasActiveRunningCadence
-        val suppressCycling = suppressCyclingForRun || suppressCyclingForFootstrikes
+        val suppressCyclingForLowSpeed = !wheelActiveMoving &&
+            bikeSpeedEvalMps != null &&
+            bikeSpeedEvalMps < bikeLowSpeedFloorMps
+        val suppressCycling = suppressCyclingForRun || suppressCyclingForFootstrikes || suppressCyclingForLowSpeed
         val suppressRunningForNoFootstrikes = !suppressCycling &&
             confirmedNoFootstrikes &&
             sportHint != SportContextHint.RUNNING
@@ -636,7 +673,10 @@ class PhoneCarriageClassifier(
             if (!easyRunSuppressWalk && walkingSpeedBand) {
                 val suppressWalkForNoFootstrikeClimb = !suppressCyclingForRun &&
                     confirmedNoFootstrikes &&
-                    effectiveSpeed >= CONFIRMED_NO_FOOTSTRIKE_WALK_SUPPRESS_SPEED_MPS
+                    (bikeSpeedEvalMps ?: effectiveSpeed) >= maxOf(
+                        CONFIRMED_NO_FOOTSTRIKE_WALK_SUPPRESS_SPEED_MPS,
+                        bikeLowSpeedFloorMps
+                    )
                 val gyroOrSwingPresent = yawResidualRms == null || yawResidualRms >= 0.08 ||
                     (orientationStats != null && orientationStats.swingSdDeg >= 4.0)
                 val isPendulumWalking = dominantFreqHz == null || dominantFreqHz in 0.60..1.12
@@ -650,11 +690,17 @@ class PhoneCarriageClassifier(
                     return RawEvaluation(PhoneCarriageMode.WALKING_TRANSITION, unambiguousMotionExit)
                 }
             }
-            // REQ-FIL-044.1: Sub-running speed floor closes the (0.15, 0.35) gap and irregular
-            // phone-handling / bike-pushing fallthrough so < 1.60 m/s without running cadence resolves to WALKING_TRANSITION.
-            if (!easyRunSuppressWalk &&
-                effectiveSpeed != null &&
+            // REQ-FIL-044.1 & REQ-FIL-047.2: Sub-running and sub-cycling non-wheel speeds without
+            // running cadence or easy-run confirmation resolve directly to WALKING_TRANSITION
+            // (closing (0.15, 0.35) bike-pushing and preventing all-(-Infinity) RUN_WAIST_HIP fallthrough,
+            // while ignoring single lagged fused samples interleaved <= 1.2 s after >= bikeLowSpeedFloorMps GPS).
+            val belowRunFloor = effectiveSpeed != null &&
                 effectiveSpeed < RUN_MIN_SPEED_MPS &&
+                !hasRecentHighSpeedSample(nowMs, INTERLEAVED_HIGH_SPEED_HOLD_MS, bikeLowSpeedFloorMps)
+            val lowSpeedWalkShortCircuit = suppressCyclingForLowSpeed &&
+                (confirmedNoFootstrikes || (effectiveSpeed != null && effectiveSpeed <= priors.maxWalkSpeedMps))
+            if (!easyRunSuppressWalk &&
+                (belowRunFloor || lowSpeedWalkShortCircuit) &&
                 !hasActiveRunningCadence
             ) {
                 return RawEvaluation(PhoneCarriageMode.WALKING_TRANSITION, unambiguousMotionExit)
@@ -943,6 +989,33 @@ class PhoneCarriageClassifier(
         }
         score += if (allowGlanceBonus && glanceCount >= 1) 3.8 else -1.8
         return score
+    }
+
+    /**
+     * Computes trailing [BIKE_SPEED_FLOOR_WINDOW_MS] mean GNSS speed so single-second noisy walking
+     * spikes (e.g. cold-start `2.26 m/s` on `2026-11-23_171814`) cannot trigger `BIKE_*` while
+     * lagged sub-`2.0 m/s` fused samples interleaved with `3.5 m/s` GPS cannot reset a cycling mount.
+     */
+    private fun sustainedGnssSpeedMps(nowMs: Long): Double? {
+        if (gnssSpeedSamples.isEmpty()) return null
+        val cutoff = nowMs - BIKE_SPEED_FLOOR_WINDOW_MS
+        var sum = 0.0
+        var count = 0
+        for (s in gnssSpeedSamples) {
+            if (s.timestampMs >= cutoff) {
+                sum += s.speedMps
+                count++
+            }
+        }
+        return if (count > 0) sum / count else null
+    }
+
+    private fun hasRecentHighSpeedSample(nowMs: Long, windowMs: Long, minSpeedMps: Double): Boolean {
+        val cutoff = nowMs - windowMs
+        for (s in gnssSpeedSamples) {
+            if (s.timestampMs >= cutoff && s.speedMps >= minSpeedMps) return true
+        }
+        return false
     }
 
     private fun effectiveSpeedMps(nowMs: Long): Double? {
@@ -1300,6 +1373,9 @@ class PhoneCarriageClassifier(
         }
         while (positionSamples.isNotEmpty() && positionSamples.peekFirst()!!.timestampMs < cutoff) {
             positionSamples.removeFirst()
+        }
+        while (gnssSpeedSamples.isNotEmpty() && gnssSpeedSamples.peekFirst()!!.timestampMs < cutoff) {
+            gnssSpeedSamples.removeFirst()
         }
         while (stepTimestampsMs.isNotEmpty() && stepTimestampsMs.peekFirst()!! < cutoff) {
             stepTimestampsMs.removeFirst()
