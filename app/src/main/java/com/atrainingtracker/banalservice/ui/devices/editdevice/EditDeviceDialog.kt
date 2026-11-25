@@ -212,6 +212,11 @@ fun EditDeviceDialog(
                     AttFusedAltitudeConfigSection(viewModel = viewModel)
                 }
 
+                // 7b. Post-Workout ERTS Smoothing Toggle for ATT Fused Sensors (ATT-8113, REQ-FIL-017.5, REQ-UI-2799.2)
+                if (shouldShowPostWorkoutErtsToggle(data.deviceType)) {
+                    PostWorkoutErtsSmoothingSection(viewModel = viewModel)
+                }
+
                 // 8. Radar V2 Bonding Hint & Tail Light Mode Control (ATT-7540, ATT-8450, ATT-8125, ATT-8731, REQ-CON-031.5, REQ-CON-048, REQ-CON-061.3, REQ-UI-2799.2)
                 if (data.deviceType == DeviceType.BIKE_RADAR) {
                     if (data.protocol == Protocol.BLUETOOTH_LE) {
@@ -1300,6 +1305,115 @@ private fun AttFusedToggleRow(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
             )
+        }
+    }
+}
+
+/**
+ * Returns `true` exclusively for the two virtual ATT Fused sensors that benefit from
+ * post-workout Extended Rauch-Tung-Striebel (`ERTS`) smoothing (`REQ-FIL-017.5`, `ATT-8113`).
+ */
+internal fun shouldShowPostWorkoutErtsToggle(deviceType: DeviceType): Boolean =
+    deviceType == DeviceType.SPEED_AND_LOCATION_ATT_FUSED ||
+    deviceType == DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED
+
+/**
+ * Stateful section binding the Post-Workout ERTS smoothing switch to [EditDeviceViewModel]
+ * draft/persisted state backed by `TuningPreferencesDataStore.KEY_POST_WORKOUT_ERTS_SMOOTHING`
+ * (`REQ-FIL-017.5`, `REQ-UI-2799.2`, `ATT-8113`).
+ */
+@Composable
+private fun PostWorkoutErtsSmoothingSection(
+    viewModel: EditDeviceViewModel,
+    modifier: Modifier = Modifier
+) {
+    val persistedEnabled by viewModel.postWorkoutErtsPersisted.collectAsStateWithLifecycle()
+    val draftEnabled by viewModel.postWorkoutErtsDraft.collectAsStateWithLifecycle()
+    val effectiveEnabled = draftEnabled ?: persistedEnabled
+
+    PostWorkoutErtsSmoothingCard(
+        checked = effectiveEnabled,
+        onCheckedChange = viewModel::onPostWorkoutErtsSmoothingChanged,
+        modifier = modifier
+    )
+}
+
+/**
+ * Stateless Material 3 card exposing the global Post-Workout ERTS smoothing toggle inside
+ * [EditDeviceDialog] for ATT Fused sensors, matching the shared preference in
+ * `SensorsGpsFilterSection` (`REQ-FIL-017.5`, `ATT-8113`).
+ */
+@Composable
+internal fun PostWorkoutErtsSmoothingCard(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedCard(
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("edit_device_post_workout_erts_card"),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.outlinedCardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = stringResource(R.string.tuning_post_workout_erts_smoothing_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 12.dp)
+                )
+                Switch(
+                    checked = checked,
+                    onCheckedChange = onCheckedChange,
+                    modifier = Modifier.testTag("edit_device_post_workout_erts_switch")
+                )
+            }
+            Text(
+                text = stringResource(R.string.tuning_post_workout_erts_smoothing_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Preview(name = "Post-Workout ERTS Card Light", showBackground = true)
+@Composable
+private fun PostWorkoutErtsSmoothingCardLightPreview() {
+    ATrainingTrackerTheme(darkTheme = false) {
+        Surface(modifier = Modifier.padding(16.dp)) {
+            PostWorkoutErtsSmoothingCard(checked = true, onCheckedChange = {})
+        }
+    }
+}
+
+@Preview(
+    name = "Post-Workout ERTS Card Dark",
+    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES,
+    showBackground = true
+)
+@Composable
+private fun PostWorkoutErtsSmoothingCardDarkPreview() {
+    ATrainingTrackerTheme(darkTheme = true) {
+        Surface(modifier = Modifier.padding(16.dp)) {
+            PostWorkoutErtsSmoothingCard(checked = false, onCheckedChange = {})
         }
     }
 }

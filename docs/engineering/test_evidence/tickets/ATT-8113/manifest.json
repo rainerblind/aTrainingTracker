@@ -1,0 +1,21 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "238e13b882deaff850b504ae10eb3946018d9f2e",
+  "files": {
+    "evidence_summary.json": "5c9c492de641a6d18cac06e37df7662984fd6604f48036540ee54b0e3e0eb8f5",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.EditDeviceDialogAltitudeGuardsTest.xml": "3b0b7c41b5e024f7edf54931ca8de9d84795df4179a6150ff0e286e3656f99e5",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.EditDeviceDialogGuardsTest.xml": "1e4ce2d2cad0cfbc8bf552cf975a1ecb0059ac7f7627c026d47a5dc6fc431a7a",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogDraftLocaleRotationTest.xml": "56a52954fc29debbc6c0c6a1c9c3015b438e57cb33f4c0d2f078909911b6be36",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogErtsSmoothingTest.xml": "90f39a13b45a05176a58aa37e258e318ec032b08bb5471d9312778cd90c071eb",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceViewModelTest.xml": "a67c5a76880f8be9225c9b75e7d8871f265a4263c2286e29a70c21d8e7fc3a7b",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.AndroidViewModelReflectionContractTest.xml": "5a7588302c2354318ab9de9a39758c99b19ea4f557853159d4e9a50ccfda8612",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml": "d86cadc3676c73c1150724429ef36a23eca99586949dc00516835fcd9d0a0dc0",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningErtsContractTest.xml": "1b3f6112d78281fa2f7dfb2105bf079fcb0c34b3bc9c2f1d8f53a6bb02ef10b7",
+    "screenshots/att8113_edit_device_altitude_erts_synced.png": "a770bdb2c29579c0ff8a7775e10647eefbdec9f33f9246d44586a1c92ae6e604",
+    "screenshots/att8113_edit_device_odometry_erts_after.png": "50a66a9a4d1438e7e3b911764b184c9cc97eb1b0453964d1443f95f2b18b9a1b",
+    "screenshots/att8113_edit_device_odometry_erts_before.png": "00d2db9752d8a4b9ac7b7732c007d4e20ad1af459b0d45a6c5660472f135fa04"
+  },
+  "run_started_utc": "2026-11-24T23:50:11.040485+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-8113"
+}

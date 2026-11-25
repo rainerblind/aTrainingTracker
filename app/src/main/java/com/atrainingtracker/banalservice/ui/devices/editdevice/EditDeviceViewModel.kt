@@ -39,8 +39,12 @@ import com.atrainingtracker.trainingtracker.database.WheelCircumferenceRecord
 import com.atrainingtracker.trainingtracker.database.WheelPosition
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -96,7 +100,8 @@ class EditDeviceViewModel internal constructor(
     private val banalServiceRepository: BANALServiceRepository,
     private val discoveryManager: EquipmentAndSportTypeDiscoveryManager,
     private val equipmentRepository: EquipmentRepository,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val tuningPreferencesDataStore: TuningPreferencesDataStore? = null
 ) : AndroidViewModel(application) {
 
     constructor(application: Application) : this(
@@ -105,8 +110,12 @@ class EditDeviceViewModel internal constructor(
         banalServiceRepository = BANALServiceRepository.getInstance(application),
         discoveryManager = EquipmentAndSportTypeDiscoveryManager.getInstance(application),
         equipmentRepository = EquipmentRepository.getInstance(application),
-        ioDispatcher = Dispatchers.IO
+        ioDispatcher = Dispatchers.IO,
+        tuningPreferencesDataStore = runCatching { TuningPreferencesDataStore.getInstance(application) }.getOrNull()
     )
+
+    private fun resolveTuningDataStore(): TuningPreferencesDataStore? =
+        tuningPreferencesDataStore ?: runCatching { TuningPreferencesDataStore.getInstance(application) }.getOrNull()
 
     private val useCase = GetMergedDevicesUseCase(
         devicesRepository,
@@ -151,6 +160,17 @@ class EditDeviceViewModel internal constructor(
     private val _radarLightDraft = MutableStateFlow<RadarLightDraftSelection?>(null)
     val radarLightDraft: StateFlow<RadarLightDraftSelection?> = _radarLightDraft.asStateFlow()
 
+    // Persisted & draft-staged Post-Workout ERTS smoothing preference for Fused sensors (REQ-FIL-017.5, REQ-UI-2799.2, ATT-8113)
+    private val _postWorkoutErtsPersisted = MutableStateFlow(
+        TuningPreferencesDefaults.DEFAULT_POST_WORKOUT_ERTS_SMOOTHING_ENABLED
+    )
+    val postWorkoutErtsPersisted: StateFlow<Boolean> = _postWorkoutErtsPersisted.asStateFlow()
+
+    private val _postWorkoutErtsDraft = MutableStateFlow<Boolean?>(null)
+    val postWorkoutErtsDraft: StateFlow<Boolean?> = _postWorkoutErtsDraft.asStateFlow()
+
+    private var ertsObserverJob: Job? = null
+
     private var hasUnsavedChanges: Boolean = false
     private var hasPendingBaselineReset: Boolean = false
     private var pendingBaselineResetCircumferenceMm: Int? = null
@@ -165,12 +185,16 @@ class EditDeviceViewModel internal constructor(
         if (_editingId.value == deviceId && _deviceSnapshot.value != null && hasUnsavedChanges) {
             return
         }
+        ertsObserverJob?.cancel()
+        ertsObserverJob = null
         hasUnsavedChanges = false
         hasPendingBaselineReset = false
         pendingBaselineResetCircumferenceMm = null
         _attFusedDraft.value = null
         _attFusedAltitudeDraft.value = null
         _radarLightDraft.value = null
+        _postWorkoutErtsDraft.value = null
+        _postWorkoutErtsPersisted.value = TuningPreferencesDefaults.DEFAULT_POST_WORKOUT_ERTS_SMOOTHING_ENABLED
         _wheelCircumferenceHistory.value = emptyList()
         val snapshot = devicesRepository.getDeviceSnapshotById(deviceId)
         if (snapshot == null) {
@@ -202,6 +226,22 @@ class EditDeviceViewModel internal constructor(
                         speedEnabled = AttFusedAltitudePreferences.isSpeedEnabled(application)
                     )
                 }.getOrElse { AttFusedAltitudeDraftConfig() }
+            }
+            if (shouldShowPostWorkoutErtsToggle(snapshot.deviceType)) {
+                val dataStore = resolveTuningDataStore()
+                _postWorkoutErtsPersisted.value = dataStore?.getTuningConfig()?.postWorkoutErtsSmoothingEnabled
+                    ?: TuningPreferencesDefaults.DEFAULT_POST_WORKOUT_ERTS_SMOOTHING_ENABLED
+                if (dataStore != null) {
+                    ertsObserverJob = viewModelScope.launch {
+                        runCatching {
+                            dataStore.postWorkoutErtsSmoothingFlow.collect { persisted ->
+                                if (_editingId.value == deviceId) {
+                                    _postWorkoutErtsPersisted.value = persisted
+                                }
+                            }
+                        }
+                    }
+                }
             }
             if (snapshot.protocol == Protocol.BLUETOOTH_LE && snapshot.deviceType == DeviceType.HRM) {
                 runCatching { devicesRepository.backfillLegacyPolarIdentityIfNeeded(snapshot) }
@@ -483,6 +523,15 @@ class EditDeviceViewModel internal constructor(
     }
 
     /**
+     * Stages a draft toggle change for Post-Workout ERTS smoothing without writing to
+     * [TuningPreferencesDataStore] until [saveChanges] is invoked (`REQ-FIL-017.5`, `REQ-UI-2799.2`, `ATT-8113`).
+     */
+    fun onPostWorkoutErtsSmoothingChanged(enabled: Boolean) {
+        hasUnsavedChanges = true
+        _postWorkoutErtsDraft.value = enabled
+    }
+
+    /**
      * Stages a draft radar tail light selection inside EditDeviceDialog without mutating
      * [RadarLightController] or `TuningPreferencesDataStore` until [saveChanges] is invoked
      * (`REQ-UI-2799.2`, `ATT-8125`).
@@ -512,12 +561,16 @@ class EditDeviceViewModel internal constructor(
      * the same device reloads fresh persisted values.
      */
     fun discardDraft() {
+        ertsObserverJob?.cancel()
+        ertsObserverJob = null
         hasUnsavedChanges = false
         hasPendingBaselineReset = false
         pendingBaselineResetCircumferenceMm = null
         _attFusedDraft.value = null
         _attFusedAltitudeDraft.value = null
         _radarLightDraft.value = null
+        _postWorkoutErtsDraft.value = null
+        _postWorkoutErtsPersisted.value = TuningPreferencesDefaults.DEFAULT_POST_WORKOUT_ERTS_SMOOTHING_ENABLED
         _editingId.value = null
         _deviceSnapshot.value = null
         _persistedDeviceIdentity.value = null
@@ -550,6 +603,7 @@ class EditDeviceViewModel internal constructor(
         val fusedDraft = _attFusedDraft.value
         val fusedAltDraft = _attFusedAltitudeDraft.value
         val radarDraft = _radarLightDraft.value
+        val ertsDraft = _postWorkoutErtsDraft.value
         val shouldResetBaseline = hasPendingBaselineReset
         val baselineCircumferenceMm = pendingBaselineResetCircumferenceMm ?: finalState.wheelCircumference
 
@@ -557,6 +611,7 @@ class EditDeviceViewModel internal constructor(
         hasPendingBaselineReset = false
         pendingBaselineResetCircumferenceMm = null
         _radarLightDraft.value = null
+        _postWorkoutErtsDraft.value = null
 
         if (finalState.deviceType == DeviceType.SPEED_AND_LOCATION_ATT_FUSED && fusedDraft != null) {
             AttFusedPreferences.setGnssEnabled(application, fusedDraft.gnssEnabled)
@@ -577,8 +632,17 @@ class EditDeviceViewModel internal constructor(
                 RadarLightController.setManualLightMode(radarDraft.mode)
             }
         }
+        val persistedErtsUpdate = ertsDraft?.takeIf { shouldShowPostWorkoutErtsToggle(finalState.deviceType) }
+        if (persistedErtsUpdate != null) {
+            _postWorkoutErtsPersisted.value = persistedErtsUpdate
+        }
 
         viewModelScope.launch {
+            if (persistedErtsUpdate != null) {
+                withContext(NonCancellable) {
+                    resolveTuningDataStore()?.updatePostWorkoutErtsSmoothingEnabled(persistedErtsUpdate)
+                }
+            }
             devicesRepository.updateDevice(finalState)
             if (shouldResetBaseline) {
                 devicesRepository.resetTirePressureBaseline(id, baselineCircumferenceMm)

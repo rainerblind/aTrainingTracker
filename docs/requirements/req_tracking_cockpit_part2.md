@@ -1,7 +1,7 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 2 of 3)
 
 **Document ID**: `DOC-REQ-TRK-P2`  
-**Version**: 1.0.107  
+**Version**: 1.0.108  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -1863,7 +1863,7 @@
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
-- **Implementation**: `ExtendedRtsOdometrySmoother.kt`, `ExtendedRtsAltitudeSlopeSmoother.kt`, `ErtsPostWorkoutRecomputer.kt`, `TuningPreferencesDataStore.kt`, `SensorsGpsFilterSection.kt`, `AdvancedTuningScreen.kt`, `TrackerService.java`
+- **Implementation**: `ExtendedRtsOdometrySmoother.kt`, `ExtendedRtsAltitudeSlopeSmoother.kt`, `ErtsPostWorkoutRecomputer.kt`, `TuningPreferencesDataStore.kt`, `SensorsGpsFilterSection.kt`, `AdvancedTuningScreen.kt`, `EditDeviceDialog.kt`, `EditDeviceViewModel.kt`, `TrackerService.java`
 - **Rationale**: Provide a non-causal bidirectional Extended Rauch-Tung-Striebel (ERTS/RTS) smoother for 2D track odometry and 3D elevation profiles reusing ATT-131 and ATT-6279 kinematic models, strictly preserving raw device columns in `WorkoutSamples.db` while updating canonical columns and `WorkoutSummaries.db` streams, guarded by an expert settings opt-in toggle (ATT-7750, extending `REQ-FIL-007`, `REQ-FIL-008`, `REQ-FIL-009`, `REQ-FIL-010`, and `REQ-FIL-016`):
 - **Description**:
   1. *2D Trajectory & Speed Extended RTS Pass (`REQ-FIL-017.1`)*:
@@ -1885,9 +1885,10 @@
      - Every source-attributed per-device column (`<SensorType> (<SourceName>)`), explicitly including `LATITUDE (GPS)`, `SPEED_mps (GPS)`, `SPEED_mps (Google Fused)`, `SPEED_mps (att_fused)`, `ALTITUDE (Höhe aus Luftdruck)`, `ALTITUDE (Topografische Höhe (DEM))`, and `ALTITUDE (att_fused_altitude_slope)`, SHALL remain 100% byte-for-byte untouched.
   4. *Workout Summaries & Stream Synchronization (`REQ-FIL-017.4`)*:
      - Upon successful ERTS smoothing of `WorkoutSamples.db`, the system SHALL update `WorkoutSummaries.db` via `WorkoutSummariesDatabaseManager.updateMapAndStreams` with the re-encoded smoothed polyline, altitude stream, and distance stream, and update summary metrics (total distance, total ascent/descent, max/avg speed).
-  5. *Expert Settings Opt-In Configuration (`REQ-FIL-017.5`)*:
-     - The smoother SHALL be guarded by a preference `postWorkoutErtsSmoothingEnabled` in `TuningPreferencesDataStore.kt` (`KEY_POST_WORKOUT_ERTS_SMOOTHING`), defaulting to `false`.
+  5. *Expert Settings & Fused Sensor Dialog Opt-In Configuration (`REQ-FIL-017.5`, refined by `ATT-8113`)*:
+     - The smoother SHALL be guarded by a preference `postWorkoutErtsSmoothingEnabled` in `TuningPreferencesDataStore.kt` (`KEY_POST_WORKOUT_ERTS_SMOOTHING`), defaulting to `false`, updated via `editAndSync` so `tuningConfigStateFlow`, `getTuningConfig()`, `postWorkoutErtsSmoothingFlow`, and `SettingsDataStoreJavaHelper` stay immediately synchronized.
      - In `SensorsGpsFilterSection.kt` and `AdvancedTuningScreen.kt`, a dedicated `TuningToggleItem` SHALL expose this setting ("Post-Workout-ERTS-Glättung" / "Post-Workout ERTS Smoothing"), localized across all 9 supported languages with zero text clipping.
+     - In `EditDeviceDialog.kt`, a dedicated `PostWorkoutErtsSmoothingCard` (`shouldShowPostWorkoutErtsToggle`) SHALL expose the exact same setting exclusively for both virtual ATT Fused sensors (`DeviceType.SPEED_AND_LOCATION_ATT_FUSED` and `DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED`, hidden for all non-Fused devices), staged in `EditDeviceViewModel` per `REQ-UI-2799.2` (Save persists to `KEY_POST_WORKOUT_ERTS_SMOOTHING`, Cancel discards with zero writes, rotation preserves draft) so toggling and saving in either `EditDeviceDialog` or `AdvancedTuningScreen` immediately reflects in the other.
      - When the preference is disabled, post-workout finalization SHALL bypass ERTS smoothing with zero behavioral change from baseline.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
@@ -2442,3 +2443,4 @@
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.104` | 2026-11-22 | Interactive-PO (`ATT-9504`) | `ATT-9504` | Split tracking cockpit requirements into 3 parts (`part2` + `part3`) to keep all shards comfortably below 4,000 lines (`ATT-9504`). |
 | `1.0.105` | 2026-11-24 | Lane 2 Author (`ATT-8674`, `--as agent1`) | `ATT-8674` | Updated `REQ-CON-031.8` & `REQ-CON-047` (`.2`/`.3`) `[Verified]` for `Off (Radar Only)` top-left / `Smart Auto` top-right swap in `RadarLightModeGrid` (`[OFF, AUTO], [PELOTON, SOLID], [NIGHT_FLASH, DAY_FLASH]`; StVZO `[OFF, AUTO], [SOLID]`) and `RadarLightController.cycleNextMode()` (`OFF -> AUTO -> ...`). |
+| `1.0.108` | 2026-11-25 | Lane 3 Author (`ATT-8113`, `--as agent1`) | `ATT-8113` | Refined `REQ-FIL-017.5` `[Verified]` to expose the shared Post-Workout ERTS smoothing switch (`KEY_POST_WORKOUT_ERTS_SMOOTHING`, `editAndSync`) inside `EditDeviceDialog.kt` exclusively for `SPEED_AND_LOCATION_ATT_FUSED` and `ALTITUDE_AND_SLOPE_ATT_FUSED`, draft/Cancel/rotation-safe per `REQ-UI-2799.2` and bidirectionally synchronized with `AdvancedTuningScreen` / `SensorsGpsFilterSection`. |

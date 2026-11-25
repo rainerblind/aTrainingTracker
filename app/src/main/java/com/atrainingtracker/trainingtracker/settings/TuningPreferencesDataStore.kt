@@ -1873,7 +1873,7 @@ data class AutoPausePreferences(
     }
 
     suspend fun updatePostWorkoutErtsSmoothingEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        editAndSync { prefs ->
             prefs[KEY_POST_WORKOUT_ERTS_SMOOTHING] = enabled
         }
     }

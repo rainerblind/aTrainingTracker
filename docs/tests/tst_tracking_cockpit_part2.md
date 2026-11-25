@@ -1,7 +1,7 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-TST-TRK-P2`  
-**Version**: 1.0.58  
+**Version**: 1.0.59  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -871,8 +871,8 @@
 
 ### TST-FIL-017: Extended Rauch-Tung-Striebel (ERTS/RTS) Zero-Phase Smoothing Verification Suite [Verified]
 - **Requirement(s)**: `REQ-FIL-017` (`REQ-FIL-017.1`..`REQ-FIL-017.5`)
-- **Component**: `ExtendedRtsOdometrySmoother.kt`, `ExtendedRtsAltitudeSlopeSmoother.kt`, `ErtsPostWorkoutRecomputer.kt`, `TuningPreferencesDataStore.kt`, `SensorsGpsFilterSection.kt`, `AdvancedTuningScreen.kt`, `TrackerService.java`
-- **Jira**: `ATT-7750`
+- **Component**: `ExtendedRtsOdometrySmoother.kt`, `ExtendedRtsAltitudeSlopeSmoother.kt`, `ErtsPostWorkoutRecomputer.kt`, `TuningPreferencesDataStore.kt`, `SensorsGpsFilterSection.kt`, `AdvancedTuningScreen.kt`, `EditDeviceDialog.kt`, `EditDeviceViewModel.kt`, `TrackerService.java`
+- **Jira**: `ATT-7750`, `ATT-8113`
 - **Test Description**:
   1. *Unicycle Odometry Extended RTS 5-State Simulation Test (`TST-FIL-017.1`, `ExtendedRtsOdometrySmootherTest.kt`)*:
      • Curved Tunnel Outage Replay: Simulate 45s $90^\circ$ curved tunnel at $10\text{ m/s}$ with IMU yaw-rate and wheel speed, followed by a 15m GNSS position jump at exit. Verify the backward RTS pass eliminates the step at the exit and smoothly bends the trajectory through the tunnel without jagged discontinuities.
@@ -889,9 +889,10 @@
   4. *TrackerService Lifecycle & Toggle Gating Test (`TST-FIL-017.4`, `TrackerServiceErtsFinalizationTest.kt`)*:
      • Finalize workout with toggle disabled: verify `ErtsPostWorkoutRecomputer` is never invoked.
      • Finalize workout with toggle enabled: verify `ErtsPostWorkoutRecomputer` runs asynchronously and dispatches `refreshWorkout`.
-  5. *Expert Settings UI & 9-Language Localization Contract Test (`TST-FIL-017.5`, `AdvancedTuningErtsContractTest.kt`)*:
+  5. *Expert Settings & Fused EditDeviceDialog UI & 9-Language Localization Contract Test (`TST-FIL-017.5`, `AdvancedTuningErtsContractTest.kt`, `EditDeviceDialogErtsSmoothingTest.kt`)*:
      • Verify `TuningPreferencesDataStore` default value is `false` for `KEY_POST_WORKOUT_ERTS_SMOOTHING`.
      • Verify toggle item rendered in `SensorsGpsFilterSection` and `AdvancedTuningScreen`.
+     • Verify `EditDeviceDialog` renders `PostWorkoutErtsSmoothingCard` exclusively for `SPEED_AND_LOCATION_ATT_FUSED` and `ALTITUDE_AND_SLOPE_ATT_FUSED` (excluded for all non-Fused `DeviceType`s), stages edits in `EditDeviceViewModel` (`REQ-UI-2799.2` Save/Cancel/rotation safety), and bidirectionally synchronizes `KEY_POST_WORKOUT_ERTS_SMOOTHING` with `AdvancedTuningScreen` / `TuningPreferencesDataStore`.
      • Verify 9-language localization parity across `values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`.
   6. *Targeted Unit & Regression Suite Execution (`TST-FIL-017.6`)*:
      • Full regression check across odometry, database, and settings packages.
@@ -2466,3 +2467,4 @@
 | `1.0.55` | 2026-11-24 | Lane 2 Author (`ATT-8723`, `--as agent1`) | `ATT-8723` | Promoted `TST-CON-062` (`.1`–`.3`) to `[Verified]` with verbatim method citations (`178/178` PASS across `12` targeted suites: `BleDisReconnectBackfillHelperTest 4/4`, `BleDisStringSanitizerTest 3/3`, `MyBTLEDeviceQueueTest 9/9`, `MyBTLEDeviceLifecycleTest 16/16`, `BTLEHeartRateDeviceTest 20/20`, `BTLERadarDeviceTest 64/64`, `BTSearchForNewDevicesEngineTest 22/22`, `PolarOfflineCapabilityStoreTest 8/8`, `PolarOfflineGattCoordinatorCoexistenceTest 14/14`, `ArchitectureConformanceContractTest 11/11`, `DetailedDesignParityContractTest 3/3`, `SystemLiveTrackingRequirementsContractTest 4/4`; clean live `emulator-5554` smoke `0` crashes + `Rule 8.5` PNG verified; SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-8723/`). |
 | `1.0.57` | 2026-11-25 | Lane 2 Author (`ATT-8722`, `--as agent1`) | `ATT-8722` | Added `[Planned]` `TST-CON-063` (`.1`–`.3`, symmetric with `REQ-CON-063`) covering sparse `337`–`350` index-shift fix (`Runna`..`Cadence App`), `336`/`338`/`343`/`344` gap nulls, `151`–`153` & `330`–`335` & `5759` (`ActiGraph`), curated `1`–`329` overrides, full FIT SDK `stringMap` parity, unknown/negative/`INVALID` guards, and `ADR-001`/LoC contracts (`N/A - 0 string changes`). |
 | `1.0.58` | 2026-11-25 | Lane 2 Author (`ATT-8722`, `--as agent1`) | `ATT-8722` | Promoted `TST-CON-063` (`.1`–`.3`) to `[Verified]` with 5 verbatim `ManufacturerTest#*` citations (`59/59` PASS across 5 targeted suites: `ManufacturerTest 5/5`, `ANTBikeRadarDeviceTest 21/21`, `DevicesDatabaseManagerTest 17/17`, `JavaCoreMigrationStrategyContractTest 5/5`, `ArchitectureConformanceContractTest 11/11`; `0` compiler warnings; clean live `emulator-5554` smoke `0` crashes + `Rule 8.5` PNG inspected). |
+| `1.0.59` | 2026-11-25 | Lane 3 Author (`ATT-8113`, `--as agent1`) | `ATT-8113` | Refined `TST-FIL-017.5` `[Verified]` with `EditDeviceDialogErtsSmoothingTest` (`7/7 PASS`) and `41/41 PASS` across `8` targeted suites (`EditDeviceDialogDraftLocaleRotationTest 4/4`, `EditDeviceViewModelTest 7/7`, `EditDeviceDialogGuardsTest 4/4`, `EditDeviceDialogAltitudeGuardsTest 4/4`, `AdvancedTuningErtsContractTest 2/2`, `ArchitectureConformanceContractTest 11/11`, `AndroidViewModelReflectionContractTest 2/2`), live `emulator-5554` bidirectional sync verification + `3` `Rule 8.5` PNGs (`0` crashes), and SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-8113/`. |
