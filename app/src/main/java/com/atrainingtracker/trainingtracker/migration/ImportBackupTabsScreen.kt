@@ -21,7 +21,6 @@ package com.atrainingtracker.trainingtracker.migration
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
-import android.util.Log
 import androidx.annotation.StringRes
 import androidx.preference.PreferenceManager
 import java.text.DateFormat
@@ -32,7 +31,6 @@ import com.atrainingtracker.trainingtracker.security.AuthCredentialsStore
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
@@ -57,8 +55,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -77,19 +75,18 @@ import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import androidx.compose.material.icons.outlined.Info
 import com.atrainingtracker.trainingtracker.ui.components.MetricItem
-import com.atrainingtracker.trainingtracker.ui.map.DarkMapAntiFlashOverlay
-import com.atrainingtracker.trainingtracker.ui.map.DarkMapStyle
-import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
-import com.atrainingtracker.trainingtracker.ui.theme.TTColor
+import com.atrainingtracker.trainingtracker.ui.map.PathPreviewMap
+import com.atrainingtracker.trainingtracker.ui.map.PreviewPolyline
 import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.model.*
 import android.widget.Toast
 import com.google.maps.android.PolyUtil
-import com.google.maps.android.compose.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+internal const val CLUSTER_NAMING_PREVIEW_MAP_TAG = "cluster_naming_preview_map"
+private const val CLUSTER_NAMING_PREVIEW_BOUNDS_PADDING_PX = 50
+private const val CLUSTER_NAMING_PREVIEW_STROKE_WIDTH_PX = 5f
 
 data class MappingData(val uri: Uri, val analysis: ImportEngine.AnalysisResult)
 
@@ -788,38 +785,26 @@ fun ClusterNamingDialog(
         clusterRepo.refreshClusters()
     }
 
-    val decodedPoints = remember(state.polyline) { PolyUtil.decode(state.polyline) }
-    val bounds = remember(decodedPoints, state.start, state.end, state.apex) {
-        val b = LatLngBounds.builder()
-        var hasPoints = false
-        decodedPoints.forEach {
-            b.include(it)
-            hasPoints = true
-        }
-        state.start?.let { b.include(it); hasPoints = true }
-        state.end?.let { b.include(it); hasPoints = true }
-        state.apex?.let { b.include(it); hasPoints = true }
-        if (!hasPoints) null else {
-            try {
-                b.build()
-            } catch (e: Exception) {
-                null
-            }
+    val decodedPoints = remember(state.polyline) {
+        if (state.polyline.isNotEmpty()) {
+            runCatching { PolyUtil.decode(state.polyline) }.getOrDefault(emptyList())
+        } else {
+            emptyList()
         }
     }
-    val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(bounds?.center ?: LatLng(0.0, 0.0), 12f)
-    }
-    var isMapLoaded by remember { mutableStateOf(false) }
-
-    LaunchedEffect(state, bounds, isMapLoaded) {
-        if (isMapLoaded && bounds != null) {
-            try {
-                cameraPositionState.animate(CameraUpdateFactory.newLatLngBounds(bounds, 50))
-            } catch (e: Exception) {
-                Log.w("ImportBackupTabsScreen", "CameraUpdateFactory animation failed, falling back to static bounds center: ${e.message}")
-                cameraPositionState.position = CameraPosition.fromLatLngZoom(bounds.center, 12f)
-            }
+    val trackColor = MaterialTheme.colorScheme.primary
+    val previewPolylines = remember(decodedPoints, trackColor) {
+        if (decodedPoints.isNotEmpty()) {
+            listOf(
+                PreviewPolyline(
+                    points = decodedPoints,
+                    color = trackColor,
+                    widthPx = CLUSTER_NAMING_PREVIEW_STROKE_WIDTH_PX,
+                    roundCaps = true
+                )
+            )
+        } else {
+            emptyList()
         }
     }
 
@@ -907,45 +892,21 @@ fun ClusterNamingDialog(
             }
         }
         
-        val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-        val mapProperties = remember(isDark, localContext) {
-            DarkMapStyle.resolveMapProperties(isDark, localContext)
-        }
-        
-        Box(modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(8.dp)).background(if (isDark) TTColor.DarkMapCanvas else Color.White)) {
-            GoogleMap(
-                modifier = Modifier.fillMaxSize().background(if (isDark) TTColor.DarkMapCanvas else Color.White),
-                cameraPositionState = cameraPositionState,
-                properties = mapProperties,
-                onMapLoaded = { isMapLoaded = true },
-                uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = false)
-            ) {
-                Polyline(
-                    points = decodedPoints,
-                    color = MaterialTheme.colorScheme.primary,
-                    width = 5f,
-                    jointType = JointType.ROUND,
-                    startCap = RoundCap(),
-                    endCap = RoundCap()
-                )
-                Marker(
-                    state = remember(state.start) { MarkerState(position = state.start) }, 
-                    title = stringResource(R.string.marker_start),
-                    icon = remember { createSensorMarker(localContext, R.drawable.control_start, TTColor.StartPoint) }
-                )
-                Marker(
-                    state = remember(state.end) { MarkerState(position = state.end) }, 
-                    title = stringResource(R.string.marker_end),
-                    icon = remember { createSensorMarker(localContext, R.drawable.control_stop, TTColor.EndPoint) }
-                )
-                Marker(
-                    state = remember(state.apex) { MarkerState(position = state.apex) }, 
-                    title = stringResource(R.string.marker_max_distance),
-                    icon = remember { createSensorMarker(localContext, R.drawable.ic_distance, TTColor.ApexPoint) }
-                )
-            }
-            DarkMapAntiFlashOverlay(isMapLoaded = isMapLoaded, isDark = isDark)
-        }
+        PathPreviewMap(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .testTag(CLUSTER_NAMING_PREVIEW_MAP_TAG),
+            start = state.start,
+            end = state.end,
+            apex = state.apex,
+            startTitle = stringResource(R.string.marker_start),
+            endTitle = stringResource(R.string.marker_end),
+            apexTitle = stringResource(R.string.marker_max_distance),
+            additionalPaths = previewPolylines,
+            boundsPaddingPx = CLUSTER_NAMING_PREVIEW_BOUNDS_PADDING_PX
+        )
 
         // ATT-5560: Workout Name Display & Inline Editing
         OutlinedTextField(

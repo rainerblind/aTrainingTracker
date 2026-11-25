@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.clusters.ClusterNamingDialogLabelsVisualContractTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-25T02:31:07.683Z" hostname="rainer-HP-EliteBook-850-G5" time="0.34">
+  <properties/>
+  <testcase name="testClusterNamingStrings_existAcrossAll9Locales" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterNamingDialogLabelsVisualContractTest" time="0.161"/>
+  <testcase name="testClusterNamingStrings_containNoEmojisAcrossAll9Locales" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterNamingDialogLabelsVisualContractTest" time="0.11"/>
+  <testcase name="testEnglishStrings_explicitlyReferenceFavoriteRoute" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterNamingDialogLabelsVisualContractTest" time="0.044"/>
+  <testcase name="testCallSites_referenceClusterNamingStringResources" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterNamingDialogLabelsVisualContractTest" time="0.008"/>
+  <testcase name="testGermanStrings_explicitlyReferenceLieblingsstrecke" classname="com.atrainingtracker.trainingtracker.ui.clusters.ClusterNamingDialogLabelsVisualContractTest" time="0.017"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,14 +1,14 @@
 # Living Test Specification: Persistence, Migration & Cloud Export
 
 **Document ID**: `DOC-TST-MIG`  
-**Version**: 1.0.54  
+**Version**: 1.0.56  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Tests**: 141
+**Total Tests**: 142
 
 ---
 
@@ -2673,10 +2673,28 @@
 
 ---
 
+### TST-MIG-062: `ClusterNamingDialog` `PathPreviewMap` Migration, Marker Cache Reuse & `WorkoutClusterEngine` Hoisted/Memoized Station Sampling Verification (`ATT-9019`) [Verified]
+- **Requirement(s)**: `REQ-MIG-062`
+- **Component**: `ImportBackupTabsScreen.kt`, `MapUtils.kt`, `PathPreviewMap.kt`, `WorkoutClusterCorridorDetector.kt`, `WorkoutClusterEngine.kt`, `WorkoutClusterRepository.kt`
+- **Jira**: `ATT-9019`
+- **Test Code**:
+  - `ClusterNamingDialogPathPreviewTest.kt` (`4/4` PASS: Robolectric Compose UI `PathPreviewMap` rendering across consecutive queue items, bounded `createSensorMarker` reuse = `3` allocations across 5 presentations, null non-caching, `tryApplyPreviewBounds` resilience)
+  - `WorkoutClusterCorridorScoringTest.kt` (`7/7` PASS: single-pass `samplePolylineStations(workoutPolyline)` count == `1` across 25 clusters & `0` when previews empty, `10` total `PolyUtil.decode` calls across 3 workouts, explicit & in-memory mutation invalidation, unsaved cluster caching, bit-identical similarity scores, 6-thread concurrent scoring + invalidation)
+  - `ClusterNamingDialogEscapeContractTest.kt` (`4/4`), `ClusterNamingDialogLabelsVisualContractTest.kt` (`5/5`), `ImportBackupMapResilienceTest.kt` (`6/6`), `ImportBackupTabsUiContractTest.kt` (`6/6`), `ImportBackupTabsSealedStateComposeTest.kt` (`4/4`), `PathPreviewMapBoundsTest.kt` (`8/8`), `UnifiedSpatialMarkersTest.kt` (`1/1`), `DarkMapStyleResolutionTest.kt` (`8/8`), `WorkoutLapsIconContractTest.kt` (`5/5`), `WorkoutClusterSplitMapPreviewTest.kt` (`4/4`), `WorkoutClusterCorridorDetectorTest.kt` (`4/4`), `WorkoutClusterEngineOptimizationTest.kt` (`4/4`), `WorkoutClusterRepositoryTest.kt` (`14/14`), `ArchitectureConformanceContractTest.kt` (`11/11`)
+- **Verification Evidence**: Verified (`ATT-9019`, `tier-b`; `95/95` targeted Tier-1 unit, Compose UI & contract tests PASS across 16 suites — `0` fail, `0` err, `0` skip, `0` new compiler warnings; live `emulator-5554` verification `CRASH_LOGCAT_CLEAN` with `Rule 8.5`-inspected screenshot `docs/engineering/test_evidence/tickets/ATT-9019/screenshots/ATT-9019_import_backup_screen.png`; SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-9019/`).
+- **Test Description**:
+  1. *`ClusterNamingDialog` `PathPreviewMap` & Marker Cache Verification (`TST-MIG-062.1` — `ClusterNamingDialogPathPreviewTest.kt`)*: Render `ClusterNamingDialog` via `createComposeRule()` across consecutive unmatched workout queue items (`state1` -> `state2`), verifying `PathPreviewMap` (`CLUSTER_NAMING_PREVIEW_MAP_TAG`) is displayed with start/end/apex markers and updated bounds; verify `createSensorMarker` invokes `BitmapDescriptorFactory.fromBitmap` once per distinct `(iconResId, pinColor, iconColor, density)` key across repeated calls/remounts and never caches `null`.
+  2. *Single-Pass Sampling, Cache Reuse/Invalidation, Score Parity & Concurrency (`TST-MIG-062.2` — `WorkoutClusterCorridorScoringTest.kt`)*: Spy on `WorkoutClusterCorridorDetector.samplePolylineStations` and `PolyUtil.decode` across `K = 25` clusters and repeated `scoreClusters`/`suggestCluster` calls; assert `workoutPolyline` is sampled at most once per call (`0×` when previews empty), cluster previews are decoded once and reused across workouts, cluster mutation/invalidation recomputes updated scores without staleness, scores are 100% identical to uncached evaluation, and multi-threaded scoring + invalidation completes with zero exceptions.
+  3. *Regression, Architecture & Live Emulator Smoke (`TST-MIG-062.3`)*: Verify existing `ClusterNamingDialog*`, `PathPreviewMapBoundsTest`, `UnifiedSpatialMarkersTest`, `WorkoutCluster*`, and `ArchitectureConformanceContractTest` suites pass 100% with zero compiler warnings, plus live `emulator-5554` verification of Import & Backup screen with `0` crash logcat and `Rule 8.5`-inspected screenshot.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.56` | 2026-11-25 | Lane 1 Author (`ATT-9019`, `--as agent1`) | `ATT-9019` | Promoted `TST-MIG-062` to `[Verified]` (`95/95` targeted Tier-1 unit, Compose UI & contract tests PASS across 16 suites incl. `WorkoutClusterCorridorScoringTest` `7/7`, `ClusterNamingDialogPathPreviewTest` `4/4`, `ClusterNamingDialogEscapeContractTest` `4/4`, `ClusterNamingDialogLabelsVisualContractTest` `5/5`, `PathPreviewMapBoundsTest` `8/8`, `UnifiedSpatialMarkersTest` `1/1`, `ArchitectureConformanceContractTest` `11/11`; `0` fail/err/skip, `0` new warnings; live `emulator-5554` verification `CRASH_LOGCAT_CLEAN` + `ATT-9019_import_backup_screen.png`; SHA-256 bundle `docs/engineering/test_evidence/tickets/ATT-9019/`). |
+| `1.0.55` | 2026-11-25 | Lane 1 Author (`ATT-9019`, `--as agent1`) | `ATT-9019` | Added `[Planned]` `TST-MIG-062` (`TST-MIG-062.1`–`TST-MIG-062.3`, symmetric with `REQ-MIG-062`) covering `ClusterNamingDialog` `PathPreviewMap` + bounded `createSensorMarker` reuse, single-pass `samplePolylineStations` hoisting + `ClusterPreviewStationCache` reuse/invalidation/concurrency/parity, and live emulator smoke. |
 | `1.0.54` | 2026-11-23 | Lane 1 Author (`ATT-9021`, `--as agent1`) | `ATT-9021` | Promoted `TST-DAT-050` to `[Verified]` (`120/120` targeted Tier-1 unit, Robolectric SQLite migration & contract tests PASS across 14 suites incl. `WorkoutSummariesEpicMigrationTest` `4/4`, `FitLosslessRoundTripTest` `7/7`, `WorkoutDataMappingSymmetryTest` `11/11`, `EditWorkoutViewModelTest` `18/18`, `SqliteSchemaParityContractTest` `6/6`, `DatabaseSchemaRegistryParityContractTest` `2/2`, `ArchitectureConformanceContractTest` `11/11`; `0` fail/err/skip, `0` new warnings; `3/3` safety linters PASS; live `emulator-5554` boot smoke `CRASH_LOGCAT_CLEAN` + `user_version = 32` + `ATT-9021_emulator_smoke.png`; SHA-256 bundle `docs/engineering/test_evidence/tickets/ATT-9021/`). |
 | `1.0.53` | 2026-11-23 | Lane 1 Author (`ATT-9021`, `--as agent1`) | `ATT-9021` | Added `[Planned]` `TST-DAT-050` (`TST-DAT-050.1`–`TST-DAT-050.4`, symmetric with `REQ-DAT-050`) covering real Robolectric SQLite v31->v32 migration & `onCreate`/`onUpgrade` parity, `DatabaseSchemaRegistry` v32 sync, `WorkoutDataMapper` single/batch symmetry, `WorkoutRepository` + `EditWorkoutViewModel.updateIsEpic`/`mergeTelemetryPreservingUserEdits`, Garmin FIT 2.0 field 8 (`is_epic`) export/parse/import round-trip + third-party compatibility, and architecture/registry contracts. |
 | `1.0.52` | 2026-11-23 | Lane 1 Author (`ATT-9607`, `--as agent1`) | `ATT-9607` | Promoted `TST-DAT-045` to `[Verified]` (`250/250` targeted Tier-1 unit, Robolectric SQLite integration & contract tests PASS across 54 suites incl. `WorkoutDeletionCascadeIntegrationTest` `4/4`, `AthleteProfileViewModelPmcDeletionTest` `5/5`, `TrackingViewModelMmpTest` `4/4`, `SportTypeViewModelRetiredTest` `3/3`, `WorkoutRepositoryConcurrencyTest`, `ArchitectureConformanceContractTest`, `DetailedDesignParityContractTest`, `AndroidViewModelReflectionContractTest`, `SourceTextReadingAuditContractTest`; `0` fail/err/skip, `0` new warnings; `3/3` safety linters PASS; live `emulator-5554` boot smoke `CRASH_LOGCAT_CLEAN` + `ATT-9607_emulator_smoke.png`; SHA-256 bundle `docs/engineering/test_evidence/tickets/ATT-9607/`). |

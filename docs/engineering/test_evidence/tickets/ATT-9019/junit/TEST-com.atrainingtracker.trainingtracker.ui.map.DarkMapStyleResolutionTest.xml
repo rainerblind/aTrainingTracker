@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.DarkMapStyleResolutionTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-25T02:31:20.078Z" hostname="rainer-HP-EliteBook-850-G5" time="2.344">
+  <properties/>
+  <testcase name="testMutedMapStyleJsonResourceParsesCleanly" classname="com.atrainingtracker.trainingtracker.ui.map.DarkMapStyleResolutionTest" time="0.309"/>
+  <testcase name="testResolveMapPropertiesInLightModeCustomType" classname="com.atrainingtracker.trainingtracker.ui.map.DarkMapStyleResolutionTest" time="0.312"/>
+  <testcase name="testStaticAuditMapFilesEnforceDynamicStylingAndAntiFlash" classname="com.atrainingtracker.trainingtracker.ui.map.DarkMapStyleResolutionTest" time="0.45"/>
+  <testcase name="testDarkMapStyleJsonParsingInvalidFallback" classname="com.atrainingtracker.trainingtracker.ui.map.DarkMapStyleResolutionTest" time="0.209"/>
+  <testcase name="testDarkMapStyleJsonParsingValid" classname="com.atrainingtracker.trainingtracker.ui.map.DarkMapStyleResolutionTest" time="0.205"/>
+  <testcase name="testResolveMapPropertiesInDarkMode" classname="com.atrainingtracker.trainingtracker.ui.map.DarkMapStyleResolutionTest" time="0.209"/>
+  <testcase name="testResolveMapPropertiesInLightModePreservesTerrainDefault" classname="com.atrainingtracker.trainingtracker.ui.map.DarkMapStyleResolutionTest" time="0.204"/>
+  <testcase name="testResolveHeatmapMapPropertiesSelectsMutedStyleInLightMode_TST_MAP_059_3" classname="com.atrainingtracker.trainingtracker.ui.map.DarkMapStyleResolutionTest" time="0.443"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

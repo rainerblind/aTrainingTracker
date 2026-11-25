@@ -213,4 +213,171 @@ object WorkoutClusterCorridorDetector {
 
         return result
     }
+
+    /**
+     * Safely samples [workoutPolyline] once when corridor scoring is applicable, returning `null`
+     * when [workoutPolyline] is null/empty, [hasAnyPreviewPaths] is false, or sampling fails.
+     */
+    internal fun samplePolylineStationsOrNull(
+        workoutPolyline: List<LatLng>?,
+        hasAnyPreviewPaths: Boolean
+    ): List<LatLng>? {
+        if (workoutPolyline.isNullOrEmpty() || !hasAnyPreviewPaths) return null
+        return runCatching { samplePolylineStations(workoutPolyline) }.getOrNull()
+    }
+}
+
+/**
+ * Thread-safe, generation-guarded bounded LRU cache of decoded & station-sampled cluster
+ * preview polylines (`REQ-MIG-062.2`, `ATT-9019`).
+ *
+ * Eliminates repeated `PolyUtil.decode` + [WorkoutClusterCorridorDetector.samplePolylineStations]
+ * allocations across bulk import scoring while remaining immune to stale entries via both
+ * explicit mutation invalidation ([invalidateCluster], [invalidateAll]) and structural
+ * `previewPaths` equality validation on every lookup.
+ */
+internal class ClusterPreviewStationCache(
+    private val maxClusters: Int = DEFAULT_MAX_CLUSTERS,
+    private val maxUnsavedEntries: Int = DEFAULT_MAX_UNSAVED_ENTRIES
+) {
+    private data class ClusterStationsEntry(
+        val previewPaths: List<String>,
+        val byPolyline: Map<String, List<LatLng>?>,
+        val sampledPaths: List<List<LatLng>>
+    )
+
+    private val cacheLock = Any()
+    private var invalidationGeneration: Long = 0L
+
+    private val clusterEntries = object : LinkedHashMap<Long, ClusterStationsEntry>(64, 0.75f, true) {
+        override fun removeEldestEntry(
+            eldest: MutableMap.MutableEntry<Long, ClusterStationsEntry>?
+        ): Boolean = size > maxClusters
+    }
+
+    private val unsavedEntries = object : LinkedHashMap<List<String>, List<List<LatLng>>>(16, 0.75f, true) {
+        override fun removeEldestEntry(
+            eldest: MutableMap.MutableEntry<List<String>, List<List<LatLng>>>?
+        ): Boolean = size > maxUnsavedEntries
+    }
+
+    /**
+     * Returns the sampled station lists for each non-empty decoded polyline in [previewPaths].
+     * Decoding/sampling executes outside [cacheLock] and never writes back if an invalidation
+     * occurred concurrently.
+     */
+    fun getOrCompute(clusterId: Long, previewPaths: List<String>): List<List<LatLng>> {
+        if (previewPaths.isEmpty()) return emptyList()
+
+        if (clusterId > 0L) {
+            val snapshotPaths = previewPaths.toList()
+            val (existing, genBefore) = synchronized(cacheLock) {
+                val entry = clusterEntries[clusterId]
+                if (entry != null && entry.previewPaths == snapshotPaths) {
+                    return entry.sampledPaths
+                }
+                entry to invalidationGeneration
+            }
+
+            val existingByPoly = existing?.byPolyline ?: emptyMap()
+            val updatedByPoly = LinkedHashMap<String, List<LatLng>?>(snapshotPaths.size)
+            val sampledPaths = ArrayList<List<LatLng>>(snapshotPaths.size)
+
+            for (previewPoly in snapshotPaths) {
+                val stations = if (updatedByPoly.containsKey(previewPoly)) {
+                    updatedByPoly[previewPoly]
+                } else if (existingByPoly.containsKey(previewPoly)) {
+                    existingByPoly[previewPoly].also { updatedByPoly[previewPoly] = it }
+                } else {
+                    val decoded = PolyUtil.decode(previewPoly)
+                    val computed = if (decoded.isNotEmpty()) {
+                        WorkoutClusterCorridorDetector.samplePolylineStations(decoded)
+                    } else {
+                        null
+                    }
+                    updatedByPoly[previewPoly] = computed
+                    computed
+                }
+                if (stations != null) {
+                    sampledPaths.add(stations)
+                }
+            }
+
+            val immutableSampled = sampledPaths.toList()
+            val newEntry = ClusterStationsEntry(
+                previewPaths = snapshotPaths,
+                byPolyline = updatedByPoly,
+                sampledPaths = immutableSampled
+            )
+            synchronized(cacheLock) {
+                if (invalidationGeneration == genBefore) {
+                    clusterEntries[clusterId] = newEntry
+                }
+            }
+            return immutableSampled
+        }
+
+        val snapshotPaths = previewPaths.toList()
+        val genBefore = synchronized(cacheLock) {
+            unsavedEntries[snapshotPaths]?.let { return it }
+            invalidationGeneration
+        }
+
+        val sampledPaths = snapshotPaths.mapNotNull { previewPoly ->
+            val decoded = PolyUtil.decode(previewPoly)
+            if (decoded.isNotEmpty()) {
+                WorkoutClusterCorridorDetector.samplePolylineStations(decoded)
+            } else {
+                null
+            }
+        }
+
+        synchronized(cacheLock) {
+            if (invalidationGeneration == genBefore) {
+                unsavedEntries[snapshotPaths] = sampledPaths
+            }
+        }
+        return sampledPaths
+    }
+
+    /**
+     * Computes the weighted corridor deviation penalty (`(minCorridorDev / 500.0) * 0.30`) against
+     * cached cluster preview stations, preserving exact `REQ-SET-097.3` similarity math.
+     */
+    fun computeCorridorCost(
+        clusterId: Long,
+        previewPaths: List<String>,
+        workoutStations: List<LatLng>?
+    ): Double {
+        if (workoutStations == null || previewPaths.isEmpty()) return 0.0
+        val minCorridorDev = getOrCompute(clusterId, previewPaths)
+            .minOfOrNull { clusterStations ->
+                WorkoutClusterCorridorDetector.computeCorridorDistance(workoutStations, clusterStations)
+            }
+        return if (minCorridorDev != null) (minCorridorDev / 500.0) * 0.30 else 0.0
+    }
+
+    fun invalidateCluster(clusterId: Long) {
+        synchronized(cacheLock) {
+            invalidationGeneration++
+            if (clusterId > 0L) {
+                clusterEntries.remove(clusterId)
+            } else {
+                unsavedEntries.clear()
+            }
+        }
+    }
+
+    fun invalidateAll() {
+        synchronized(cacheLock) {
+            invalidationGeneration++
+            clusterEntries.clear()
+            unsavedEntries.clear()
+        }
+    }
+
+    companion object {
+        internal const val DEFAULT_MAX_CLUSTERS = 512
+        internal const val DEFAULT_MAX_UNSAVED_ENTRIES = 64
+    }
 }

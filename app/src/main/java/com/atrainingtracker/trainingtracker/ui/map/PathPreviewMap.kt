@@ -331,6 +331,8 @@ internal fun tryApplyPreviewBounds(applyMove: () -> Unit): Boolean =
         true
     } catch (_: IllegalStateException) {
         false
+    } catch (_: NullPointerException) {
+        false
     }
 
 /**

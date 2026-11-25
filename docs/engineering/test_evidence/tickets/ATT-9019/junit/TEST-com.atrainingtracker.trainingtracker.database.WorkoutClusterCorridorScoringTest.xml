@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutClusterCorridorScoringTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-25T02:30:12.696Z" hostname="rainer-HP-EliteBook-850-G5" time="1.503">
+  <properties/>
+  <testcase name="testPreviewStationCache_concurrentScoringAndInvalidationIsThreadSafe_TST_MIG_062" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCorridorScoringTest" time="0.178"/>
+  <testcase name="testPreviewStationCache_unsavedClustersAndRepositoryMutationInvalidation_TST_MIG_062" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCorridorScoringTest" time="0.4"/>
+  <testcase name="testCorridorScoring_accuratelyRanksForestWorkoutForForestCluster" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCorridorScoringTest" time="0.113"/>
+  <testcase name="testCorridorScoring_accuratelyRanksCityWorkoutForCityCluster" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCorridorScoringTest" time="0.109"/>
+  <testcase name="testScoreClusters_hoistsWorkoutPolylineSamplingToAtMostOncePerCall_TST_MIG_062" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCorridorScoringTest" time="0.32"/>
+  <testcase name="testScoreClusters_cachesClusterPreviewDecodingAcrossWorkoutsAndInvalidatesOnMutation_TST_MIG_062" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCorridorScoringTest" time="0.263"/>
+  <testcase name="testApexDiscrimination_separatesCorridorsEvenWithoutPolyline" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCorridorScoringTest" time="0.12"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

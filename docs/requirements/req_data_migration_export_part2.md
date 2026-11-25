@@ -1,14 +1,14 @@
 # Living Requirements: Persistence, Migration & Cloud Export (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-MIG-P2`  
-**Version**: 1.0.55  
+**Version**: 1.0.57  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export_part2`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Requirements**: 40
+**Total Requirements**: 41
 
 ---
 
@@ -1334,10 +1334,40 @@
 
 ---
 
+### REQ-MIG-062: Lightweight `PathPreviewMap` in `ClusterNamingDialog`, Bounded Marker Descriptor Reuse & Hoisted/Memoized Polyline Station Sampling in `WorkoutClusterEngine` (`ATT-9019`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-MIG-062`
+- **System Requirement(s)**: `SYSREQ-DEX-002`, `SYSREQ-DEX-004`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit, On-Device Manual
+- **Implementation**: `ImportBackupTabsScreen.kt`, `MapUtils.kt`, `PathPreviewMap.kt`, `WorkoutClusterCorridorDetector.kt`, `WorkoutClusterEngine.kt`, `WorkoutClusterRepository.kt`
+- **Localization Parity**: `N/A - 0 string changes`
+- **Rationale**: During bulk Strava archive import (`3,287` rows on Pixel 10), `ClusterNamingDialog` instantiated a full interactive `GoogleMap` plus 3 uncached `createSensorMarker` bitmaps per modal presentation (`23–46 MB` LOS churn), while `WorkoutClusterEngine.scoreClusters`/`calculateSimilarity` recomputed `samplePolylineStations(workoutPolyline)` `K` times per workout and re-decoded every cluster's `previewPaths` `N_workouts × N_clusters` times (`ATT-9019`, refining `REQ-MAP-022`, `REQ-MAP-068`, `REQ-UI-2789.3`, `REQ-SET-097.3`, `REQ-MIG-060`).
+- **Description**:
+  1. *Lite-Mode `PathPreviewMap` & Bounded Marker Reuse in `ClusterNamingDialog` (`REQ-MIG-062.1`)*: `ClusterNamingDialog` (`ImportBackupTabsScreen.kt`) SHALL replace its inline interactive `GoogleMap`, manual bounds/camera `LaunchedEffect`, and `DarkMapAntiFlashOverlay` with `PathPreviewMap` (`GoogleMapOptions().liteMode(true)` / inspection `Canvas` fallback), preserving track polyline rendering (`PreviewPolyline`), start/end/apex markers, localized marker titles, dark-mode styling, and queue re-framing. `createSensorMarker` (`MapUtils.kt`) SHALL cache non-null `BitmapDescriptor` results in a bounded thread-safe LRU cache keyed by `(iconResId, pinColorArgb, iconColorArgb, densityBits)` (never caching `null`) to eliminate redundant marker bitmap allocations across consecutive queue items.
+  2. *Single-Pass Workout Station Sampling & Invalidated Cluster Preview Station Cache (`REQ-MIG-062.2`)*: `WorkoutClusterEngine.scoreClusters` (and `suggestCluster`/`getClusterScores` delegating to it) SHALL hoist `WorkoutClusterCorridorDetector.samplePolylineStations(workoutPolyline)` to execute at most once per call (`0` times if `workoutPolyline.isNullOrEmpty()` or no candidate cluster has `previewPaths`) and reuse decoded/sampled cluster preview stations from a thread-safe, generation-guarded bounded LRU `ClusterPreviewStationCache` (`WorkoutClusterCorridorDetector.kt`). The cache SHALL validate `previewPaths` equality on read and be explicitly invalidated on cluster insert/update/delete/clear mutations across `WorkoutClusterEngine` and `WorkoutClusterRepository`, preserving 100% identical similarity scores and zero thread-safety races.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-MAP-022`, `REQ-MAP-068`, `REQ-UI-2789.3`, `REQ-SET-097.3`, and `REQ-MIG-060`.
+2. *Historical Origin & Commit Trace*: Inline `GoogleMap` in `ClusterNamingDialog` (`ATT-305`/`ATT-1579`/`ATT-2022`) predated `PathPreviewMap` `PreviewPolyline` (`ATT-6041`) and synchronous Lite-Mode bounds/retry (`ATT-8736`); corridor scoring was added inline in `ATT-5899`.
+3. *Root Reason for Existing Formulation*: Preserved `CameraUpdateFactory` resilience, `isMapLoaded` queue stability (`ATT-2022`), and lossless `suggestCluster` / `scoreClusters` parity (`ATT-1133`, `REQ-MIG-029`).
+4. *Preservation of Core Invariants*: All `ClusterNamingDialog` escape/label/selection contracts, `PathPreviewMap` multi-path/marker/anti-flash contracts, `WorkoutClusterEngine` public `@JvmOverloads` signatures and exact similarity scores, `WorkoutClusterEngine.kt <= 1,635` LoC with `0` `.ui.*` imports, and `ImportBackupTabsScreen.kt <= 1,500` LoC remain strictly intact.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* interactive cluster prompting is enabled and `ClusterNamingDialog` presents consecutive unmatched workouts, *When* the dialog renders the workout track and start/end/apex markers, *Then* it uses `PathPreviewMap` (Lite Mode) rather than a full interactive `GoogleMap` and reuses cached `BitmapDescriptor` markers without duplicate bitmap allocations.
+• *Given* `scoreClusters` or `suggestCluster` evaluates `K` clusters against a non-empty `workoutPolyline` across multiple workouts, *When* similarity scores are calculated (and after a cluster is mutated), *Then* `samplePolylineStations(workoutPolyline)` runs at most once per call, cluster preview stations are cached/reused without repeated `PolyUtil.decode` calls, mutated clusters are invalidated without stale scores, and all similarity scores are 100% identical to uncached evaluation.
+
+**Invariants**: `0` SQLite schema changes; `0` `strings*.xml` edits; identical `WorkoutClusterEngine` public `@JvmOverloads` signatures and exact similarity scores; `WorkoutClusterEngine.kt <= 1,635` LoC (`0` `.ui.*` imports); `ImportBackupTabsScreen.kt <= 1,500` LoC; `ArchitectureConformanceContractTest` passes 100%.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.57` | 2026-11-25 | Lane 1 Author (`ATT-9019`, `--as agent1`) | `ATT-9019` | Promoted `REQ-MIG-062` to `[Verified]` after migrating `ClusterNamingDialog` (`ImportBackupTabsScreen.kt`) to Lite-Mode `PathPreviewMap` + bounded LRU `createSensorMarker` descriptor cache (`MapUtils.kt`), hoisting single-pass `samplePolylineStations` + thread-safe generation-guarded `ClusterPreviewStationCache` (`WorkoutClusterCorridorDetector.kt`, `WorkoutClusterEngine.kt`, `WorkoutClusterRepository.kt`), passing `95/95` targeted unit & Compose tests across 16 suites (`0` fail/err/skip, `0` new warnings), live `emulator-5554` verification (`ATT-9019_import_backup_screen.png`, `CRASH_LOGCAT_CLEAN`), and SHA-256 evidence bundle (`docs/engineering/test_evidence/tickets/ATT-9019/`). |
+| `1.0.56` | 2026-11-25 | Lane 1 Author (`ATT-9019`, `--as agent1`) | `ATT-9019` | Added `[Planned]` `REQ-MIG-062` (`SYSREQ-DEX-002`, `SYSREQ-DEX-004`, `.1`–`.2`) for Lite-Mode `PathPreviewMap` + bounded `createSensorMarker` descriptor caching in `ClusterNamingDialog`, and single-pass `samplePolylineStations` hoisting + thread-safe mutation-invalidated `ClusterPreviewStationCache` in `WorkoutClusterEngine` (`N/A - 0 string changes`). |
 | `1.0.55` | 2026-11-23 | Lane 1 Author (`ATT-9021`, `--as agent1`) | `ATT-9021` | Promoted `REQ-DAT-050` to `[Verified]` after Gate 3 (`ATT-9672`) PASS implementation (`WorkoutSummaries.db` v32 `EPIC` column + `onCreate`/`onUpgrade` parity + `updateWorkoutData`, `WorkoutData`/`WorkoutExportHeader`/`WorkoutDataMapper`/`WorkoutRepository`/`EditWorkoutViewModel.updateIsEpic` + `mergeTelemetryPreservingUserEdits` 20-field preservation, FIT 2.0 field `8` `is_epic` export/parse/import round-trip), `120/120` targeted Tier-1 unit & contract tests PASS across 14 suites (`0` fail/err/skip, `0` new warnings), `3/3` safety linters PASS, live `emulator-5554` boot smoke `CRASH_LOGCAT_CLEAN` (`PRAGMA user_version = 32`, `epic` column verified, `ATT-9021_emulator_smoke.png`), and SHA-256 evidence bundle (`docs/engineering/test_evidence/tickets/ATT-9021/`). |
 | `1.0.54` | 2026-11-23 | Lane 1 Author (`ATT-9021`, `--as agent1`) | `ATT-9021` | Added `[Planned]` `REQ-DAT-050` (`SYSREQ-DEX-001`, `SYSREQ-DEX-002`, `SYSREQ-DEX-005`, `.1`–`.4`) for `WorkoutSummaries.db` v32 `EPIC` column (`int DEFAULT 0`), symmetric `WorkoutData`/`WorkoutExportHeader`/`WorkoutDataMapper`/`WorkoutRepository`/`EditWorkoutViewModel.updateIsEpic` persistence, and Garmin FIT 2.0 Developer Field `8` (`is_epic`, `UINT8`, `developerDataIndex = 1`) export/import round-trip (`N/A - 0 string changes`). |
 | `1.0.53` | 2026-11-23 | Lane 1 Author (`ATT-9607`, `--as agent1`) | `ATT-9607` | Promoted `REQ-DAT-049` to `[Verified]` after Gate 3 (`ATT-9666`) PASS implementation incorporating all 6 guardrails (`.tmp.salvage` + `.gz.salvage` sidecars, private DB providers in `WorkoutDeletionCoordinator`, zero production mock catchers per `ATT-8136`, transactional 5-table `WorkoutSummariesDatabaseManager.deleteWorkout` + `ActiveDevicesDbHelper.deleteWorkout`, synchronous bulk `deleteOldWorkoutsCascade`, bounded `workoutMutationEvents`, and reactive refresh across all 5 ViewModels & `WorkoutClusterRepository`), `250/250` targeted Tier-1 tests PASS across 54 suites (`0` fail/err/skip, `0` new warnings), `3/3` safety linters PASS, live `emulator-5554` boot smoke `CRASH_LOGCAT_CLEAN` (`ATT-9607_emulator_smoke.png`), and SHA-256 evidence bundle (`docs/engineering/test_evidence/tickets/ATT-9607/`). |

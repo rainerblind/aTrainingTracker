@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.ImportBackupTabsSealedStateComposeTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-25T02:30:35.141Z" hostname="rainer-HP-EliteBook-850-G5" time="19.657">
+  <properties/>
+  <testcase name="testPendingImportSource_stravaArchiveHidesStravaUploadOptionWhileOtherVariantsShowIt_tstUi2790_1" classname="com.atrainingtracker.trainingtracker.migration.ImportBackupTabsSealedStateComposeTest" time="11.157"/>
+  <testcase name="testPendingImportSource_dropboxBulkConfirmAndStravaStravaOptionSuppression_tstUi2790_1" classname="com.atrainingtracker.trainingtracker.migration.ImportBackupTabsSealedStateComposeTest" time="3.363"/>
+  <testcase name="testCloudInfoDialog_disconnectedAndNoCloudPaths_showUnifiedAlertAndNeverOpenRestoreConfirm_tstUi2790_1" classname="com.atrainingtracker.trainingtracker.migration.ImportBackupTabsSealedStateComposeTest" time="3.348"/>
+  <testcase name="testPendingRestoreSource_autoDropboxAndGoogleDriveRestoreDialogs_cancelAndConfirmDispatch_tstUi2790_1" classname="com.atrainingtracker.trainingtracker.migration.ImportBackupTabsSealedStateComposeTest" time="1.789"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
