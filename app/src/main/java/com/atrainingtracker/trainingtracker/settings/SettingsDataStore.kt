@@ -30,12 +30,14 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.preferencesDataStore
+import com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceSortOrder
 import com.atrainingtracker.trainingtracker.monetization.GarageLeague
 import com.atrainingtracker.trainingtracker.monetization.GarageNudgeCooldownState
 import com.atrainingtracker.trainingtracker.monetization.SupporterTier
 import com.atrainingtracker.trainingtracker.monetization.SupporterTierOverride
 import com.atrainingtracker.trainingtracker.zones.ValidationResult
 import com.atrainingtracker.trainingtracker.zones.ZoneValidator
+import com.atrainingtracker.util.safeEnumValueOfOrNull
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -238,6 +240,9 @@ class SettingsDataStore private constructor(
 
         // Developer Overrides (ATT-7659, REQ-CON-030.8)
         val KEY_RADAR_V1_ONLY_OVERRIDE = booleanPreferencesKey("radar_v1_only_override")
+
+        // Sensor List Sort Order (ATT-8101, REQ-UI-2806)
+        val KEY_DEVICE_SORT_ORDER = stringPreferencesKey("device_sort_order")
 
         // Athlete Baselines (ATT-1289, REQ-TRK-019, ATT-3704, REQ-UI-391, ATT-3862, REQ-UI-399)
         val KEY_ATHLETE_WEIGHT_KG = floatPreferencesKey("athlete_weight_kg")
@@ -745,6 +750,26 @@ class SettingsDataStore private constructor(
     suspend fun setRadarV1OnlyOverride(enabled: Boolean) {
         dataStore.edit { prefs ->
             prefs[KEY_RADAR_V1_ONLY_OVERRIDE] = enabled
+        }
+    }
+
+    /**
+     * Flow emitting the persisted sensor list [DeviceSortOrder] (`REQ-UI-2806.1`, `ATT-8101`).
+     * Falls back safely to [DeviceSortOrder.ALPHABETICAL] when unset or when an invalid token is stored.
+     */
+    val deviceSortOrderFlow: Flow<DeviceSortOrder> = dataStore.data
+        .catch { emit(emptyPreferences()) }
+        .map { prefs ->
+            safeEnumValueOfOrNull<DeviceSortOrder>(prefs[KEY_DEVICE_SORT_ORDER])
+                ?: DeviceSortOrder.ALPHABETICAL
+        }
+
+    /**
+     * Persists the selected sensor list [DeviceSortOrder] (`REQ-UI-2806.1`, `ATT-8101`).
+     */
+    suspend fun setDeviceSortOrder(order: DeviceSortOrder) {
+        dataStore.edit { prefs ->
+            prefs[KEY_DEVICE_SORT_ORDER] = order.name
         }
     }
 

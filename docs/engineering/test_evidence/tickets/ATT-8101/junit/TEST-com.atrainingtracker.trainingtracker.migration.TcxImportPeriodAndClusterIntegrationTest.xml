@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.TcxImportPeriodAndClusterIntegrationTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-25T05:56:21.342Z" hostname="rainer-HP-EliteBook-850-G5" time="13.983">
+  <properties/>
+  <testcase name="testTST_MIG_023_directRepositoryNotificationPipelineInvoked" classname="com.atrainingtracker.trainingtracker.migration.TcxImportPeriodAndClusterIntegrationTest" time="3.862"/>
+  <testcase name="testTST_MIG_024_candidateSportsInferredForUnknownSport_and_nameMatchDiscount_and_bSportPersisted" classname="com.atrainingtracker.trainingtracker.migration.TcxImportPeriodAndClusterIntegrationTest" time="2.489"/>
+  <testcase name="testTST_MIG_023_reactivePeriodProjection_syncsImportedWorkoutsAutomatically" classname="com.atrainingtracker.trainingtracker.migration.TcxImportPeriodAndClusterIntegrationTest" time="2.554"/>
+  <testcase name="testTST_STB_021_3_bulkImportBatchDefersReloadAndReconcilesOnce" classname="com.atrainingtracker.trainingtracker.migration.TcxImportPeriodAndClusterIntegrationTest" time="2.421"/>
+  <testcase name="testTST_STB_021_3_singleFileImportSuppressesDuplicateLocalBroadcast" classname="com.atrainingtracker.trainingtracker.migration.TcxImportPeriodAndClusterIntegrationTest" time="2.657"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

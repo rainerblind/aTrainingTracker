@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPriorityTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-25T05:54:12.464Z" hostname="rainer-HP-EliteBook-850-G5" time="1.021">
+  <properties/>
+  <testcase name="testNewlyDiscoveredSensors_areSortedAtTopOfListInRecencyOrder" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPriorityTest" time="0.212"/>
+  <testcase name="testSortOrder_firstSeenSortsByIdDescending" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPriorityTest" time="0.188"/>
+  <testcase name="testPairingToggle_sortingRemainsStableWithoutConnectionJumping" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPriorityTest" time="0.192"/>
+  <testcase name="testSortOrder_batteryLevelSortsLowestKnownFirst" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPriorityTest" time="0.195"/>
+  <testcase name="testNewlyDiscoveredSensors_remainPinnedAtTopAcrossAllSortOrders" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelPriorityTest" time="0.233"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

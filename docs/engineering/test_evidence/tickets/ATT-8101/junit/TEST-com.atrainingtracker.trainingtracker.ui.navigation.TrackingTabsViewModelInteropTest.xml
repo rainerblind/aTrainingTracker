@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.navigation.TrackingTabsViewModelInteropTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-25T05:57:34.103Z" hostname="rainer-HP-EliteBook-850-G5" time="3.842">
+  <properties/>
+  <testcase name="testMainActivityOnActivityTypeSelectedMethodContract" classname="com.atrainingtracker.trainingtracker.ui.navigation.TrackingTabsViewModelInteropTest" time="0.756"/>
+  <testcase name="testExitConfigurationSafeInTrackingMode" classname="com.atrainingtracker.trainingtracker.ui.navigation.TrackingTabsViewModelInteropTest" time="0.828"/>
+  <testcase name="testExitConfigurationFromPreviewReturnsToTracking" classname="com.atrainingtracker.trainingtracker.ui.navigation.TrackingTabsViewModelInteropTest" time="0.702"/>
+  <testcase name="testSportSelectionTransitionsToConfiguration" classname="com.atrainingtracker.trainingtracker.ui.navigation.TrackingTabsViewModelInteropTest" time="0.717"/>
+  <testcase name="testHierarchicalBackNavigationFromConfigurationToPreview" classname="com.atrainingtracker.trainingtracker.ui.navigation.TrackingTabsViewModelInteropTest" time="0.838"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

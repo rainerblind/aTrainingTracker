@@ -23,18 +23,22 @@ import android.util.Log
 import androidx.arch.core.executor.ArchTaskExecutor
 import androidx.arch.core.executor.TaskExecutor
 import androidx.lifecycle.SavedStateHandle
+import androidx.datastore.preferences.core.preferencesOf
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceSortOrder
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.settings.InMemoryPreferencesDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -99,6 +103,7 @@ class DevicesTabbedViewModelTest {
         mockSettingsDataStore = mockk(relaxed = true)
         every { mockSettingsDataStore.isHrZonesConfigured } returns MutableStateFlow(false)
         every { mockSettingsDataStore.isPwrZonesConfigured } returns MutableStateFlow(false)
+        every { mockSettingsDataStore.deviceSortOrderFlow } returns MutableStateFlow(DeviceSortOrder.ALPHABETICAL)
         SettingsDataStore.setInstanceForTesting(mockSettingsDataStore)
     }
 
@@ -529,6 +534,142 @@ class DevicesTabbedViewModelTest {
         verify { mockDeviceDataRepository.getDeviceName(200L) }
         verify { mockDeviceDataRepository.getDeviceType(200L) }
         assertEquals("Fallback Polar", viewModel.zonePromptState.value?.deviceName)
+    }
+
+    // Linked test specs: TST-UI-2806.1
+    @Test
+    fun testSettingsDataStore_deviceSortOrderFlow_defaultsToAlphabeticalAndPersistsAllValues() = kotlinx.coroutines.test.runTest {
+        val dataStore = InMemoryPreferencesDataStore()
+        val realSettings = SettingsDataStore.createForTesting(mockApplication, dataStore, this)
+
+        assertEquals(DeviceSortOrder.ALPHABETICAL, realSettings.deviceSortOrderFlow.first())
+
+        for (order in listOf(
+            DeviceSortOrder.FIRST_SEEN,
+            DeviceSortOrder.LAST_USAGE,
+            DeviceSortOrder.BATTERY_LEVEL,
+            DeviceSortOrder.ALPHABETICAL
+        )) {
+            realSettings.setDeviceSortOrder(order)
+            assertEquals(order, realSettings.deviceSortOrderFlow.first())
+        }
+    }
+
+    // Linked test specs: TST-UI-2806.1
+    @Test
+    fun testSettingsDataStore_deviceSortOrderFlow_invalidTokenFallsBackToAlphabetical() = kotlinx.coroutines.test.runTest {
+        val dataStore = InMemoryPreferencesDataStore(
+            preferencesOf(SettingsDataStore.KEY_DEVICE_SORT_ORDER to "BOGUS_FUTURE_SORT_ORDER")
+        )
+        val realSettings = SettingsDataStore.createForTesting(mockApplication, dataStore, this)
+
+        assertEquals(DeviceSortOrder.ALPHABETICAL, realSettings.deviceSortOrderFlow.first())
+    }
+
+    // Linked test specs: TST-UI-2806.2
+    @Test
+    fun testSortOrder_persistsAcrossViewModelReinstantiation_simulatingAppRestart() = kotlinx.coroutines.test.runTest {
+        val sharedDataStore = InMemoryPreferencesDataStore()
+        val realSettings = SettingsDataStore.createForTesting(mockApplication, sharedDataStore, this)
+
+        val initialVm = DevicesTabbedViewModel(
+            mockApplication,
+            SavedStateHandle(),
+            settingsDataStore = realSettings
+        )
+        testScheduler.advanceUntilIdle()
+        assertEquals(DeviceSortOrder.ALPHABETICAL, initialVm.sortOrder.value)
+
+        initialVm.setSortOrder(DeviceSortOrder.BATTERY_LEVEL)
+        testScheduler.advanceUntilIdle()
+        assertEquals(DeviceSortOrder.BATTERY_LEVEL, initialVm.sortOrder.value)
+
+        // Simulate full app termination and cold restart with a fresh empty SavedStateHandle
+        val restartedSavedState = SavedStateHandle()
+        val restartedVm = DevicesTabbedViewModel(
+            mockApplication,
+            restartedSavedState,
+            settingsDataStore = realSettings
+        )
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(DeviceSortOrder.BATTERY_LEVEL, restartedVm.sortOrder.value)
+        assertEquals(
+            DeviceSortOrder.BATTERY_LEVEL.name,
+            restartedSavedState.get<String>(DevicesTabbedViewModel.KEY_SORT_ORDER)
+        )
+
+        // Change again and verify a second restart preserves the updated choice
+        restartedVm.setSortOrder(DeviceSortOrder.LAST_USAGE)
+        testScheduler.advanceUntilIdle()
+
+        val secondRestartVm = DevicesTabbedViewModel(
+            mockApplication,
+            SavedStateHandle(),
+            settingsDataStore = realSettings
+        )
+        testScheduler.advanceUntilIdle()
+        assertEquals(DeviceSortOrder.LAST_USAGE, secondRestartVm.sortOrder.value)
+    }
+
+    // Linked test specs: TST-UI-2806.2
+    @Test
+    fun testSortOrder_invalidStoredValueInDataStore_fallsBackToAlphabeticalOnRestart() = kotlinx.coroutines.test.runTest {
+        val corruptDataStore = InMemoryPreferencesDataStore(
+            preferencesOf(SettingsDataStore.KEY_DEVICE_SORT_ORDER to "CORRUPT_VALUE_999")
+        )
+        val realSettings = SettingsDataStore.createForTesting(mockApplication, corruptDataStore, this)
+
+        val restartedSavedState = SavedStateHandle()
+        val viewModel = DevicesTabbedViewModel(
+            mockApplication,
+            restartedSavedState,
+            settingsDataStore = realSettings
+        )
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(DeviceSortOrder.ALPHABETICAL, viewModel.sortOrder.value)
+        assertEquals(
+            DeviceSortOrder.ALPHABETICAL.name,
+            restartedSavedState.get<String>(DevicesTabbedViewModel.KEY_SORT_ORDER)
+        )
+    }
+
+    // Linked test specs: TST-UI-2806.2
+    @Test
+    fun testSortOrder_explicitSavedStateAndImmediateSelectionNotOverwrittenByDelayedDataStoreEmission() = kotlinx.coroutines.test.runTest {
+        // Case 1: SavedStateHandle already holds FIRST_SEEN while DataStore emits ALPHABETICAL
+        val savedStateWithSelection = SavedStateHandle(
+            mapOf(DevicesTabbedViewModel.KEY_SORT_ORDER to DeviceSortOrder.FIRST_SEEN.name)
+        )
+        val delayedFlow1 = MutableSharedFlow<DeviceSortOrder>(replay = 0)
+        every { mockSettingsDataStore.deviceSortOrderFlow } returns delayedFlow1
+
+        val vmWithSavedState = DevicesTabbedViewModel(
+            mockApplication,
+            savedStateWithSelection,
+            settingsDataStore = mockSettingsDataStore
+        )
+        delayedFlow1.tryEmit(DeviceSortOrder.ALPHABETICAL)
+        testScheduler.advanceUntilIdle()
+        assertEquals(DeviceSortOrder.FIRST_SEEN, vmWithSavedState.sortOrder.value)
+
+        // Case 2: Cold start where user picks BATTERY_LEVEL before delayed DataStore ALPHABETICAL arrives
+        val delayedFlow2 = MutableSharedFlow<DeviceSortOrder>(replay = 1)
+        every { mockSettingsDataStore.deviceSortOrderFlow } returns delayedFlow2
+        coEvery { mockSettingsDataStore.setDeviceSortOrder(any()) } just Runs
+
+        val coldVm = DevicesTabbedViewModel(
+            mockApplication,
+            SavedStateHandle(),
+            settingsDataStore = mockSettingsDataStore
+        )
+        coldVm.setSortOrder(DeviceSortOrder.BATTERY_LEVEL)
+        delayedFlow2.emit(DeviceSortOrder.ALPHABETICAL)
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(DeviceSortOrder.BATTERY_LEVEL, coldVm.sortOrder.value)
+        coVerify(exactly = 1) { mockSettingsDataStore.setDeviceSortOrder(DeviceSortOrder.BATTERY_LEVEL) }
     }
 }
 

@@ -1,14 +1,14 @@
 # Living Requirements: UI Components & Design System (Part 6 of 6)
 
 **Document ID**: `DOC-REQ-UI-P6`  
-**Version**: 1.0.37  
+**Version**: 1.0.38  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part6`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Requirements**: 49
+**Total Requirements**: 50
 
 ---
 
@@ -1204,7 +1204,7 @@
      - Tapping the button SHALL open a `DropdownMenu` listing all 4 sort options, displaying a `Check` leading icon next to the currently active sort order.
      - The Sort button SHALL be hidden on Equipment Matrix tabs (`pagerState.currentPage in 3..4`).
   4. *ViewModel State & Process Death Persistence (`REQ-UI-528.4`)*:
-     - `DevicesTabbedViewModel` SHALL expose `sortOrder: StateFlow<DeviceSortOrder>` initialized from `SavedStateHandle[KEY_SORT_ORDER]`, surviving configuration changes and process restoration.
+     - `DevicesTabbedViewModel` SHALL expose `sortOrder: StateFlow<DeviceSortOrder>` initialized from `SavedStateHandle[KEY_SORT_ORDER]`, surviving configuration changes and process restoration *(refined by `REQ-UI-2806` / `ATT-8101` for durable `SettingsDataStore` persistence across full app restarts)*.
   5. *100% 9-Language Localization Parity (`REQ-UI-528.5`)*:
      - All 4 sort order labels (`devices_sort_alphabetical`, `devices_sort_first_seen`, `devices_sort_last_usage`, `devices_sort_battery_level`) and menu title/description SHALL be localized across all 9 supported application locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) with zero missing entries and zero empty strings.
 
@@ -1846,6 +1846,29 @@
   1. *Original Requirement ID & Target*: Refines `REQ-UI-408` (*Multi-Tab Workout Details*, `ATT-3920`) and `REQ-UI-499` (*Reorderable WorkoutSummary*, `ATT-6213`).
   2. *Preservation of Core Invariants*: `WorkoutHeader` click (`initialSection = null` -> tab `0`), `WorkoutSummaryCompact` click, `pendingAutoShare` snapshot capture, `WorkoutLaps` per-row/split/move actions, `StravaHelper.openActivity`, `ExportStatus` inline toggle, `WorkoutPhotoStrip` preview/add, `HorizontalPager` gesture isolation (`REQ-UI-408.4`), and pinned `InterfaceSignatureDriftContractTest` signatures remain 100% preserved.
 
+### REQ-UI-2806: Durable Cross-Restart Persistence of Sensor List Sort Order (`DeviceSortOrder`) (`ATT-8101`) [Verified]
+- **Tests**: `TST-UI-2806`
+- **Tickets**: `ATT-8101`
+- **System Requirement(s)**: Derived (SW UI preference persistence refining `REQ-UI-528.4`)
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, On-Device Manual
+- **Implementation**: `SettingsDataStore.kt`, `DevicesTabbedViewModel.kt`
+- **Localization Parity**: `N/A - 0 new or modified UI strings`
+- **Rationale**: In `DevicesTabbedViewModel.kt` (`ATT-7663`), `sortOrder` was stored solely in `SavedStateHandle[KEY_SORT_ORDER]`, so the athlete's chosen sensor sorting (`FIRST_SEEN`, `LAST_USAGE`, `BATTERY_LEVEL`) was lost upon normal app termination and cold restart, reverting to `ALPHABETICAL`. Persisting `DeviceSortOrder` in `SettingsDataStore` while preserving `SavedStateHandle` reactivity ensures the selected sort order survives full app restarts without `runBlocking` main-thread stalls or state flicker (`ATT-8101`, Parent Epic `ATT-5910`, refining `REQ-UI-528.4`).
+- **Description**:
+  1. *Durable `SettingsDataStore` Sort Order Key & Safe Fallback (`REQ-UI-2806.1`)*: `SettingsDataStore` SHALL define `KEY_DEVICE_SORT_ORDER = stringPreferencesKey("device_sort_order")`, expose non-blocking `deviceSortOrderFlow: Flow<DeviceSortOrder>` resolving persisted tokens via `safeEnumValueOfOrNull<DeviceSortOrder>` with safe fallback to `DeviceSortOrder.ALPHABETICAL` when unset or invalid (and `.catch { emit(emptyPreferences()) }`), and provide `suspend fun setDeviceSortOrder(order: DeviceSortOrder)` to persist updates atomically without `runBlocking`.
+  2. *`DevicesTabbedViewModel` Restart Hydration & Flicker-Free Reactivity (`REQ-UI-2806.2`)*: `DevicesTabbedViewModel` SHALL synchronously honor any valid `SavedStateHandle[KEY_SORT_ORDER]` on initialization; when `SavedStateHandle` has no valid selection (cold app restart), `init` SHALL asynchronously hydrate `_sortOrder` and `savedStateHandle[KEY_SORT_ORDER]` from `settingsDataStore.deviceSortOrderFlow` on `viewModelScope` without overwriting an active `setSortOrder(...)` call or `SavedStateHandle` override. `setSortOrder(order)` SHALL update `_sortOrder` and `savedStateHandle` synchronously and persist to `SettingsDataStore` asynchronously via `viewModelScope.launch`.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* the athlete selects a non-default sensor sort order (e.g., `BATTERY_LEVEL`, `LAST_USAGE`, or `FIRST_SEEN`) on `DevicesTabbedScreen`, *When* the app is terminated and cold-restarted (new `DevicesTabbedViewModel` with an empty `SavedStateHandle`), *Then* `DevicesTabbedViewModel.sortOrder` hydrates to the persisted `DeviceSortOrder` and does not revert to `ALPHABETICAL`.
+  • *Given* a missing or corrupted/unknown `device_sort_order` string in `SettingsDataStore`, *When* `deviceSortOrderFlow` or `DevicesTabbedViewModel` initializes, *Then* `sortOrder` resolves safely to `DeviceSortOrder.ALPHABETICAL` without throwing exceptions.
+  • *Given* an explicit valid `SavedStateHandle[KEY_SORT_ORDER]` or an immediate `setSortOrder(...)` call before async hydration finishes, *When* DataStore emits, *Then* the explicit selection is preserved without flickering back to `ALPHABETICAL`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Refines `REQ-UI-528.4` (`ATT-7663`, *ViewModel State & Process Death Persistence*).
+  2. *Historical Origin & Commit Trace*: Introduced in `ATT-7663` (`DevicesTabbedViewModel.kt` using `SavedStateHandle[KEY_SORT_ORDER]`).
+  3. *Root Reason for Existing Formulation*: `SavedStateHandle` handled configuration changes and process-death restoration, omitting cross-restart disk persistence.
+  4. *Preservation of Core Invariants*: `SavedStateHandle` config-change/process-death survival, `isNewlyDiscovered` recency pinning (`REQ-UI-334`), `DeviceSortOrder` comparator determinism (`REQ-UI-528.2`), `SettingsDataStore` non-blocking hot-path invariant (`REQ-SET-079`, zero `runBlocking`), and `DevicesTabbedViewModel` `@JvmOverloads` constructor compatibility (`Rule 3.5`) remain 100% preserved.
+
 ---
 
 ## Change History
@@ -1886,3 +1909,4 @@
 | `1.0.33` | 2026-11-23 | Lane 2 Author (`ATT-9610`, `--as agent1`) | `ATT-9610` | Promoted `REQ-UI-2804` to `[Verified]` (`214/214` targeted/dependent tests PASS across `34` suites incl. `PrimaryHrSensorArbitratorTest` `9/9`, `SensorSourceDialogPriorityTest` `6/6`, `SensorSourceDialogContractTest` `12/12`, `ControlTracking*` `48/48`, `DeviceDataRepository*` `17/17`, `DeviceListViewModel*` `24/24`, `EditDevice*` `46/46`, `BANALServiceRepository*` `13/13`, `MySensorManagerPriorityTest` `8/8`, `ArchitectureConformanceContractTest` `11/11`, `InterfaceSignatureDriftContractTest` `3/3`; live `emulator-5554` PNG `ATT-9610_sensor_source_dialog.png` visually inspected via `read_file` with `0` crashes in `logcat -b crash -d`; pre-existing `ATT-9639` `MeasuredNfrBenchmarkTest#testNfr014` isolated per Rule 1.3). |
 | `1.0.34` | 2026-11-23 | Lane 1 Author (`ATT-8721`, `--as agent1`) | `ATT-8721` | Added `REQ-UI-2805` (`[Planned]`, `.1`–`.3`) for resilient summary-section-to-detail-tab navigation (`WorkoutSummary` -> `TrackOnMapScreen` -> `WorkoutDetailTabbedContent` + `MapDetailLayout` intra-tab/single-page scrolling). |
 | `1.0.35` | 2026-11-23 | Lane 1 Author (`ATT-8721`, `--as agent1`) | `ATT-8721` | Promoted `REQ-UI-2805` to `[Verified]` (`79/79` targeted tests PASS across `13` suites incl. `WorkoutDetailTabsTest` `21/21`, `WorkoutDetailSectionNavigationUiTest` `5/5`, `WorkoutDetailTabbedContentTest` `7/7`, `WorkoutDetailSectionOrderUiTest` `5/5`, `WorkoutDetailSummaryDecouplingTest` `2/2`, `WorkoutSummary*` `9/9`, `TrackOnMap*` `12/12`, `MapDetailLayoutViewportConsolidationUiTest` `4/4`, `InterfaceSignatureDriftContractTest` `3/3`, `ArchitectureConformanceContractTest` `11/11`; live `emulator-5554` PNGs `ATT-8721_emulator_smoke.png` & `ATT-8721_emulator_map_tab.png` inspected via `read_file` with `0` crashes in `logcat -b crash -d`). |
+| `1.0.36` | 2026-11-25 | Lane 1 Author (`ATT-8101`, `--as agent1`) | `ATT-8101` | Added and verified `REQ-UI-2806` (`[Verified]`, `.1`–`.2`, refining `REQ-UI-528.4`) for durable `SettingsDataStore` persistence of `DeviceSortOrder` (`KEY_DEVICE_SORT_ORDER`) with safe `ALPHABETICAL` fallback and flicker-free `DevicesTabbedViewModel` restart hydration (`60/60` PASS across `7` suites; live `emulator-5554` cold-restart verification with `0` crashes in `logcat -b crash -d`). |

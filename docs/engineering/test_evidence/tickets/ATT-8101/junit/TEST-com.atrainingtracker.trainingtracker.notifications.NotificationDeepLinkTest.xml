@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.notifications.NotificationDeepLinkTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-25T05:56:17.388Z" hostname="rainer-HP-EliteBook-850-G5" time="1.347">
+  <properties/>
+  <testcase name="devicesTabbedViewModel_setCriticalBatteryFilter_updatesCriteriaReactively" classname="com.atrainingtracker.trainingtracker.notifications.NotificationDeepLinkTest" time="0.541"/>
+  <testcase name="devicesTabbedViewModel_initializedWithExtraFilterCriticalBattery_preselectsCriticalBatteryFilter" classname="com.atrainingtracker.trainingtracker.notifications.NotificationDeepLinkTest" time="0.306"/>
+  <testcase name="lowBatteryNotification_pendingIntent_containsDeepLinkAndFilterExtras" classname="com.atrainingtracker.trainingtracker.notifications.NotificationDeepLinkTest" time="0.5"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

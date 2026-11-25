@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.AutoImportManagerTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-25T05:54:28.353Z" hostname="rainer-HP-EliteBook-850-G5" time="17.817">
+  <properties/>
+  <testcase name="testDownloadDropboxWithRetry_exhaustedRateLimitRetriesSkipsFinalTailSleep_TST_MIG_061_3" classname="com.atrainingtracker.trainingtracker.migration.AutoImportManagerTest" time="4.81"/>
+  <testcase name="testCooldownSuppressesImmediateRepeat" classname="com.atrainingtracker.trainingtracker.migration.AutoImportManagerTest" time="1.843"/>
+  <testcase name="testSyncWhenAutoImportDisabledReturnsEarly" classname="com.atrainingtracker.trainingtracker.migration.AutoImportManagerTest" time="1.751"/>
+  <testcase name="testSyncIncremental_rejectsZipSlipArchiveAndImportsValidZipSibling_TST_MIG_061_3" classname="com.atrainingtracker.trainingtracker.migration.AutoImportManagerTest" time="1.977"/>
+  <testcase name="testSyncIncremental_installsBulkImportBatchContextAndRefreshesClimbsOnceWhenClimbsPersisted" classname="com.atrainingtracker.trainingtracker.migration.AutoImportManagerTest" time="1.917"/>
+  <testcase name="testDownloadDropboxWithRetry_backsOffOnRateLimitExceptionAndSucceeds_TST_MIG_061_3" classname="com.atrainingtracker.trainingtracker.migration.AutoImportManagerTest" time="1.896"/>
+  <testcase name="testPreDownloadDeduplicationAndIncrementalSync_TST_MIG_050_2" classname="com.atrainingtracker.trainingtracker.migration.AutoImportManagerTest" time="1.786"/>
+  <testcase name="testSyncIncremental_rejectsTraversalFilenamesBeforeDownloadAndImportsValidSibling_TST_MIG_061_3" classname="com.atrainingtracker.trainingtracker.migration.AutoImportManagerTest" time="1.836"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
