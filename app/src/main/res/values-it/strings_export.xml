@@ -11,4 +11,7 @@
     <string name="diagnostic_share_button">Condividi pacchetto diagnostico</string>
     <string name="diagnostic_bundle_packaging">Creazione pacchetto diagnostico…</string>
     <string name="diagnostic_no_sidecar_warning">Nessuna registrazione grezza disponibile per questo allenamento.</string>
+    <string name="strava_activity_photos_section">Foto dell\'attività</string>
+    <string name="strava_download_photos_title">Scarica foto da Strava</string>
+    <string name="strava_download_photos_desc">Importa le foto delle attività Strava sincronizzate nella galleria locale</string>
 </resources>

@@ -1,14 +1,14 @@
 # Living Test Specification: Persistence, Migration & Cloud Export
 
 **Document ID**: `DOC-TST-MIG`  
-**Version**: 1.0.56  
+**Version**: 1.0.57  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Tests**: 142
+**Total Tests**: 143
 
 ---
 
@@ -2689,10 +2689,32 @@
 
 ---
 
+### TST-EXP-050: Strava API v3 Activity Photo Download, Settings Toggle & Local Deduplication Verification (`ATT-8100`) [Verified]
+- **Requirement(s)**: `REQ-EXP-050`
+- **Component**: `StravaPhotoPreferences.kt`, `StravaSettingsDialog.kt`, `prefs_strava.xml`, `StravaActivityData.kt`, `WorkoutPhotoManager.kt`, `StravaUploader.kt`, `WorkoutDetailTabbedContent.kt`, `WorkoutSummary.kt`, `strings_export.xml`
+- **Jira**: `ATT-8100`
+- **Test Code**:
+  - `StravaPhotoDownloadTest.kt` (`8/8` PASS: preference default/null-safety, `/photos` + `photos_summary` parsing, Null-Island rejection, disabled privacy guard, API download + EXIF + track interpolation + repeat-sync pre-download dedup, bulk-import/camera-timestamp/SHA-256 dedup, multi-photo preservation, `/photos` 500 -> `photos_summary` non-fatal fallback)
+  - `StravaSettingsDialogComposeTest.kt` (`2/2` PASS: Robolectric Compose UI toggle displayed, persisted on Save, discarded on Cancel)
+  - `StravaSettingsDialogContractTest.kt` (`3/3` PASS)
+  - `WorkoutPhotoManagerTest.kt` (`11/11` PASS)
+  - `StravaUploaderTest.kt` (`8/8`), `StravaUploaderNamingTest.kt` (`32/32`), `StravaUploaderRaceWorkoutTypeTest.kt` (`3/3`), `StravaUploaderRadarSummaryTest.kt` (`5/5`), `StravaActivitySectionTest.kt` (`25/25`)
+  - `TranslationParityTest.kt` (`11/11` PASS across all 9 locales)
+- **Verification Evidence**: Verified (`ATT-8100`, `tier-b`; `108/108` targeted Tier-1 unit, Compose UI & localization tests PASS across 10 suites — `0` fail, `0` err, `0` skip; live `emulator-5554` verification `CRASH_LOGCAT_CLEAN` with `Rule 8.5`-inspected screenshot `docs/engineering/test_evidence/tickets/ATT-8100/screenshots/att8100_strava_settings.png`; SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-8100/`).
+- **Test Description**:
+  1. *Settings Preference & Compose UI Toggle (`TST-EXP-050.1` — `StravaSettingsDialogContractTest.kt`, `StravaPhotoDownloadTest.kt`)*: Verify `StravaPhotoPreferences.isDownloadEnabled(context)` defaults to `false` (including null-safe `context == null` check), persists via `setDownloadEnabled`, and `StravaSettingsDialog` renders the localized photo download toggle in connected state and persists changes on Save without saving on Cancel.
+  2. *API Fetch, Metadata Parsing, Security Guards, Storage & Fallback Coordinates (`TST-EXP-050.2` — `StravaPhotoDownloadTest.kt`, `WorkoutPhotoManagerTest.kt`)*: Mock Strava API v3 `/activities/{id}/photos` (and `photos_summary` fallback) + CDN image bytes via `OkHttpClient` interceptor; verify highest-resolution `https://` URL selection, cleartext `http://`/non-HTTPS scheme rejection, unsafe `uniqueId`/path-traversal rejection, non-image `Content-Type` rejection with temp-file cleanup, zero `Authorization` header leaked to CDN requests, storage inside `WorkoutPhotoManager.getWorkoutPhotosDir(context, workoutId)`, `workout_photos` DB registration, EXIF/timestamp/coordinate fallback & trackpoint interpolation, and `(0.0, 0.0)` Null-Island rejection.
+  3. *Deduplication & Disabled Privacy Guard (`TST-EXP-050.3` — `StravaPhotoDownloadTest.kt`, `WorkoutPhotoManagerTest.kt`)*: Verify duplicate skipping for (a) previously downloaded `strava_<uniqueId>.*` photos (zero CDN download), (b) bulk-imported `<uniqueId>.*` photos, (c) local camera/gallery photos matching `takenAtMs` within `2,000 ms` or matching SHA-256 content digest, and (d) distinct multi-photo activities without EXIF are all preserved. Verify when `downloadStravaPhotos() == false`, zero `/photos` or CDN requests are issued and `StravaActivityParser.minimize()` continues stripping all photo fields.
+  4. *9-Language Localization Parity & Live Emulator UI Check (`TST-EXP-050.4` — `TranslationParityTest.kt`)*: Verify `TranslationParityTest` passes 100% for new `strings_export.xml` keys and verify `StravaSettingsDialog` visually on `emulator-5554`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.58` | 2026-11-25 | Lane 3 Author (`ATT-8100`, `--as agent1`) | `ATT-8100` | Promoted `TST-EXP-050` to `[Verified]` (`112/112` targeted Tier-1 unit, Compose UI & localization tests PASS across 10 suites incl. `StravaPhotoDownloadTest` `12/12` — with Bounce 1/5 `http://`, path-traversal, and non-image `Content-Type` rejection tests, `StravaSettingsDialogComposeTest` `2/2`, `StravaSettingsDialogContractTest` `3/3`, `WorkoutPhotoManagerTest` `11/11`, `StravaUploader*` `48/48`, `StravaActivitySectionTest` `25/25`, `TranslationParityTest` `11/11`; `0` fail/err/skip, `0` new warnings; live `emulator-5554` verification `CRASH_LOGCAT_CLEAN` + `Rule 8.5`-inspected screenshot; SHA-256 bundle `docs/engineering/test_evidence/tickets/ATT-8100/`). |
+| `1.0.57` | 2026-11-25 | Lane 3 Author (`ATT-8100`, `--as agent1`) | `ATT-8100` | Added `[Planned]` `TST-EXP-050` (`TST-EXP-050.1`–`TST-EXP-050.4`, symmetric with `REQ-EXP-050`) covering `StravaPhotoPreferences` & `StravaSettingsDialog` Compose UI toggle, Strava API v3 `/photos` + `photos_summary` parsing/storage/EXIF/coordinates, pre-/post-download deduplication, disabled privacy guard, and 9-locale parity. |
 | `1.0.56` | 2026-11-25 | Lane 1 Author (`ATT-9019`, `--as agent1`) | `ATT-9019` | Promoted `TST-MIG-062` to `[Verified]` (`95/95` targeted Tier-1 unit, Compose UI & contract tests PASS across 16 suites incl. `WorkoutClusterCorridorScoringTest` `7/7`, `ClusterNamingDialogPathPreviewTest` `4/4`, `ClusterNamingDialogEscapeContractTest` `4/4`, `ClusterNamingDialogLabelsVisualContractTest` `5/5`, `PathPreviewMapBoundsTest` `8/8`, `UnifiedSpatialMarkersTest` `1/1`, `ArchitectureConformanceContractTest` `11/11`; `0` fail/err/skip, `0` new warnings; live `emulator-5554` verification `CRASH_LOGCAT_CLEAN` + `ATT-9019_import_backup_screen.png`; SHA-256 bundle `docs/engineering/test_evidence/tickets/ATT-9019/`). |
 | `1.0.55` | 2026-11-25 | Lane 1 Author (`ATT-9019`, `--as agent1`) | `ATT-9019` | Added `[Planned]` `TST-MIG-062` (`TST-MIG-062.1`–`TST-MIG-062.3`, symmetric with `REQ-MIG-062`) covering `ClusterNamingDialog` `PathPreviewMap` + bounded `createSensorMarker` reuse, single-pass `samplePolylineStations` hoisting + `ClusterPreviewStationCache` reuse/invalidation/concurrency/parity, and live emulator smoke. |
 | `1.0.54` | 2026-11-23 | Lane 1 Author (`ATT-9021`, `--as agent1`) | `ATT-9021` | Promoted `TST-DAT-050` to `[Verified]` (`120/120` targeted Tier-1 unit, Robolectric SQLite migration & contract tests PASS across 14 suites incl. `WorkoutSummariesEpicMigrationTest` `4/4`, `FitLosslessRoundTripTest` `7/7`, `WorkoutDataMappingSymmetryTest` `11/11`, `EditWorkoutViewModelTest` `18/18`, `SqliteSchemaParityContractTest` `6/6`, `DatabaseSchemaRegistryParityContractTest` `2/2`, `ArchitectureConformanceContractTest` `11/11`; `0` fail/err/skip, `0` new warnings; `3/3` safety linters PASS; live `emulator-5554` boot smoke `CRASH_LOGCAT_CLEAN` + `user_version = 32` + `ATT-9021_emulator_smoke.png`; SHA-256 bundle `docs/engineering/test_evidence/tickets/ATT-9021/`). |

@@ -179,7 +179,8 @@ fun WorkoutSummary(
     val workoutPhotos by produceState<List<WorkoutPhotoEntry>>(
         initialValue = emptyList(),
         key1 = workoutData.id,
-        key2 = photosRefreshKey
+        key2 = photosRefreshKey,
+        key3 = workoutData.exportStatuses
     ) {
         value = withContext(Dispatchers.IO) {
             repository.getWorkoutPhotos(workoutData.id)

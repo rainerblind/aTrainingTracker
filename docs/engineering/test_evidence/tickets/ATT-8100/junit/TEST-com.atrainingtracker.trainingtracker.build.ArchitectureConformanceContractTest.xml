@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-25T07:41:06.652Z" hostname="rainer-HP-EliteBook-850-G5" time="3.069">
+  <properties/>
+  <testcase name="testDomainLayer_pureJvmIsolation" classname="com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest" time="0.571"/>
+  <testcase name="testMonolithLocBaseline_containsExpectedCeilingCount" classname="com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest" time="0.005"/>
+  <testcase name="testRatchetingTripwire_detectsForbiddenDatabaseUpwardImport" classname="com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest" time="0.0"/>
+  <testcase name="testArchitectureDoc_definesResourceAndTimingBudgets" classname="com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest" time="0.022"/>
+  <testcase name="testRatchetingTripwire_detectsUnallowlistedUiDatabaseCall" classname="com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest" time="0.0"/>
+  <testcase name="testDatabaseLayer_noUpwardUiOrComposeImports" classname="com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest" time="0.104"/>
+  <testcase name="testUiLayer_noUnallowlistedDatabaseManagerReferences" classname="com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest" time="2.094"/>
+  <testcase name="testRatchetingTripwire_detectsForbiddenDomainImport" classname="com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest" time="0.0"/>
+  <testcase name="testMonolithLocRatchet_noNewOrGrowingGodClasses" classname="com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest" time="0.262"/>
+  <testcase name="testBaseline_containsExpectedCount" classname="com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest" time="0.0"/>
+  <testcase name="testRatchetingTripwire_commentStrippingPreventsFalsePositive" classname="com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

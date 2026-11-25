@@ -11,4 +11,7 @@
     <string name="diagnostic_share_button">診断バンドルを共有</string>
     <string name="diagnostic_bundle_packaging">診断バンドルを作成中…</string>
     <string name="diagnostic_no_sidecar_warning">このワークアウトには生センサー記録がありません。</string>
+    <string name="strava_activity_photos_section">アクティビティの写真</string>
+    <string name="strava_download_photos_title">Stravaの写真をダウンロード</string>
+    <string name="strava_download_photos_desc">同期したStravaアクティビティの写真をローカルのワークアウトギャラリーに取り込む</string>
 </resources>

@@ -23,6 +23,7 @@ import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.util.safeEnumValueOfOrNull
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.database.WorkoutPhotoManager
 import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
 import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.RadarTrafficSummaryFormatter
@@ -31,6 +32,7 @@ import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusRep
 import com.atrainingtracker.trainingtracker.exporter.BaseExporter
 import com.atrainingtracker.trainingtracker.exporter.ExportInfo
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
+import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaPhotoPreferences
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.StravaActivityParser
 import com.atrainingtracker.trainingtracker.util.AppHttpClient
@@ -479,6 +481,9 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
         // ATT-912 / REQ-EXP-010: Ingest Strava segment feedback to update local PRs:
         processSegmentEffortsForPrs(activityJSON)
 
+        // ATT-8100 / REQ-EXP-050: Opt-in Strava API v3 activity photo download & deduplication
+        downloadAndImportStravaPhotos(exportInfo.fileBaseName, activityId, activityJSON)
+
         // ATT-902 / ATT-1105 / ATT-1114: If duplicate, reconcile with Strava metadata:
         if (isDuplicate && activityJSON != null) {
             var updateName: String? = null
@@ -638,6 +643,53 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
 
     internal open fun getStravaActivity(stravaActivityId: String): JSONObject? {
         return getStravaJson(URL_STRAVA_ACTIVITY + stravaActivityId)
+    }
+
+    internal open fun getStravaActivityPhotos(stravaActivityId: String): JSONArray? {
+        return getStravaJsonArray("${URL_STRAVA_ACTIVITY}${stravaActivityId}/photos?size=2048&photo_sources=true")
+    }
+
+    /**
+     * Fetches and imports Strava activity photos into [WorkoutPhotoManager] when
+     * [StravaPhotoPreferences.isDownloadEnabled] is enabled (REQ-EXP-050).
+     * Non-fatal: errors are logged without failing activity upload/sync.
+     */
+    internal open fun downloadAndImportStravaPhotos(
+        fileBaseName: String,
+        activityId: String,
+        activityJson: JSONObject?
+    ) {
+        if (!StravaPhotoPreferences.isDownloadEnabled(mContext)) {
+            return
+        }
+        try {
+            val workoutId = WorkoutRepository.getInstance(mContext).getWorkoutIdByBaseFileName(fileBaseName)
+            if (workoutId <= 0L) {
+                Log.w(TAG, "downloadAndImportStravaPhotos skipped: no local workoutId for $fileBaseName")
+                return
+            }
+
+            if (StravaActivityParser.hasZeroPhotosHint(activityJson)) {
+                if (DEBUG) Log.d(TAG, "downloadAndImportStravaPhotos: activity $activityId reports zero photos, skipping API fetch")
+                return
+            }
+
+            val photosArray = getStravaActivityPhotos(activityId)
+            val photos = if (photosArray != null) {
+                StravaActivityParser.parseActivityPhotos(photosArray)
+            } else {
+                StravaActivityParser.parsePhotosSummary(activityJson)
+            }
+
+            if (photos.isEmpty()) {
+                return
+            }
+
+            val imported = WorkoutPhotoManager.importStravaPhotos(mContext, workoutId, photos, client)
+            if (DEBUG) Log.i(TAG, "downloadAndImportStravaPhotos: imported $imported/${photos.size} photo(s) for workoutId=$workoutId (Strava activity $activityId)")
+        } catch (e: Exception) {
+            Log.w(TAG, "Non-fatal error downloading Strava photos for activity $activityId ($fileBaseName)", e)
+        }
     }
 
     internal open fun getStravaGear(gearId: String): JSONObject? {
