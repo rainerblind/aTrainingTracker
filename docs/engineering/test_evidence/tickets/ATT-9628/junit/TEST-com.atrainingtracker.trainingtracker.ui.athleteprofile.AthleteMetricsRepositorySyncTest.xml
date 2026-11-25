@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepositorySyncTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-25T09:21:04.836Z" hostname="rainer-HP-EliteBook-850-G5" time="6.334">
+  <properties/>
+  <testcase name="legacy KEY_HR_MAX seeds HR_MAX_RUN and HR_MAX_BIKE idempotently even when athlete_metrics_seeded is true (TST-SET-135_1)" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepositorySyncTest" time="5.916"/>
+  <testcase name="zone snapshot sync projects latest to DataStore and respects historical backdating" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepositorySyncTest" time="0.074"/>
+  <testcase name="ensureSeededFromDataStore seeds existing positive baselines once and is idempotent" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepositorySyncTest" time="0.04"/>
+  <testcase name="upgraded user saving HR_BIKE before first profile open preserves legacy HR_MAX_RUN without duplicate HR_MAX_BIKE rows" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepositorySyncTest" time="0.032"/>
+  <testcase name="all 7 sport threshold types sync atomically to DataStore and resolve historically via getEffectiveThresholdsAt (TST-SET-135_2)" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepositorySyncTest" time="0.175"/>
+  <testcase name="fresh install calling saveCalculatedHeartRateZones before ensureSeeded never fabricates other sport HRmax" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepositorySyncTest" time="0.017"/>
+  <testcase name="fresh install saving HR_BIKE creates zero HR_MAX_RUN rows and single HR_MAX_BIKE row" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepositorySyncTest" time="0.018"/>
+  <testcase name="add, backdated add, edit, and delete state machine projects chronological latest to SettingsDataStore" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepositorySyncTest" time="0.054"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

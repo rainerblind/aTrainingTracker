@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutSummariesEpicMigrationTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:11:29.539Z" hostname="rainer-HP-EliteBook-850-G5" time="0.899">
+  <properties/>
+  <testcase name="testUpdateWorkoutDataAndRepositoryExportHeaderPersistEpic_tstDat050_1_and_2" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesEpicMigrationTest" time="0.235"/>
+  <testcase name="testGenuinePreV32UpgradeToV32_preservesRowsDefaultsZeroAndMatchesOnCreate_tstDat050_1" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesEpicMigrationTest" time="0.107"/>
+  <testcase name="testDbVersionColumnConstantAndRegistryParity_tstDat050_1" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesEpicMigrationTest" time="0.05"/>
+  <testcase name="testLegacyImportEnginePersistParsedWorkout_persistsIsEpicIntoRealSqlite_tstDat050_3" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesEpicMigrationTest" time="0.505"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository$exportStatusUpdateReceiver$1@679125c6], context=[android.app.ContextImpl@7d892a3], intentFilter=[android.content.IntentFilter@7d30fff8]]]
+]]></system-err>
+</testsuite>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.radar.RadarBrakeLightConcurrencyStressTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:27:39.962Z" hostname="rainer-HP-EliteBook-850-G5" time="10.412">
+  <properties/>
+  <testcase name="tuningPreferencesUpdates_propagateImmediatelyToRadarLightControllerAndAutoPauseConfig_tstCon056_2" classname="com.atrainingtracker.banalservice.devices.radar.RadarBrakeLightConcurrencyStressTest" time="6.895"/>
+  <testcase name="debouncedCycleNextModeWithRealDataStore_coalescesToSingleHardwareWrite_tstCon059_2" classname="com.atrainingtracker.banalservice.devices.radar.RadarBrakeLightConcurrencyStressTest" time="0.211"/>
+  <testcase name="rapidManualToAutoAndMidRideCollectLatest_neverRevertAutoModeWhileExternalUpdatesPropagate_tstCon059_3" classname="com.atrainingtracker.banalservice.devices.radar.RadarBrakeLightConcurrencyStressTest" time="0.466"/>
+  <testcase name="parallelRadarLightControllerAndSmartBrakeLightDetector_haveZeroAbBaDeadlocks_tstCon056_4" classname="com.atrainingtracker.banalservice.devices.radar.RadarBrakeLightConcurrencyStressTest" time="0.757"/>
+  <testcase name="concurrentThreatAndSnoozeMutations_neverOverwriteTargetsOrFailoverControlState_tstCon056_3" classname="com.atrainingtracker.banalservice.devices.radar.RadarBrakeLightConcurrencyStressTest" time="0.109"/>
+  <testcase name="deadCachesAndInvalidationHooks_areRemovedFromRadarLightControllerAndTrackerService_tstCon056_2" classname="com.atrainingtracker.banalservice.devices.radar.RadarBrakeLightConcurrencyStressTest" time="0.262"/>
+  <testcase name="timedSnooze_producesZeroWakeupsInSmartRadarLightEngineAndRadarAlertManager_tstCon056_3" classname="com.atrainingtracker.banalservice.devices.radar.RadarBrakeLightConcurrencyStressTest" time="1.701"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

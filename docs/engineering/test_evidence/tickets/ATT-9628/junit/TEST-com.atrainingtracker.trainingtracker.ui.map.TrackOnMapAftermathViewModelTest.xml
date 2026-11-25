@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModelTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-11-25T09:21:29.407Z" hostname="rainer-HP-EliteBook-850-G5" time="15.095">
+  <properties/>
+  <testcase name="reactiveClimbsAndKnownLocations_hydrateAfterColdStartAndSurviveWorkoutSwitch" classname="com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModelTest" time="9.646"/>
+  <testcase name="updateHrZonesAndFtp_persistSportSpecificHrvThresholdsAndOptionalZoneRecalc_TST_SET_135_4" classname="com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModelTest" time="1.285"/>
+  <testcase name="loadAftermathData_cancelsPreviousInFlightJob" classname="com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModelTest" time="0.294"/>
+  <testcase name="loadAftermathData_populatesIsSmoothedHrvStreamFromWorkoutRepository" classname="com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModelTest" time="0.309"/>
+  <testcase name="loadAftermathData_populatesActivityCarriageTimelineForTracklessAndResetsOnSwitch" classname="com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModelTest" time="0.315"/>
+  <testcase name="toggleTrackTypeEnabled_persistsSelectionAcrossViewModelRecreation_TST_UI_056" classname="com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModelTest" time="0.345"/>
+  <testcase name="testReloadSameWorkoutAfterDeferredSync_refreshesHrZonesAndTelemetryWithoutDroppingTracks" classname="com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModelTest" time="0.288"/>
+  <testcase name="updateHrZones_persistsHeartRateZonesAndUpdatesUiState" classname="com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModelTest" time="0.58"/>
+  <testcase name="updateFtp_persistsPowerZonesAndUpdatesUiState" classname="com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModelTest" time="0.512"/>
+  <testcase name="loadAftermathData_sameWorkout_preservesTracksWithoutPhase1Wipe" classname="com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModelTest" time="0.311"/>
+  <testcase name="loadAftermathData_differentWorkout_executesPhase1Wipe" classname="com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModelTest" time="0.3"/>
+  <testcase name="updateHrZones_whenHrvt2ExceedsConfiguredHrMax_persistsAutoBumpedHrMaxToRepository" classname="com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModelTest" time="0.582"/>
+  <testcase name="loadAftermathData_populatesLoadedWorkoutId" classname="com.atrainingtracker.trainingtracker.ui.map.TrackOnMapAftermathViewModelTest" time="0.318"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

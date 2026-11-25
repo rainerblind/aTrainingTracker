@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceEquipmentWheelPositionTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-25T03:52:44.112Z" hostname="rainer-HP-EliteBook-850-G5" time="4.093">
+  <properties/>
+  <testcase name="testRawDeviceDataProvider_hydratesWheelPositionsAndConflictsOnlyForWheelSensors" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceEquipmentWheelPositionTest" time="1.308"/>
+  <testcase name="testWheelSpeedSensor_displaysPositionsInSummaryAndSheet_andPromptsWithConflictPreview" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceEquipmentWheelPositionTest" time="0.737"/>
+  <testcase name="testNonWheelSensors_retainSimpleCheckboxUiWithoutWheelPositionDialog" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceEquipmentWheelPositionTest" time="1.189"/>
+  <testcase name="testBikeSpeedAndCadence_sheetCancelDiscardsDraftWheelPositionChanges" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceEquipmentWheelPositionTest" time="0.402"/>
+  <testcase name="testLightDarkWheelPositionPreviews_renderAndCapturePng_rule85" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceEquipmentWheelPositionTest" time="0.457"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[System.logW: A resource failed to call AbstractCursor.close. 
+]]></system-err>
+</testsuite>

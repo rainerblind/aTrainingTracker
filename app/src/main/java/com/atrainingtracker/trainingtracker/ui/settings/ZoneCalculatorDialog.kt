@@ -33,6 +33,7 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
@@ -44,7 +45,9 @@ import com.atrainingtracker.trainingtracker.zones.ZoneValidator
 
 enum class HrMethod {
     MAX_HR,
-    KARVONEN
+    KARVONEN,
+    LTHR,
+    THRESHOLD_ANCHORED
 }
 
 data class ZoneCalculatorUiState(
@@ -54,9 +57,13 @@ data class ZoneCalculatorUiState(
     val ftpErrorResId: Int? = null,
     val hrMaxInput: String = "185",
     val hrRestInput: String = "55",
+    val lthrInput: String = "168",
+    val lt1HrInput: String = "142",
     val hrMethod: HrMethod = HrMethod.KARVONEN,
     val hrMaxErrorResId: Int? = null,
     val hrRestErrorResId: Int? = null,
+    val lthrErrorResId: Int? = null,
+    val lt1HrErrorResId: Int? = null,
     val hrGeneralErrorResId: Int? = null,
     val calculatedZones: List<Int>? = null,
     val showOverwriteWarning: Boolean = false,
@@ -64,8 +71,15 @@ data class ZoneCalculatorUiState(
 ) {
     val isValid: Boolean
         get() = calculatedZones != null &&
-                (if (zoneType == ZoneType.PWR_BIKE) ftpErrorResId == null
-                else hrMaxErrorResId == null && (hrMethod != HrMethod.KARVONEN || hrRestErrorResId == null) && hrGeneralErrorResId == null)
+            (if (zoneType == ZoneType.PWR_BIKE) {
+                ftpErrorResId == null
+            } else {
+                hrMaxErrorResId == null &&
+                    (hrMethod != HrMethod.KARVONEN || hrRestErrorResId == null) &&
+                    ((hrMethod != HrMethod.LTHR && hrMethod != HrMethod.THRESHOLD_ANCHORED) || lthrErrorResId == null) &&
+                    (hrMethod != HrMethod.THRESHOLD_ANCHORED || lt1HrErrorResId == null) &&
+                    hrGeneralErrorResId == null
+            })
 
     val canApply: Boolean
         get() = isValid && !isSaving
@@ -77,7 +91,9 @@ class ZoneCalculatorStateHolder(
     initialFtp: Int? = null,
     initialHrMax: Int? = null,
     initialHrRest: Int? = null,
-    initialHrMethod: HrMethod = HrMethod.KARVONEN
+    initialHrMethod: HrMethod = HrMethod.KARVONEN,
+    initialLthr: Int? = null,
+    initialLt1Hr: Int? = null
 ) {
     var state: ZoneCalculatorUiState by mutableStateOf(
         ZoneCalculatorUiState(
@@ -86,6 +102,8 @@ class ZoneCalculatorStateHolder(
             ftpInput = (initialFtp?.takeIf { it in ZoneCalculationMath.MIN_FTP..ZoneCalculationMath.MAX_FTP } ?: SettingsDataStore.DEFAULT_CYCLING_FTP).toString(),
             hrMaxInput = (initialHrMax?.takeIf { it in ZoneCalculationMath.MIN_HR_MAX..ZoneCalculationMath.MAX_HR_MAX } ?: SettingsDataStore.DEFAULT_HR_MAX).toString(),
             hrRestInput = (initialHrRest?.takeIf { it in ZoneCalculationMath.MIN_HR_REST..ZoneCalculationMath.MAX_HR_REST } ?: SettingsDataStore.DEFAULT_HR_REST).toString(),
+            lthrInput = (initialLthr?.takeIf { it in ZoneCalculationMath.MIN_LTHR..ZoneCalculationMath.MAX_LTHR } ?: 168).toString(),
+            lt1HrInput = (initialLt1Hr?.takeIf { it in ZoneCalculationMath.MIN_LT1_HR..ZoneCalculationMath.MAX_LT1_HR } ?: 142).toString(),
             hrMethod = initialHrMethod
         )
     )
@@ -107,6 +125,16 @@ class ZoneCalculatorStateHolder(
 
     fun onHrRestChanged(input: String) {
         state = state.copy(hrRestInput = input)
+        recalculate()
+    }
+
+    fun onLthrChanged(input: String) {
+        state = state.copy(lthrInput = input)
+        recalculate()
+    }
+
+    fun onLt1HrChanged(input: String) {
+        state = state.copy(lt1HrInput = input)
         recalculate()
     }
 
@@ -173,36 +201,90 @@ class ZoneCalculatorStateHolder(
         } else {
             val hrMax = ZoneNumberParser.parseIntOrNull(state.hrMaxInput)
             val hrRest = ZoneNumberParser.parseIntOrNull(state.hrRestInput)
+            val lthr = ZoneNumberParser.parseIntOrNull(state.lthrInput)
+            val lt1Hr = ZoneNumberParser.parseIntOrNull(state.lt1HrInput)
 
             var hrMaxError: Int? = null
             var hrRestError: Int? = null
+            var lthrError: Int? = null
+            var lt1HrError: Int? = null
             var hrGeneralError: Int? = null
 
             if (hrMax == null || hrMax !in ZoneCalculationMath.MIN_HR_MAX..ZoneCalculationMath.MAX_HR_MAX) {
                 hrMaxError = R.string.zone_calc_error_hr_max_range
             }
 
-            if (state.hrMethod == HrMethod.KARVONEN) {
-                if (hrRest == null || hrRest !in ZoneCalculationMath.MIN_HR_REST..ZoneCalculationMath.MAX_HR_REST) {
-                    hrRestError = R.string.zone_calc_error_hr_rest_range
+            when (state.hrMethod) {
+                HrMethod.MAX_HR -> Unit
+                HrMethod.KARVONEN -> {
+                    if (hrRest == null || hrRest !in ZoneCalculationMath.MIN_HR_REST..ZoneCalculationMath.MAX_HR_REST) {
+                        hrRestError = R.string.zone_calc_error_hr_rest_range
+                    }
+                    if (hrMax != null && hrRest != null) {
+                        if (hrMax <= hrRest) {
+                            hrGeneralError = R.string.zone_calc_error_hr_max_greater_rest
+                        } else if (hrMax - hrRest < ZoneCalculationMath.MIN_KARVONEN_RESERVE) {
+                            hrGeneralError = R.string.zone_calc_error_karvonen_delta
+                        }
+                    }
                 }
-                if (hrMax != null && hrRest != null) {
-                    if (hrMax <= hrRest) {
-                        hrGeneralError = R.string.zone_calc_error_hr_max_greater_rest
-                    } else if (hrMax - hrRest < ZoneCalculationMath.MIN_KARVONEN_RESERVE) {
-                        hrGeneralError = R.string.zone_calc_error_karvonen_delta
+                HrMethod.LTHR -> {
+                    if (lthr == null || lthr !in ZoneCalculationMath.MIN_LTHR..ZoneCalculationMath.MAX_LTHR) {
+                        lthrError = R.string.zone_calc_error_lthr_range
+                    }
+                    if (hrMax != null && lthr != null && lthr >= hrMax) {
+                        hrGeneralError = R.string.zone_calc_error_lthr_lt_hrmax
+                    }
+                }
+                HrMethod.THRESHOLD_ANCHORED -> {
+                    if (lt1Hr == null || lt1Hr !in ZoneCalculationMath.MIN_LT1_HR..ZoneCalculationMath.MAX_LT1_HR) {
+                        lt1HrError = R.string.zone_calc_error_lt1_hr_range
+                    }
+                    if (lthr == null || lthr !in ZoneCalculationMath.MIN_LTHR..ZoneCalculationMath.MAX_LTHR) {
+                        lthrError = R.string.zone_calc_error_lthr_range
+                    }
+                    if (lt1Hr != null && lthr != null && lthr - lt1Hr < 2) {
+                        hrGeneralError = R.string.zone_calc_error_lt1_lt_lthr
+                    } else if (hrMax != null && lthr != null && lthr >= hrMax) {
+                        hrGeneralError = R.string.zone_calc_error_lthr_lt_hrmax
                     }
                 }
             }
 
-            val hasError = hrMaxError != null || (state.hrMethod == HrMethod.KARVONEN && hrRestError != null) || hrGeneralError != null
+            val hasError = hrMaxError != null ||
+                (state.hrMethod == HrMethod.KARVONEN && hrRestError != null) ||
+                ((state.hrMethod == HrMethod.LTHR || state.hrMethod == HrMethod.THRESHOLD_ANCHORED) && lthrError != null) ||
+                (state.hrMethod == HrMethod.THRESHOLD_ANCHORED && lt1HrError != null) ||
+                hrGeneralError != null
+
             val zones = if (!hasError && hrMax != null) {
-                if (state.hrMethod == HrMethod.KARVONEN && hrRest != null) {
-                    val t = ZoneCalculationMath.calculateKarvonenHeartRateZones(hrMax, hrRest)
-                    listOf(t.z1Max, t.z2Max, t.z3Max, t.z4Max)
-                } else {
-                    val t = ZoneCalculationMath.calculateHeartRateZonesMax(hrMax)
-                    listOf(t.z1Max, t.z2Max, t.z3Max, t.z4Max)
+                val safeHrRest = hrRest?.takeIf { it in ZoneCalculationMath.MIN_HR_REST..ZoneCalculationMath.MAX_HR_REST }
+                when (state.hrMethod) {
+                    HrMethod.MAX_HR -> {
+                        val t = ZoneCalculationMath.calculateHeartRateZonesMax(hrMax)
+                        listOf(t.z1Max, t.z2Max, t.z3Max, t.z4Max)
+                    }
+                    HrMethod.KARVONEN -> {
+                        val t = ZoneCalculationMath.calculateKarvonenHeartRateZones(hrMax, hrRest!!)
+                        listOf(t.z1Max, t.z2Max, t.z3Max, t.z4Max)
+                    }
+                    HrMethod.LTHR -> {
+                        val t = ZoneCalculationMath.calculateLthrAnchoredHeartRateZones(
+                            lthr = lthr!!,
+                            hrMax = hrMax,
+                            hrRest = safeHrRest?.takeIf { it < lthr }
+                        )
+                        listOf(t.z1Max, t.z2Max, t.z3Max, t.z4Max)
+                    }
+                    HrMethod.THRESHOLD_ANCHORED -> {
+                        val t = ZoneCalculationMath.calculateThresholdAnchoredHeartRateZones(
+                            hrvt1 = lt1Hr!!,
+                            hrvt2 = lthr!!,
+                            hrMax = hrMax,
+                            hrRest = safeHrRest?.takeIf { it < lt1Hr }
+                        )
+                        listOf(t.z1Max, t.z2Max, t.z3Max, t.z4Max)
+                    }
                 }
             } else {
                 null
@@ -211,6 +293,8 @@ class ZoneCalculatorStateHolder(
             state = state.copy(
                 hrMaxErrorResId = hrMaxError,
                 hrRestErrorResId = hrRestError,
+                lthrErrorResId = lthrError,
+                lt1HrErrorResId = lt1HrError,
                 hrGeneralErrorResId = hrGeneralError,
                 calculatedZones = zones
             )
@@ -218,14 +302,39 @@ class ZoneCalculatorStateHolder(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ZoneCalculatorDialog(
     holder: ZoneCalculatorStateHolder,
     onDismiss: () -> Unit,
     onSavePower: (ftp: Int, cutoffs: List<Int>) -> Unit,
-    onSaveHeartRate: (zoneType: ZoneType, hrMax: Int, hrRest: Int?, method: String, cutoffs: List<Int>) -> Unit
+    onSaveHeartRate: (zoneType: ZoneType, hrMax: Int, hrRest: Int?, method: String, cutoffs: List<Int>) -> Unit,
+    onSaveHeartRateThresholds: ((lthr: Int?, lt1Hr: Int?) -> Unit)? = null
 ) {
     val state = holder.state
+
+    val dispatchSave: (List<Int>) -> Unit = { cutoffs ->
+        if (state.zoneType == ZoneType.PWR_BIKE) {
+            val ftp = ZoneNumberParser.parseIntOrNull(state.ftpInput) ?: SettingsDataStore.DEFAULT_CYCLING_FTP
+            onSavePower(ftp, cutoffs)
+        } else {
+            val hrMax = ZoneNumberParser.parseIntOrNull(state.hrMaxInput) ?: SettingsDataStore.DEFAULT_HR_MAX
+            val hrRest = if (state.hrMethod == HrMethod.KARVONEN) ZoneNumberParser.parseIntOrNull(state.hrRestInput) else null
+            val method = when (state.hrMethod) {
+                HrMethod.KARVONEN -> "KARVONEN"
+                HrMethod.MAX_HR -> "MAX_HR"
+                HrMethod.LTHR -> "LTHR"
+                HrMethod.THRESHOLD_ANCHORED -> "HRVT_ANCHORS"
+            }
+            if (state.hrMethod == HrMethod.LTHR || state.hrMethod == HrMethod.THRESHOLD_ANCHORED) {
+                onSaveHeartRateThresholds?.invoke(
+                    ZoneNumberParser.parseIntOrNull(state.lthrInput),
+                    if (state.hrMethod == HrMethod.THRESHOLD_ANCHORED) ZoneNumberParser.parseIntOrNull(state.lt1HrInput) else null
+                )
+            }
+            onSaveHeartRate(state.zoneType, hrMax, hrRest, method, cutoffs)
+        }
+    }
 
     AlertDialog(
         onDismissRequest = { if (!state.isSaving) onDismiss() },
@@ -269,27 +378,66 @@ fun ZoneCalculatorDialog(
                         modifier = Modifier.fillMaxWidth()
                     )
                 } else {
-                    // HR Method Selection
+                    // HR Method Selection (2x2 clean segmented rows per docs/design_guidelines.md §1.1/§1.4)
                     Text(
                         text = stringResource(R.string.zone_calc_method_label),
                         style = MaterialTheme.typography.labelMedium
                     )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        FilterChip(
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                        SegmentedButton(
                             selected = state.hrMethod == HrMethod.KARVONEN,
                             onClick = { holder.onHrMethodChanged(HrMethod.KARVONEN) },
-                            label = { Text(stringResource(R.string.zone_calc_method_karvonen)) },
-                            modifier = Modifier.weight(1f)
-                        )
-                        FilterChip(
+                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                            icon = {}
+                        ) {
+                            Text(
+                                text = stringResource(R.string.zone_calc_method_karvonen),
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        SegmentedButton(
                             selected = state.hrMethod == HrMethod.MAX_HR,
                             onClick = { holder.onHrMethodChanged(HrMethod.MAX_HR) },
-                            label = { Text(stringResource(R.string.zone_calc_method_max_hr)) },
-                            modifier = Modifier.weight(1f)
-                        )
+                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                            icon = {}
+                        ) {
+                            Text(
+                                text = stringResource(R.string.zone_calc_method_max_hr),
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                        SegmentedButton(
+                            selected = state.hrMethod == HrMethod.LTHR,
+                            onClick = { holder.onHrMethodChanged(HrMethod.LTHR) },
+                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                            icon = {}
+                        ) {
+                            Text(
+                                text = stringResource(R.string.zone_calc_method_lthr),
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        SegmentedButton(
+                            selected = state.hrMethod == HrMethod.THRESHOLD_ANCHORED,
+                            onClick = { holder.onHrMethodChanged(HrMethod.THRESHOLD_ANCHORED) },
+                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                            icon = {}
+                        ) {
+                            Text(
+                                text = stringResource(R.string.zone_calc_method_threshold_anchored),
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
 
                     // HRmax Field
@@ -333,6 +481,58 @@ fun ZoneCalculatorDialog(
                                             state.hrRestErrorResId,
                                             ZoneCalculationMath.MIN_HR_REST,
                                             ZoneCalculationMath.MAX_HR_REST
+                                        ),
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    // LT1 HR Field (if Threshold-Anchored LT1 + LTHR)
+                    if (state.hrMethod == HrMethod.THRESHOLD_ANCHORED) {
+                        OutlinedTextField(
+                            value = state.lt1HrInput,
+                            onValueChange = { holder.onLt1HrChanged(it) },
+                            label = { Text(stringResource(R.string.zone_calc_lt1_hr_label)) },
+                            suffix = { Text(stringResource(R.string.units_heart_rate)) },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            isError = state.lt1HrErrorResId != null,
+                            supportingText = {
+                                if (state.lt1HrErrorResId != null) {
+                                    Text(
+                                        text = stringResource(
+                                            state.lt1HrErrorResId,
+                                            ZoneCalculationMath.MIN_LT1_HR,
+                                            ZoneCalculationMath.MAX_LT1_HR
+                                        ),
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    // LTHR Field (if LTHR or Threshold-Anchored)
+                    if (state.hrMethod == HrMethod.LTHR || state.hrMethod == HrMethod.THRESHOLD_ANCHORED) {
+                        OutlinedTextField(
+                            value = state.lthrInput,
+                            onValueChange = { holder.onLthrChanged(it) },
+                            label = { Text(stringResource(R.string.zone_calc_lthr_label)) },
+                            suffix = { Text(stringResource(R.string.units_heart_rate)) },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            isError = state.lthrErrorResId != null,
+                            supportingText = {
+                                if (state.lthrErrorResId != null) {
+                                    Text(
+                                        text = stringResource(
+                                            state.lthrErrorResId,
+                                            ZoneCalculationMath.MIN_LTHR,
+                                            ZoneCalculationMath.MAX_LTHR
                                         ),
                                         color = MaterialTheme.colorScheme.error
                                     )
@@ -414,19 +614,7 @@ fun ZoneCalculatorDialog(
         },
         confirmButton = {
             Button(
-                onClick = {
-                    holder.onApplyClicked { cutoffs ->
-                        if (state.zoneType == ZoneType.PWR_BIKE) {
-                            val ftp = ZoneNumberParser.parseIntOrNull(state.ftpInput) ?: SettingsDataStore.DEFAULT_CYCLING_FTP
-                            onSavePower(ftp, cutoffs)
-                        } else {
-                            val hrMax = ZoneNumberParser.parseIntOrNull(state.hrMaxInput) ?: SettingsDataStore.DEFAULT_HR_MAX
-                            val hrRest = if (state.hrMethod == HrMethod.KARVONEN) ZoneNumberParser.parseIntOrNull(state.hrRestInput) else null
-                            val method = if (state.hrMethod == HrMethod.KARVONEN) "KARVONEN" else "MAX_HR"
-                            onSaveHeartRate(state.zoneType, hrMax, hrRest, method, cutoffs)
-                        }
-                    }
-                },
+                onClick = { holder.onApplyClicked(dispatchSave) },
                 enabled = state.canApply
             ) {
                 if (state.isSaving) {
@@ -468,19 +656,7 @@ fun ZoneCalculatorDialog(
             },
             confirmButton = {
                 Button(
-                    onClick = {
-                        holder.onConfirmOverwrite { cutoffs ->
-                            if (state.zoneType == ZoneType.PWR_BIKE) {
-                                val ftp = ZoneNumberParser.parseIntOrNull(state.ftpInput) ?: SettingsDataStore.DEFAULT_CYCLING_FTP
-                                onSavePower(ftp, cutoffs)
-                            } else {
-                                val hrMax = ZoneNumberParser.parseIntOrNull(state.hrMaxInput) ?: SettingsDataStore.DEFAULT_HR_MAX
-                                val hrRest = if (state.hrMethod == HrMethod.KARVONEN) ZoneNumberParser.parseIntOrNull(state.hrRestInput) else null
-                                val method = if (state.hrMethod == HrMethod.KARVONEN) "KARVONEN" else "MAX_HR"
-                                onSaveHeartRate(state.zoneType, hrMax, hrRest, method, cutoffs)
-                            }
-                        }
-                    }
+                    onClick = { holder.onConfirmOverwrite(dispatchSave) }
                 ) {
                     Text(stringResource(R.string.zone_calc_apply_button))
                 }

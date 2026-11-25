@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.exporter.uploader.GoogleDriveUploaderTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-11-25T09:09:44.921Z" hostname="rainer-HP-EliteBook-850-G5" time="2.712">
+  <properties/>
+  <testcase name="testDoExport_folderResolutionFails_returnsFailure" classname="com.atrainingtracker.trainingtracker.exporter.uploader.GoogleDriveUploaderTest" time="0.375"/>
+  <testcase name="testDoExport_folderResolutionFailsWith403ApiDisabled_returnsLocalizedApiDisabledMessage" classname="com.atrainingtracker.trainingtracker.exporter.uploader.GoogleDriveUploaderTest" time="0.181"/>
+  <testcase name="testDoExport_fileDoesNotExist_returnsFailure" classname="com.atrainingtracker.trainingtracker.exporter.uploader.GoogleDriveUploaderTest" time="0.167"/>
+  <testcase name="testDoExport_uploadSuccess_updatesTimestampAndReturnsSuccess" classname="com.atrainingtracker.trainingtracker.exporter.uploader.GoogleDriveUploaderTest" time="0.18"/>
+  <testcase name="testDoExport_nullCachedToken_attemptsSilentRefresh_andSucceeds" classname="com.atrainingtracker.trainingtracker.exporter.uploader.GoogleDriveUploaderTest" time="0.352"/>
+  <testcase name="testDoExport_uploadFailsWith404_evictsFolderAndRecreatesOnRetry" classname="com.atrainingtracker.trainingtracker.exporter.uploader.GoogleDriveUploaderTest" time="0.189"/>
+  <testcase name="testDoExport_missingCredentials_returnsFailure" classname="com.atrainingtracker.trainingtracker.exporter.uploader.GoogleDriveUploaderTest" time="0.179"/>
+  <testcase name="testDoExport_transientHttp503_returnsShallRetryTrue" classname="com.atrainingtracker.trainingtracker.exporter.uploader.GoogleDriveUploaderTest" time="0.183"/>
+  <testcase name="testDoExport_folderResolutionFailsWith401_returnsLocalizedAuthExpiredMessage" classname="com.atrainingtracker.trainingtracker.exporter.uploader.GoogleDriveUploaderTest" time="0.179"/>
+  <testcase name="testDoExport_transientHttp429_returnsShallRetryTrue" classname="com.atrainingtracker.trainingtracker.exporter.uploader.GoogleDriveUploaderTest" time="0.178"/>
+  <testcase name="testDoExport_formatSpecificFolders_tcxGpxCsvTargetRespectiveDirectories" classname="com.atrainingtracker.trainingtracker.exporter.uploader.GoogleDriveUploaderTest" time="0.187"/>
+  <testcase name="testDoExport_nonTransient401_returnsShallRetryFalse" classname="com.atrainingtracker.trainingtracker.exporter.uploader.GoogleDriveUploaderTest" time="0.18"/>
+  <testcase name="testDoExport_ioException_returnsShallRetryTrue" classname="com.atrainingtracker.trainingtracker.exporter.uploader.GoogleDriveUploaderTest" time="0.182"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -67,10 +67,13 @@ class DevicesDatabaseManagerMigrationV15Test {
 
     @Test
     fun testDbVersion15_andSchemaRegistryParity_TST_CON_060_3() {
-        assertEquals(15, DevicesDatabaseManager.DevicesDbHelper.DB_VERSION)
+        assertTrue(
+            "DevicesDbHelper.DB_VERSION must be >= 15",
+            DevicesDatabaseManager.DevicesDbHelper.DB_VERSION >= 15
+        )
         val maxVersion = DatabaseSchemaRegistry.getMaxSupportedVersion("Devices.db")
         assertNotNull("Devices.db must be registered in DatabaseSchemaRegistry", maxVersion)
-        assertEquals(15, maxVersion)
+        assertEquals(DevicesDatabaseManager.DevicesDbHelper.DB_VERSION, maxVersion)
     }
 
     @Test

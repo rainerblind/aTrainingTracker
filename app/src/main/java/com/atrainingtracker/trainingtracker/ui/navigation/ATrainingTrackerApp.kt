@@ -632,7 +632,10 @@ fun ATrainingTrackerApp(
                     com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileScreen(
                         viewModel = athleteProfileViewModel,
                         onOpenDrawer = { activity.openDrawer() },
-                        onNavigateToMorningHrv = { navController.navigate(NavRoutes.morningHrv(forceFullHrv = true)) }
+                        onNavigateToMorningHrv = { navController.navigate(NavRoutes.morningHrv(forceFullHrv = true)) },
+                        onNavigateToZones = { tabIndex ->
+                            navController.navigate(NavRoutes.trainingZones(initialTab = tabIndex, pushed = true))
+                        }
                     )
                 }
 

@@ -30,12 +30,14 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.preferencesDataStore
+import com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceSortOrder
 import com.atrainingtracker.trainingtracker.monetization.GarageLeague
 import com.atrainingtracker.trainingtracker.monetization.GarageNudgeCooldownState
 import com.atrainingtracker.trainingtracker.monetization.SupporterTier
 import com.atrainingtracker.trainingtracker.monetization.SupporterTierOverride
 import com.atrainingtracker.trainingtracker.zones.ValidationResult
 import com.atrainingtracker.trainingtracker.zones.ZoneValidator
+import com.atrainingtracker.util.safeEnumValueOfOrNull
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -65,7 +67,16 @@ data class SettingsSnapshot(
     val hrBikeDisplayOptions: ZoneDisplayOptions,
     val pwrBikeDisplayOptions: ZoneDisplayOptions,
     val hrvDisplayOptions: ZoneDisplayOptions = ZoneDisplayOptions(),
-    val isRadarV1OnlyOverrideEnabled: Boolean = false
+    val isRadarV1OnlyOverrideEnabled: Boolean = false,
+    val hrRest: Int? = null,
+    val hrMax: Int? = null,
+    val hrMaxRun: Int? = null,
+    val hrMaxBike: Int? = null,
+    val lthrRun: Int? = null,
+    val lthrBike: Int? = null,
+    val lt1HrRun: Int? = null,
+    val lt1HrBike: Int? = null,
+    val lt1PwrBike: Int? = null
 ) {
     companion object {
         val DEFAULT = SettingsSnapshot(
@@ -239,11 +250,22 @@ class SettingsDataStore private constructor(
         // Developer Overrides (ATT-7659, REQ-CON-030.8)
         val KEY_RADAR_V1_ONLY_OVERRIDE = booleanPreferencesKey("radar_v1_only_override")
 
-        // Athlete Baselines (ATT-1289, REQ-TRK-019, ATT-3704, REQ-UI-391, ATT-3862, REQ-UI-399)
+        // Sensor List Sort Order (ATT-8101, REQ-UI-2806)
+        val KEY_DEVICE_SORT_ORDER = stringPreferencesKey("device_sort_order")
+
+        // Athlete Baselines & Sport-Specific Thresholds (ATT-1289, ATT-3704, ATT-3862, ATT-9628 / REQ-SET-135)
         val KEY_ATHLETE_WEIGHT_KG = floatPreferencesKey("athlete_weight_kg")
         val KEY_ATHLETE_METRICS_SEEDED = booleanPreferencesKey("athlete_metrics_seeded")
+        val KEY_SPORT_HR_MAX_SEEDED = booleanPreferencesKey("sport_hr_max_seeded")
         val KEY_CYCLING_CP_WATTS = intPreferencesKey("cycling_cp_watts")
         val KEY_CYCLING_W_PRIME_KJ = floatPreferencesKey("cycling_w_prime_kj")
+        val KEY_HR_MAX_RUN = intPreferencesKey("hr_max_run")
+        val KEY_HR_MAX_BIKE = intPreferencesKey("hr_max_bike")
+        val KEY_LTHR_RUN = intPreferencesKey("lthr_run")
+        val KEY_LTHR_BIKE = intPreferencesKey("lthr_bike")
+        val KEY_LT1_HR_RUN = intPreferencesKey("lt1_hr_run")
+        val KEY_LT1_HR_BIKE = intPreferencesKey("lt1_hr_bike")
+        val KEY_LT1_PWR_BIKE = intPreferencesKey("lt1_pwr_bike")
         const val DEFAULT_ATHLETE_WEIGHT_KG = 0.0f
         const val MIN_ATHLETE_WEIGHT_KG = 30.0f
         const val MAX_ATHLETE_WEIGHT_KG = 300.0f
@@ -366,9 +388,27 @@ class SettingsDataStore private constructor(
         prefs[KEY_CYCLING_FTP_UPDATED_AT]?.takeIf { it > 0L }
     }
 
+    private fun resolveEffectiveHrMax(prefs: Preferences): Int? =
+        listOfNotNull(
+            prefs[KEY_HR_MAX_RUN]?.takeIf { it > 0 },
+            prefs[KEY_HR_MAX_BIKE]?.takeIf { it > 0 }
+        ).maxOrNull() ?: prefs[KEY_HR_MAX]?.takeIf { it > 0 }
+
     val hrMaxFlow: Flow<Int?> = dataStore.data.map { prefs ->
+        resolveEffectiveHrMax(prefs)
+    }
+
+    val legacyHrMaxRawFlow: Flow<Int?> = dataStore.data.map { prefs ->
         prefs[KEY_HR_MAX]?.takeIf { it > 0 }
     }
+
+    val hrMaxRunFlow: Flow<Int?> = dataStore.data.map { it[KEY_HR_MAX_RUN]?.takeIf { v -> v > 0 } }
+    val hrMaxBikeFlow: Flow<Int?> = dataStore.data.map { it[KEY_HR_MAX_BIKE]?.takeIf { v -> v > 0 } }
+    val lthrRunFlow: Flow<Int?> = dataStore.data.map { it[KEY_LTHR_RUN]?.takeIf { v -> v > 0 } }
+    val lthrBikeFlow: Flow<Int?> = dataStore.data.map { it[KEY_LTHR_BIKE]?.takeIf { v -> v > 0 } }
+    val lt1HrRunFlow: Flow<Int?> = dataStore.data.map { it[KEY_LT1_HR_RUN]?.takeIf { v -> v > 0 } }
+    val lt1HrBikeFlow: Flow<Int?> = dataStore.data.map { it[KEY_LT1_HR_BIKE]?.takeIf { v -> v > 0 } }
+    val lt1PwrBikeFlow: Flow<Int?> = dataStore.data.map { it[KEY_LT1_PWR_BIKE]?.takeIf { v -> v > 0 } }
 
     val hrRestFlow: Flow<Int?> = dataStore.data.map { prefs ->
         prefs[KEY_HR_REST]?.takeIf { it > 0 }
@@ -424,6 +464,68 @@ class SettingsDataStore private constructor(
             prefs[KEY_ATHLETE_METRICS_SEEDED] = seeded
         }
     }
+
+    val sportHrMaxSeededFlow: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[KEY_SPORT_HR_MAX_SEEDED] ?: false
+    }
+
+    suspend fun setSportHrMaxSeeded(seeded: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[KEY_SPORT_HR_MAX_SEEDED] = seeded
+        }
+    }
+
+    private suspend fun setBoundedIntPref(key: Preferences.Key<Int>, value: Int?, minVal: Int, maxVal: Int) {
+        dataStore.edit { prefs ->
+            if (value == null || value <= 0) prefs.remove(key) else prefs[key] = value.coerceIn(minVal, maxVal)
+        }
+    }
+
+    private suspend fun setSportHrMax(key: Preferences.Key<Int>, hrMax: Int?) {
+        dataStore.edit { prefs ->
+            if (hrMax == null || hrMax <= 0) {
+                prefs.remove(key)
+            } else {
+                prefs[key] = hrMax.coerceIn(
+                    com.atrainingtracker.trainingtracker.zones.ZoneCalculationMath.MIN_HR_MAX,
+                    com.atrainingtracker.trainingtracker.zones.ZoneCalculationMath.MAX_HR_MAX
+                )
+            }
+            val syncedMax = listOfNotNull(
+                prefs[KEY_HR_MAX_RUN]?.takeIf { it > 0 },
+                prefs[KEY_HR_MAX_BIKE]?.takeIf { it > 0 }
+            ).maxOrNull()
+            if (syncedMax != null) prefs[KEY_HR_MAX] = syncedMax else prefs.remove(KEY_HR_MAX)
+        }
+    }
+
+    suspend fun setHrMaxRun(hrMax: Int?) = setSportHrMax(KEY_HR_MAX_RUN, hrMax)
+    suspend fun setHrMaxBike(hrMax: Int?) = setSportHrMax(KEY_HR_MAX_BIKE, hrMax)
+    suspend fun setLthrRun(lthr: Int?) = setBoundedIntPref(
+        KEY_LTHR_RUN, lthr,
+        com.atrainingtracker.trainingtracker.zones.ZoneCalculationMath.MIN_LTHR,
+        com.atrainingtracker.trainingtracker.zones.ZoneCalculationMath.MAX_LTHR
+    )
+    suspend fun setLthrBike(lthr: Int?) = setBoundedIntPref(
+        KEY_LTHR_BIKE, lthr,
+        com.atrainingtracker.trainingtracker.zones.ZoneCalculationMath.MIN_LTHR,
+        com.atrainingtracker.trainingtracker.zones.ZoneCalculationMath.MAX_LTHR
+    )
+    suspend fun setLt1HrRun(lt1: Int?) = setBoundedIntPref(
+        KEY_LT1_HR_RUN, lt1,
+        com.atrainingtracker.trainingtracker.zones.ZoneCalculationMath.MIN_LT1_HR,
+        com.atrainingtracker.trainingtracker.zones.ZoneCalculationMath.MAX_LT1_HR
+    )
+    suspend fun setLt1HrBike(lt1: Int?) = setBoundedIntPref(
+        KEY_LT1_HR_BIKE, lt1,
+        com.atrainingtracker.trainingtracker.zones.ZoneCalculationMath.MIN_LT1_HR,
+        com.atrainingtracker.trainingtracker.zones.ZoneCalculationMath.MAX_LT1_HR
+    )
+    suspend fun setLt1PwrBike(lt1: Int?) = setBoundedIntPref(
+        KEY_LT1_PWR_BIKE, lt1,
+        com.atrainingtracker.trainingtracker.zones.ZoneCalculationMath.MIN_LT1_PWR,
+        com.atrainingtracker.trainingtracker.zones.ZoneCalculationMath.MAX_LT1_PWR
+    )
 
     /**
      * Unidirectionally updates or clears the athlete's Resting Heart Rate (`KEY_HR_REST`) in DataStore (`REQ-UI-391.3`).
@@ -510,7 +612,7 @@ class SettingsDataStore private constructor(
         if (explicit != null) {
             explicit
         } else {
-            val hrMax = prefs[KEY_HR_MAX]
+            val hrMax = resolveEffectiveHrMax(prefs)
             val hrRunCustomized = prefs[KEY_HR_RUN_ZONES_CUSTOMIZED] ?: false
             val hrBikeCustomized = prefs[KEY_HR_BIKE_ZONES_CUSTOMIZED] ?: false
             (hrMax != null && hrMax > 0) || hrRunCustomized || hrBikeCustomized
@@ -748,6 +850,26 @@ class SettingsDataStore private constructor(
         }
     }
 
+    /**
+     * Flow emitting the persisted sensor list [DeviceSortOrder] (`REQ-UI-2806.1`, `ATT-8101`).
+     * Falls back safely to [DeviceSortOrder.ALPHABETICAL] when unset or when an invalid token is stored.
+     */
+    val deviceSortOrderFlow: Flow<DeviceSortOrder> = dataStore.data
+        .catch { emit(emptyPreferences()) }
+        .map { prefs ->
+            safeEnumValueOfOrNull<DeviceSortOrder>(prefs[KEY_DEVICE_SORT_ORDER])
+                ?: DeviceSortOrder.ALPHABETICAL
+        }
+
+    /**
+     * Persists the selected sensor list [DeviceSortOrder] (`REQ-UI-2806.1`, `ATT-8101`).
+     */
+    suspend fun setDeviceSortOrder(order: DeviceSortOrder) {
+        dataStore.edit { prefs ->
+            prefs[KEY_DEVICE_SORT_ORDER] = order.name
+        }
+    }
+
     // --- NON-BLOCKING IN-MEMORY SNAPSHOT & SYNCHRONOUS GETTERS (REQ-SET-079) ---
 
     // Snapshot StateFlow and sync write helper use constructor-injected appScope (REQ-SET-128).
@@ -831,7 +953,16 @@ class SettingsDataStore private constructor(
             hrBikeDisplayOptions = hrBikeDisplay,
             pwrBikeDisplayOptions = pwrBikeDisplay,
             hrvDisplayOptions = hrvDisplay,
-            isRadarV1OnlyOverrideEnabled = prefs[KEY_RADAR_V1_ONLY_OVERRIDE] ?: false
+            isRadarV1OnlyOverrideEnabled = prefs[KEY_RADAR_V1_ONLY_OVERRIDE] ?: false,
+            hrRest = prefs[KEY_HR_REST]?.takeIf { it > 0 },
+            hrMax = resolveEffectiveHrMax(prefs),
+            hrMaxRun = prefs[KEY_HR_MAX_RUN]?.takeIf { it > 0 },
+            hrMaxBike = prefs[KEY_HR_MAX_BIKE]?.takeIf { it > 0 },
+            lthrRun = prefs[KEY_LTHR_RUN]?.takeIf { it > 0 },
+            lthrBike = prefs[KEY_LTHR_BIKE]?.takeIf { it > 0 },
+            lt1HrRun = prefs[KEY_LT1_HR_RUN]?.takeIf { it > 0 },
+            lt1HrBike = prefs[KEY_LT1_HR_BIKE]?.takeIf { it > 0 },
+            lt1PwrBike = prefs[KEY_LT1_PWR_BIKE]?.takeIf { it > 0 }
         )
     }
 
@@ -875,6 +1006,15 @@ class SettingsDataStore private constructor(
     fun getAthleteWeightKgSync(): Float = snapshotStateFlow.value.athleteWeightKg
     fun getCpWattsSync(): Int? = snapshotStateFlow.value.cpWatts
     fun getWPrimeKjSync(): Float? = snapshotStateFlow.value.wPrimeKj
+    fun getHrRestSync(): Int? = snapshotStateFlow.value.hrRest
+    fun getHrMaxSync(): Int? = snapshotStateFlow.value.hrMax
+    fun getHrMaxRunSync(): Int? = snapshotStateFlow.value.hrMaxRun
+    fun getHrMaxBikeSync(): Int? = snapshotStateFlow.value.hrMaxBike
+    fun getLthrRunSync(): Int? = snapshotStateFlow.value.lthrRun
+    fun getLthrBikeSync(): Int? = snapshotStateFlow.value.lthrBike
+    fun getLt1HrRunSync(): Int? = snapshotStateFlow.value.lt1HrRun
+    fun getLt1HrBikeSync(): Int? = snapshotStateFlow.value.lt1HrBike
+    fun getLt1PwrBikeSync(): Int? = snapshotStateFlow.value.lt1PwrBike
     fun isRadarV1OnlyOverrideEnabledSync(): Boolean = snapshotStateFlow.value.isRadarV1OnlyOverrideEnabled
 
     fun launchSetAthleteWeightKg(weightKg: Float) {
@@ -1054,7 +1194,13 @@ class SettingsDataStore private constructor(
         }
 
         dataStore.edit { prefs ->
-            prefs[KEY_HR_MAX] = hrMax
+            val sportKey = if (zoneType == ZoneType.HR_RUN) KEY_HR_MAX_RUN else KEY_HR_MAX_BIKE
+            prefs[sportKey] = hrMax
+            val syncedMax = listOfNotNull(
+                prefs[KEY_HR_MAX_RUN]?.takeIf { it > 0 },
+                prefs[KEY_HR_MAX_BIKE]?.takeIf { it > 0 }
+            ).maxOrNull() ?: hrMax
+            prefs[KEY_HR_MAX] = syncedMax
             if (hrRest != null && hrRest > 0) {
                 prefs[KEY_HR_REST] = hrRest
             }

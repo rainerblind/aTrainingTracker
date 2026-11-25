@@ -68,6 +68,7 @@ class StravaUploaderTest {
 
     @After
     fun tearDown() {
+        StravaUploadDbHelper.resetForTesting(null)
         unmockkAll()
     }
 
@@ -396,5 +397,160 @@ class StravaUploaderTest {
         assertFalse("Timeout must not be marked success", result.success())
         assertTrue("Timeout must be classified as retryable", result.shallRetry())
         assertTrue("Status must mention timeout", result.answer().contains("Timeout waiting for Strava processing"))
+    }
+
+    private fun readRequestBodyUtf8(request: Request): String {
+        val buf = okio.Buffer()
+        request.body?.writeTo(buf)
+        return buf.readUtf8()
+    }
+
+    /**
+     * TST-EXP-051.3: Uploading a .fit file sends multipart data_type="fit" and .fit filename.
+     */
+    @Test
+    fun testUploadToStrava_sendsFitDataTypeForFitFile_TST_EXP_051_3() {
+        val mockDbHelper = mockk<StravaUploadDbHelper>(relaxed = true)
+        StravaUploadDbHelper.resetForTesting(mockDbHelper)
+
+        var capturedMultipart = ""
+        val testClient = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val req = chain.request()
+                if (req.method == "POST") {
+                    capturedMultipart = readRequestBodyUtf8(req)
+                    Response.Builder()
+                        .request(req)
+                        .protocol(Protocol.HTTP_1_1)
+                        .code(201)
+                        .message("Created")
+                        .body("""{"id": "upl_fit_1", "status": "Your activity is ready.", "activity_id": 123456}""".toResponseBody("application/json".toMediaTypeOrNull()))
+                        .build()
+                } else {
+                    Response.Builder()
+                        .request(req)
+                        .protocol(Protocol.HTTP_1_1)
+                        .code(200)
+                        .message("OK")
+                        .body("""{"id": "upl_fit_1", "status": "Your activity is ready.", "activity_id": 123456}""".toResponseBody("application/json".toMediaTypeOrNull()))
+                        .build()
+                }
+            }
+            .build()
+
+        val uploader = object : StravaUploader(mockContext, testClient) {
+            override fun doUpdate(exportInfo: ExportInfo, isDuplicate: Boolean): ExportResult {
+                return ExportResult(true, false, "successfully updated")
+            }
+        }.apply { sleepStrategy = {} }
+        every { StravaHelper.getRefreshedAccessToken() } returns "mock_token"
+
+        val tempFit = File.createTempFile("ride_20261125", ".fit").apply {
+            writeBytes(byteArrayOf(0x0E, 0x20, 0x01, 0x02, '.'.code.toByte(), 'F'.code.toByte(), 'I'.code.toByte(), 'T'.code.toByte()))
+            deleteOnExit()
+        }
+        val exportInfo = ExportInfo("ride_20261125", FileFormat.STRAVA, ExportType.COMMUNITY)
+
+        val result = uploader.uploadToStrava(exportInfo, tempFit, "mock_token")
+        assertTrue("FIT upload must succeed: ${result.answer()}", result.success())
+        assertTrue("Multipart body must contain data_type=fit", capturedMultipart.contains("name=\"data_type\"") && capturedMultipart.contains("\r\n\r\nfit\r\n"))
+        assertTrue("Multipart body must upload .fit filename", capturedMultipart.contains("filename=\"${tempFit.name}\""))
+    }
+
+    /**
+     * TST-EXP-051.3: Uploading a legacy .tcx (or .TCX) file sends multipart data_type="tcx".
+     */
+    @Test
+    fun testUploadToStrava_sendsTcxDataTypeForLegacyTcxFile_TST_EXP_051_3() {
+        val mockDbHelper = mockk<StravaUploadDbHelper>(relaxed = true)
+        StravaUploadDbHelper.resetForTesting(mockDbHelper)
+
+        var capturedMultipart = ""
+        val testClient = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val req = chain.request()
+                if (req.method == "POST") {
+                    capturedMultipart = readRequestBodyUtf8(req)
+                }
+                Response.Builder()
+                    .request(req)
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(201)
+                    .message("Created")
+                    .body("""{"id": "upl_tcx_1", "status": "Your activity is ready.", "activity_id": 654321}""".toResponseBody("application/json".toMediaTypeOrNull()))
+                    .build()
+            }
+            .build()
+
+        val uploader = object : StravaUploader(mockContext, testClient) {
+            override fun doUpdate(exportInfo: ExportInfo, isDuplicate: Boolean): ExportResult {
+                return ExportResult(true, false, "successfully updated")
+            }
+        }.apply { sleepStrategy = {} }
+        every { StravaHelper.getRefreshedAccessToken() } returns "mock_token"
+
+        val tempTcx = File.createTempFile("legacy_ride", ".TCX").apply {
+            writeText("<TrainingCenterDatabase/>")
+            deleteOnExit()
+        }
+        val exportInfo = ExportInfo("legacy_ride", FileFormat.STRAVA, ExportType.COMMUNITY)
+
+        val result = uploader.uploadToStrava(exportInfo, tempTcx, "mock_token")
+        assertTrue("Legacy TCX upload must succeed: ${result.answer()}", result.success())
+        assertTrue("Multipart body must contain data_type=tcx", capturedMultipart.contains("name=\"data_type\"") && capturedMultipart.contains("\r\n\r\ntcx\r\n"))
+        assertEquals("tcx", uploader.resolveDataType(tempTcx))
+        assertEquals("fit", uploader.resolveDataType(File("workout.fit")))
+    }
+
+    /**
+     * TST-EXP-051.3 (Gate 3 Watchpoint 3): Verify resolveUploadFile primary .fit precedence,
+     * pre-upgrade .tcx queue fallback, and 0-byte file guards on both .fit and .tcx.
+     */
+    @Test
+    fun testResolveUploadFile_prefersPrimaryFitAndFallsBackToLegacyTcxWithZeroByteGuards_TST_EXP_051_3() {
+        val tempBaseDir = java.nio.file.Files.createTempDirectory("strava_resolve_test").toFile()
+        try {
+            val stravaDir = File(tempBaseDir, FileFormat.STRAVA.dirName).apply { mkdirs() }
+            val uploader = StravaUploader(mockContext)
+            val baseName = "2026-11-25_08-00-00"
+            val exportInfo = ExportInfo(baseName, FileFormat.STRAVA, ExportType.COMMUNITY)
+            val primaryFit = File(stravaDir, "$baseName.fit")
+            val legacyTcx = File(stravaDir, "$baseName.tcx")
+
+            // Case 1: Both non-empty -> prefers primary .fit
+            primaryFit.writeBytes(byteArrayOf(0x0E, 0x20))
+            legacyTcx.writeText("<tcx/>")
+            val resolvedBoth = uploader.resolveUploadFile(exportInfo, tempBaseDir)
+            assertEquals(primaryFit.absolutePath, resolvedBoth.absolutePath)
+            assertEquals("fit", uploader.resolveDataType(resolvedBoth))
+
+            // Case 2: Primary .fit missing, non-empty legacy .tcx exists -> falls back to .tcx
+            primaryFit.delete()
+            val resolvedFallback = uploader.resolveUploadFile(exportInfo, tempBaseDir)
+            assertEquals(legacyTcx.absolutePath, resolvedFallback.absolutePath)
+            assertEquals("tcx", uploader.resolveDataType(resolvedFallback))
+
+            // Case 3: 0-byte primary .fit exists + non-empty legacy .tcx exists -> falls back to .tcx
+            primaryFit.writeBytes(ByteArray(0))
+            val resolvedZeroFit = uploader.resolveUploadFile(exportInfo, tempBaseDir)
+            assertEquals(legacyTcx.absolutePath, resolvedZeroFit.absolutePath)
+            assertEquals("tcx", uploader.resolveDataType(resolvedZeroFit))
+
+            // Case 4: Primary .fit missing + 0-byte legacy .tcx exists -> does NOT pick 0-byte .tcx; returns primary .fit
+            primaryFit.delete()
+            legacyTcx.writeBytes(ByteArray(0))
+            val resolvedZeroTcx = uploader.resolveUploadFile(exportInfo, tempBaseDir)
+            assertEquals(primaryFit.absolutePath, resolvedZeroTcx.absolutePath)
+            val emptyResult = uploader.uploadToStrava(exportInfo, resolvedZeroTcx, "mock_token")
+            assertFalse("Missing/0-byte file must fail", emptyResult.success())
+            assertFalse("Missing/0-byte file must not retry", emptyResult.shallRetry())
+
+            // Case 5: Both missing -> returns primary .fit
+            legacyTcx.delete()
+            val resolvedMissing = uploader.resolveUploadFile(exportInfo, tempBaseDir)
+            assertEquals(primaryFit.absolutePath, resolvedMissing.absolutePath)
+        } finally {
+            tempBaseDir.deleteRecursively()
+        }
     }
 }

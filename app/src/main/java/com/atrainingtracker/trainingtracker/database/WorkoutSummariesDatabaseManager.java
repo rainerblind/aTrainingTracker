@@ -1022,6 +1022,7 @@ public class WorkoutSummariesDatabaseManager extends BaseDatabaseManager<Workout
                 + "CAST(strftime('%s', w." + WorkoutSummaries.TIME_START + ") AS INTEGER) * 1000 AS start_ms, "
                 + "IFNULL(w." + WorkoutSummaries.TIME_ACTIVE_s + ", 0) AS active_s, "
                 + "w." + WorkoutSummaries.RPE + " AS workout_rpe, "
+                + "w." + WorkoutSummaries.B_SPORT + " AS workout_bsport, "
                 + "MAX(CASE WHEN e." + WorkoutSummaries.SENSOR_TYPE + " = 'TSS' AND e." + WorkoutSummaries.EXTREMA_TYPE + " IN ('END', 'AVG', 'MAX') THEN e." + WorkoutSummaries.VALUE + " END) AS power_tss, "
                 + "MAX(CASE WHEN e." + WorkoutSummaries.SENSOR_TYPE + " = 'NORMALIZED_POWER' AND e." + WorkoutSummaries.EXTREMA_TYPE + " IN ('END', 'AVG') THEN e." + WorkoutSummaries.VALUE + " END) AS np_watts, "
                 + "MAX(CASE WHEN e." + WorkoutSummaries.SENSOR_TYPE + " = 'POWER' AND e." + WorkoutSummaries.EXTREMA_TYPE + " = 'AVG' THEN e." + WorkoutSummaries.VALUE + " END) AS avg_power, "
@@ -1037,6 +1038,7 @@ public class WorkoutSummariesDatabaseManager extends BaseDatabaseManager<Workout
                 int startMsIdx = cursor.getColumnIndex("start_ms");
                 int activeSIdx = cursor.getColumnIndex("active_s");
                 int rpeIdx = cursor.getColumnIndex("workout_rpe");
+                int bSportIdx = cursor.getColumnIndex("workout_bsport");
                 int tssIdx = cursor.getColumnIndex("power_tss");
                 int npIdx = cursor.getColumnIndex("np_watts");
                 int pwrIdx = cursor.getColumnIndex("avg_power");
@@ -1046,6 +1048,11 @@ public class WorkoutSummariesDatabaseManager extends BaseDatabaseManager<Workout
                     long startMs = (startMsIdx != -1 && !cursor.isNull(startMsIdx)) ? cursor.getLong(startMsIdx) : 0L;
                     int activeS = (activeSIdx != -1 && !cursor.isNull(activeSIdx)) ? cursor.getInt(activeSIdx) : 0;
                     Integer rpe = (rpeIdx != -1 && !cursor.isNull(rpeIdx)) ? cursor.getInt(rpeIdx) : null;
+                    String rawBSport = (bSportIdx != -1 && !cursor.isNull(bSportIdx)) ? cursor.getString(bSportIdx) : null;
+                    BSportType bSportType = BSportType.UNKNOWN;
+                    if (rawBSport != null) {
+                        try { bSportType = BSportType.valueOf(rawBSport); } catch (IllegalArgumentException ignored) { bSportType = BSportType.UNKNOWN; }
+                    }
                     Double powerTss = (tssIdx != -1 && !cursor.isNull(tssIdx)) ? cursor.getDouble(tssIdx) : null;
                     Double npWatts = (npIdx != -1 && !cursor.isNull(npIdx)) ? cursor.getDouble(npIdx) : null;
                     Double avgPower = (pwrIdx != -1 && !cursor.isNull(pwrIdx)) ? cursor.getDouble(pwrIdx) : null;
@@ -1059,7 +1066,8 @@ public class WorkoutSummariesDatabaseManager extends BaseDatabaseManager<Workout
                                 npWatts,
                                 avgPower,
                                 avgHr,
-                                rpe
+                                rpe,
+                                bSportType
                         ));
                     }
                 }

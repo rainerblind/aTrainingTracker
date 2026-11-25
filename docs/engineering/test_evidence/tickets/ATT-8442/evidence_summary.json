@@ -1,0 +1,66 @@
+{
+  "android_test_summary": {
+    "details": "109 Android unit tests passed (14 JUnit XML).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 109
+  },
+  "checks": [
+    {
+      "details": "Android: 109 Android unit tests passed (14 JUnit XML). | Python: No Python tests selected.",
+      "failing_tests": [],
+      "name": "dependent_unit_tests",
+      "passed": true
+    },
+    {
+      "details": "All safety linters passed.",
+      "name": "static_safety_linters",
+      "passed": true
+    },
+    {
+      "details": "Tier C fast lane: zero stage deliverables required.",
+      "name": "deliverable_lint",
+      "passed": true
+    },
+    {
+      "details": "PASS: Zero Git conflict markers detected (12701 tracked file(s) scanned).",
+      "name": "conflict_markers",
+      "passed": true
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "96f69c04d2d8e5839471b0aca5ed93aad49de5f2",
+  "junit_xml_files": [
+    "junit/TEST-com.atrainingtracker.banalservice.devices.EditDeviceDialogAltitudeGuardsTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.EditDeviceDialogGuardsTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.radar.RadarLightControllerTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.DeviceManagementUiTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogDraftLocaleRotationTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogErtsSmoothingTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogRadarBondingTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogRadarLightTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogWheelGuidanceTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceEquipmentWheelPositionTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDevicePolarBackupTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDevicePolarLiveImuTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceWheelCircumferenceTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorsUiPolishContractTest.xml"
+  ],
+  "python_test_summary": {
+    "details": "No Python tests selected.",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "risk_tier": "tier-c",
+  "run_started_utc": "2026-11-25T03:51:32.958782+00:00",
+  "schema_version": "1.0.0",
+  "screenshots": [
+    "screenshots/att8442_before_polar_h10_overlap.png",
+    "screenshots/att8442_after_ble_polar_h10_de.png",
+    "screenshots/att8442_after_ant_polar_h10_de.png"
+  ],
+  "ticket_key": "ATT-8442",
+  "ui_touching": true,
+  "verdict": "PASS"
+}

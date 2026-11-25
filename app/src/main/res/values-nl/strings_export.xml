@@ -11,4 +11,7 @@
     <string name="diagnostic_share_button">Diagnosepakket delen</string>
     <string name="diagnostic_bundle_packaging">Diagnosepakket samenstellen…</string>
     <string name="diagnostic_no_sidecar_warning">Geen ruwe sensoropname beschikbaar voor deze training.</string>
+    <string name="strava_activity_photos_section">Activiteitsfoto\'s</string>
+    <string name="strava_download_photos_title">Strava-foto\'s downloaden</string>
+    <string name="strava_download_photos_desc">Foto\'s van gesynchroniseerde Strava-activiteiten importeren in de lokale trainingsgalerij</string>
 </resources>

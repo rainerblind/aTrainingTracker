@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.RepositoryEngineCleanlinessContractTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-25T07:41:35.932Z" hostname="rainer-HP-EliteBook-850-G5" time="0.169">
+  <properties/>
+  <testcase name="testLegacyImportEngine_zeroDatabaseManagerInstantiation" classname="com.atrainingtracker.trainingtracker.ui.RepositoryEngineCleanlinessContractTest" time="0.016"/>
+  <testcase name="testWorkoutDeletionHelper_zeroDatabaseManagerInstantiation" classname="com.atrainingtracker.trainingtracker.ui.RepositoryEngineCleanlinessContractTest" time="0.002"/>
+  <testcase name="testBackupManager_zeroDatabaseManagerInstantiation" classname="com.atrainingtracker.trainingtracker.ui.RepositoryEngineCleanlinessContractTest" time="0.004"/>
+  <testcase name="testTCXFileWriter_zeroDatabaseManagerInstantiation" classname="com.atrainingtracker.trainingtracker.ui.RepositoryEngineCleanlinessContractTest" time="0.005"/>
+  <testcase name="testTST_DAT_038_2_phaseBEngines_zeroProhibitedDatabaseImports" classname="com.atrainingtracker.trainingtracker.ui.RepositoryEngineCleanlinessContractTest" time="0.022"/>
+  <testcase name="testFitFileWriter_zeroDatabaseManagerInstantiation" classname="com.atrainingtracker.trainingtracker.ui.RepositoryEngineCleanlinessContractTest" time="0.012"/>
+  <testcase name="testWorkoutClusterEngine_zeroDatabaseManagerInstantiation" classname="com.atrainingtracker.trainingtracker.ui.RepositoryEngineCleanlinessContractTest" time="0.02"/>
+  <testcase name="testStravaUploader_zeroDatabaseManagerInstantiation" classname="com.atrainingtracker.trainingtracker.ui.RepositoryEngineCleanlinessContractTest" time="0.016"/>
+  <testcase name="testTST_DAT_038_1_repositoryReflection_zeroPublicDatabaseBackdoors" classname="com.atrainingtracker.trainingtracker.ui.RepositoryEngineCleanlinessContractTest" time="0.07"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

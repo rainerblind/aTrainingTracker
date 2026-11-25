@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.WorkoutImportAtomicityTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:15:21.492Z" hostname="rainer-HP-EliteBook-850-G5" time="18.609">
+  <properties/>
+  <testcase name="testGuaranteedDetachInFinally_evenOnMidTransactionException" classname="com.atrainingtracker.trainingtracker.migration.WorkoutImportAtomicityTest" time="1.801"/>
+  <testcase name="testOrphanDataDiagnosticHelper_findOrphanRecords" classname="com.atrainingtracker.trainingtracker.migration.WorkoutImportAtomicityTest" time="1.86"/>
+  <testcase name="testCrossDatabaseTransactionAtomicity_rollsBackOnChildFailure" classname="com.atrainingtracker.trainingtracker.migration.WorkoutImportAtomicityTest" time="1.766"/>
+  <testcase name="testScopedConnectionLifecycle_detachesAndClosesSafely" classname="com.atrainingtracker.trainingtracker.migration.WorkoutImportAtomicityTest" time="1.759"/>
+  <testcase name="testFailFastOnInvalidWorkoutId_rejectsNegativeOne" classname="com.atrainingtracker.trainingtracker.migration.WorkoutImportAtomicityTest" time="1.848"/>
+  <testcase name="testOrphanDataDiagnosticHelper_purgeOrphanRecords" classname="com.atrainingtracker.trainingtracker.migration.WorkoutImportAtomicityTest" time="1.857"/>
+  <testcase name="testAttachDatabaseFailure_ensuresDedicatedDbClosed" classname="com.atrainingtracker.trainingtracker.migration.WorkoutImportAtomicityTest" time="2.03"/>
+  <testcase name="testLegacyImportEngineRecalculateCancellation_compensatesAndRethrows" classname="com.atrainingtracker.trainingtracker.migration.WorkoutImportAtomicityTest" time="2.065"/>
+  <testcase name="testLegacyImportEngineInvertedPipeline_compensatesOnSampleFailure" classname="com.atrainingtracker.trainingtracker.migration.WorkoutImportAtomicityTest" time="1.802"/>
+  <testcase name="testStaticColumnFiltering_discardsUnmappedColumns" classname="com.atrainingtracker.trainingtracker.migration.WorkoutImportAtomicityTest" time="1.821"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

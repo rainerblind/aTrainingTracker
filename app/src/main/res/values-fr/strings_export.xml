@@ -11,4 +11,7 @@
     <string name="diagnostic_share_button">Partager le pack de diagnostic</string>
     <string name="diagnostic_bundle_packaging">Création du pack de diagnostic…</string>
     <string name="diagnostic_no_sidecar_warning">Aucun enregistrement brut disponible pour cet entraînement.</string>
+    <string name="strava_activity_photos_section">Photos d\'activité</string>
+    <string name="strava_download_photos_title">Télécharger les photos Strava</string>
+    <string name="strava_download_photos_desc">Importer les photos des activités Strava synchronisées dans la galerie locale</string>
 </resources>

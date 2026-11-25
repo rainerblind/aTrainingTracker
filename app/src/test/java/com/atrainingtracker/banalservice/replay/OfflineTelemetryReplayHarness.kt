@@ -32,6 +32,9 @@ import com.atrainingtracker.banalservice.odometry.ExtendedRtsAltitudeSlopeSmooth
 import com.atrainingtracker.banalservice.odometry.ExtendedRtsOdometrySmoother
 import com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkf
 import com.atrainingtracker.banalservice.odometry.KinematicSportTypeDiscriminator
+import com.atrainingtracker.banalservice.odometry.MultisportHardwareSignals
+import com.atrainingtracker.banalservice.odometry.MultisportTelemetryAnchor
+import com.atrainingtracker.banalservice.odometry.MultisportTransitionDetector
 import com.atrainingtracker.banalservice.odometry.PhoneCarriageClassifier
 import com.atrainingtracker.banalservice.odometry.PhoneCarriageMode
 import com.atrainingtracker.banalservice.odometry.QuaternionGyroProjector
@@ -129,9 +132,10 @@ object OfflineTelemetryReplayHarness {
             return emptyResult()
         }
 
-        val classifier = PhoneCarriageClassifier()
+        val classifier = PhoneCarriageClassifier(sportSpeedPriors = config.sportSpeedPriors)
         val gyroProjector = QuaternionGyroProjector()
-        val sportDiscriminator = KinematicSportTypeDiscriminator()
+        val sportDiscriminator = KinematicSportTypeDiscriminator(sportSpeedPriors = config.sportSpeedPriors)
+        val multisportDetector = MultisportTransitionDetector(sportSpeedPriors = config.sportSpeedPriors)
         val odometryEkf = UnicycleOdometryEkf(recordSnapshots = true)
         val altitudeEkf = KinematicAltitudeSlopeEkf(
             is3StateMode = config.altitude3StateEnabled,
@@ -166,6 +170,10 @@ object OfflineTelemetryReplayHarness {
         var currentMode = PhoneCarriageMode.UNKNOWN
         var lastInferredSport = BSportType.UNKNOWN
         var lastClassifyMs = Long.MIN_VALUE
+        var lastMultisportTickMs = Long.MIN_VALUE
+        var multisportTransitionCount = 0
+        var lastWheelMs = Long.MIN_VALUE
+        var hasEverSeenWheel = false
         var hasStepEvent = false
 
         lateinit var phoneCadenceEstimator: SmartphoneImuCadenceEstimator
@@ -365,6 +373,27 @@ object OfflineTelemetryReplayHarness {
             val newMode = classifier.classify(tMs)
             val inferred = sportDiscriminator.onCarriageMode(newMode, tMs)
             if (inferred != BSportType.UNKNOWN) lastInferredSport = inferred
+            if (lastMultisportTickMs == Long.MIN_VALUE || (tMs > lastMultisportTickMs && (tMs - lastMultisportTickMs) >= 1_000L)) {
+                lastMultisportTickMs = tMs
+                val activeBikeHw = lastWheelSpeed != null && lastWheelSpeed!! > 0.3 &&
+                    lastWheelMs != Long.MIN_VALUE && (tMs - lastWheelMs) <= 3_000L
+                val hwSignals = MultisportHardwareSignals(
+                    hasActiveBikeHardware = activeBikeHw,
+                    hardwareSportType = if (hasEverSeenWheel) BSportType.BIKE else BSportType.UNKNOWN
+                )
+                val secInt = (tMs / 1_000L).toInt()
+                val ev = multisportDetector.onTick(
+                    carriageMode = newMode,
+                    kinematicSport = lastInferredSport,
+                    hardwareSignals = hwSignals,
+                    anchor = MultisportTelemetryAnchor(tMs, secInt, secInt, ekfTotalDistanceM),
+                    isTracking = true,
+                    isPausedOrAutoPaused = false,
+                    isUserSportLocked = false,
+                    hasActiveRunFootstrike = classifier.hasActiveRunFootstrike(tMs)
+                )
+                if (ev != null) multisportTransitionCount++
+            }
             syncCadenceSportHint(tMs)
             if (newMode != currentMode) {
                 currentMode = newMode
@@ -566,6 +595,8 @@ object OfflineTelemetryReplayHarness {
                             val speedMps = r.v0
                             val variance = if (r.v1.isFinite() && r.v1 > 0.0) r.v1 else 0.05
                             lastWheelSpeed = speedMps
+                            lastWheelMs = tMs
+                            hasEverSeenWheel = true
                             if (speedMps >= config.motionSpeedThresholdMps && firstMotionCueMs == null) {
                                 firstMotionCueMs = tMs
                             }
@@ -728,7 +759,9 @@ object OfflineTelemetryReplayHarness {
             ertsMinSlopePct = ertsMinSlope,
             ertsMaxSlopePct = ertsMaxSlope,
             coldStartTimeToMotionSec = coldStartSec,
-            phoneTotalStrides = phoneTotalStrides
+            phoneTotalStrides = phoneTotalStrides,
+            multisportEstablishedSport = multisportDetector.currentEstablishedSport,
+            multisportTransitionCount = multisportTransitionCount
         )
         return OfflineReplayResult(scorecard = scorecard, series = finalSeries)
     }

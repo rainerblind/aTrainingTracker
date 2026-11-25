@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.EditDeviceDialogGuardsTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-25T12:56:10.196Z" hostname="rainer-HP-EliteBook-850-G5" time="3.788">
+  <properties/>
+  <testcase name="testAllSensorsAvailable_allowsUserPreferencesToControlState" classname="com.atrainingtracker.banalservice.devices.EditDeviceDialogGuardsTest" time="1.001"/>
+  <testcase name="testGnssGuard_whenPermissionDenied_isUnavailableAndInactive" classname="com.atrainingtracker.banalservice.devices.EditDeviceDialogGuardsTest" time="0.883"/>
+  <testcase name="testWheelSensorGuard_whenNoWheelSensorPaired_isUnavailableAndInactive" classname="com.atrainingtracker.banalservice.devices.EditDeviceDialogGuardsTest" time="0.965"/>
+  <testcase name="testGyroGuard_whenNoHardwareGyro_isUnavailableAndInactive" classname="com.atrainingtracker.banalservice.devices.EditDeviceDialogGuardsTest" time="0.939"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

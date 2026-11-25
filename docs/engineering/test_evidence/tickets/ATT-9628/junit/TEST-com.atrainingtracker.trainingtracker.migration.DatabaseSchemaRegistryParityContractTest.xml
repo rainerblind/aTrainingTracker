@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.DatabaseSchemaRegistryParityContractTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:14:04.254Z" hostname="rainer-HP-EliteBook-850-G5" time="11.813">
+  <properties/>
+  <testcase name="testAllProductionSqliteOpenHelpers_registeredWithExactVersionInDatabaseSchemaRegistry_TST_MIG_057_1" classname="com.atrainingtracker.trainingtracker.migration.DatabaseSchemaRegistryParityContractTest" time="11.693"/>
+  <testcase name="testDatabaseConnectionManager_tracksOnlyOpenedDatabasesWithoutEagerOpening_TST_MIG_057_2" classname="com.atrainingtracker.trainingtracker.migration.DatabaseSchemaRegistryParityContractTest" time="0.12"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

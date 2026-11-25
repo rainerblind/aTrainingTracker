@@ -1,0 +1,19 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "53b513d0e3bcbf520fcc8c449c2ecd8aca6520ea",
+  "files": {
+    "evidence_summary.json": "80f3ce3bbe256e1d55ccd57e687d9e0806844a8da12f96e9b4565e25d30c1962",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest.xml": "7ad789b1a11b2b8b14e8a54fead76e2aed43e2aed821308fa97e533ae16983aa",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.ExtendedRtsAltitudeSlopeSmootherTest.xml": "3cf93e71795f055a0eecce0d0c7b68a95a71d245354cb57008e6f7695a9d09d9",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.ExtendedRtsOdometrySmootherTest.xml": "4e67d0f01ad46bbcd2cee6122c180e8fa2eb82ea4065e27a41803d3cf6dd0084",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest.xml": "d77f93d6cc257f57011ba34506d9da0ba6eaf149bc3cc03900b309c6c030c4ee",
+    "junit/TEST-com.atrainingtracker.banalservice.replay.OfflineReplayCliTest.xml": "b10f75b36d937534da5653e8253245e0d1cf15ce90d454cb43ca0211055b28eb",
+    "junit/TEST-com.atrainingtracker.banalservice.replay.OfflineTelemetryReplayHarnessTest.xml": "384258db99f5566f4988c550d114c1745a37a1c43b8eda7f71c4e9fbfe5e3805",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml": "287f7221246554fdd0f6cec53970bf52a525bc9c4f8ee11840f0977120c15a4c",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.InterfaceSignatureDriftContractTest.xml": "1058ce7558dde94034cb94310175ecb0971aecd3eea6f08e9c8ca2fa92a3936f",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputerTest.xml": "01b7640b120ba0bcab185d584ccf6c9cad4fe5898371d13a086b6ae650c159ce"
+  },
+  "run_started_utc": "2026-11-25T11:02:32.425082+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-9693"
+}

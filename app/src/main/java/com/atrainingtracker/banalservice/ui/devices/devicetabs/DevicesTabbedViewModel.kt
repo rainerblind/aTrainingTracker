@@ -49,6 +49,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -186,16 +187,24 @@ class DevicesTabbedViewModel @JvmOverloads constructor(
         updateFilterCriteria(DeviceFilterCriteria(batteryFilter = BatteryFilter.CRITICAL_ONLY))
     }
 
-    private val _sortOrder = MutableStateFlow(
+    private val initialSavedSortOrder: DeviceSortOrder? =
         savedStateHandle.get<String>(KEY_SORT_ORDER)?.let {
             safeEnumValueOfOrNull<DeviceSortOrder>(it)
-        } ?: DeviceSortOrder.ALPHABETICAL
-    )
+        }
+
+    @Volatile
+    private var hasExplicitSortOrderSelection: Boolean = initialSavedSortOrder != null
+
+    private val _sortOrder = MutableStateFlow(initialSavedSortOrder ?: DeviceSortOrder.ALPHABETICAL)
     val sortOrder: StateFlow<DeviceSortOrder> = _sortOrder.asStateFlow()
 
     fun setSortOrder(order: DeviceSortOrder) {
+        hasExplicitSortOrderSelection = true
         _sortOrder.value = order
         savedStateHandle[KEY_SORT_ORDER] = order.name
+        viewModelScope.launch {
+            settingsDataStore.setDeviceSortOrder(order)
+        }
     }
 
     private val _uiState = MutableLiveData<UiState>()
@@ -228,6 +237,18 @@ class DevicesTabbedViewModel @JvmOverloads constructor(
         _uiState.value = UiState.DisplayingTabs(savedDeviceType)
 
         banalServiceRepository.bindToBANALService()
+
+        if (!hasExplicitSortOrderSelection) {
+            viewModelScope.launch {
+                val persistedOrder = runCatching {
+                    settingsDataStore.deviceSortOrderFlow.firstOrNull()
+                }.getOrNull()
+                if (!hasExplicitSortOrderSelection && persistedOrder != null) {
+                    _sortOrder.value = persistedOrder
+                    savedStateHandle[KEY_SORT_ORDER] = persistedOrder.name
+                }
+            }
+        }
     }
 
     /**

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.tracker.PostWorkoutPhysiologyRecomputerTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:16:24.030Z" hostname="rainer-HP-EliteBook-850-G5" time="2.439">
+  <properties/>
+  <testcase name="recomputeAfterHrBackfill_filtersNullableAndNonFiniteHr_resolvesSportType_andPersistsAllMetrics_TST_TRK_093_3" classname="com.atrainingtracker.trainingtracker.tracker.PostWorkoutPhysiologyRecomputerTest" time="1.308"/>
+  <testcase name="recomputeAfterHrBackfill_guardsInvalidInputsAndEmptySamples_TST_TRK_093_3" classname="com.atrainingtracker.trainingtracker.tracker.PostWorkoutPhysiologyRecomputerTest" time="0.233"/>
+  <testcase name="recomputeAfterHrBackfill_fallsBackToUnknownSportAndSpeedSensorForRunning_TST_TRK_093_3" classname="com.atrainingtracker.trainingtracker.tracker.PostWorkoutPhysiologyRecomputerTest" time="0.897"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -350,6 +350,7 @@ fun WorkoutSummariesTabbedScreen(
                     recentSessions = aftermathUIState.recentSessions,
                     isSmoothedStream = aftermathUIState.isSmoothedHrvStream,
                     onUpdateFtp = { trackOnMapViewModel.updateFtp(it) },
+                    onUpdatePowerThresholds = { ftp, lt1 -> trackOnMapViewModel.updateFtp(ftp, lt1PowerWatts = lt1) },
                     onUpdateHrZones = { t1, t2 -> trackOnMapViewModel.updateHrZones(t1, t2) },
                     telemetryPath = aftermathUIState.telemetryPath,
                     multiSensorOverlays = aftermathUIState.multiSensorOverlays,

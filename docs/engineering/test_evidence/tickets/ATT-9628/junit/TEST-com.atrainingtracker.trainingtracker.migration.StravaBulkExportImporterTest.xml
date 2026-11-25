@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.StravaBulkExportImporterTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:15:51.264Z" hostname="rainer-HP-EliteBook-850-G5" time="8.711">
+  <properties/>
+  <testcase name="testImportArchive_200ActivitiesInsideBulkBatchContextWithBoundedHeap" classname="com.atrainingtracker.trainingtracker.migration.StravaBulkExportImporterTest" time="2.67"/>
+  <testcase name="testImportArchive_sortsActivitiesAscendingByActivityId" classname="com.atrainingtracker.trainingtracker.migration.StravaBulkExportImporterTest" time="1.233"/>
+  <testcase name="testImportArchive_successWithMetadataEnrichmentAndEquipmentSync" classname="com.atrainingtracker.trainingtracker.migration.StravaBulkExportImporterTest" time="1.248"/>
+  <testcase name="testImportArchive_duplicateSkipped" classname="com.atrainingtracker.trainingtracker.migration.StravaBulkExportImporterTest" time="1.294"/>
+  <testcase name="testZipSlip_rejection" classname="com.atrainingtracker.trainingtracker.migration.StravaBulkExportImporterTest" time="1.145"/>
+  <testcase name="testImportArchive_zeroIoFastForwardDuplicates" classname="com.atrainingtracker.trainingtracker.migration.StravaBulkExportImporterTest" time="1.121"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

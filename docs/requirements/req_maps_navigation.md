@@ -1,14 +1,14 @@
 # Living Requirements: Maps, Polylines & Navigation
 
 **Document ID**: `DOC-REQ-MAPS`  
-**Version**: 1.0.12  
+**Version**: 1.0.14  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `maps_navigation`  
 **Prefixes**: `GEO`, `MAP`, `NAV`, `ROU`  
 **Scope**: Map rendering, polylines, navigation overlays, GPX track follow-me, and routing.  
-**Total Requirements**: 79
+**Total Requirements**: 80
 
 ---
 
@@ -2933,6 +2933,37 @@
   • *Then* full-screen opens at `14.2 km` and Workout Details updates to `21.5 km` upon return.
 - **Invariants**: Preserves `MapDetailLayout.kt` below `1,500` LoC, preserves `LiveSegmentSheetContractTest`'s `LaunchedEffect(externalScrubDistance)` block verbatim, preserves `ElevationProfile` adaptive height (`Design Guidelines §2.3`), preserves `TelemetryChartGestures` default `clearSelectionOnDragEnd = true` for embedded charts, and enforces `TranslationParityTest` 9-language parity.
 
+### REQ-MAP-071: Mapsforge On-Device Vector `TileProvider` & Offline OSM Base-Map Mode in `ATrainingTrackerMap` [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-MAP-074`
+- **System Requirement(s)**: `SYSREQ-TRK-004`, `SYSREQ-TRK-009`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration, On-Device Manual
+- **Implementation**: `app/build.gradle`, `app/proguard-rules.pro`, `TrainingApplication.java`, `OfflineMapGraphicInitializer.kt`, `MapBaseSource.kt`, `OfflineMapPreferences.kt`, `OfflineMapStorage.kt`, `MapsforgeOfflineTileProvider.kt`, `OfflineMapTileProviderManager.kt`, `OfflineOsmAttributionBadge.kt`, `ATrainingTrackerMap.kt`, `strings_offline_maps.xml`
+- **Localization Parity**: All 9 locales (`values*/strings_offline_maps.xml`: `en`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`)
+- **Rationale**: Athletes riding in alpine/forest dead zones or using SIM-less handlebar devices need detailed OpenStreetMap trail/cycleway maps rendered 100% offline at zero cloud tile cost while preserving all existing `ATrainingTrackerMap` and `MapLayers` overlays, Follow-Me camera behaviors, and snapshot sharing (`ATT-8175`, Epic `ATT-8171`).
+- **Description**:
+  1. *Mapsforge `0.25.0` Dependencies, ProGuard Rules & Safe Graphics Bootstrap (`REQ-MAP-071.1`)*: `app/build.gradle` SHALL declare `org.mapsforge:{mapsforge-core,mapsforge-map,mapsforge-map-reader,mapsforge-map-android,mapsforge-themes}:0.25.0` (`LGPLv3`) and `com.caverock:androidsvg:1.4`, excluding `net.sf.kxml:kxml2` and `xmlpull:xmlpull` on `implementation` while retaining `testImplementation 'net.sf.kxml:kxml2:2.3.0'` to prevent R8 `XmlPullParser` conflicts. `app/proguard-rules.pro` SHALL retain `org.mapsforge.**` and `com.caverock.androidsvg.**`. `TrainingApplication.onCreate()` SHALL call `OfflineMapGraphicInitializer.initialize(this)`, guarding `Build.VERSION.SDK_INT > 0`, idempotency (`AtomicBoolean`), and `try/catch (Throwable)` around `AndroidGraphicFactory.createInstance(application)`.
+  2. *Thread-Safe `MapsforgeOfflineTileProvider`, Multi-Region Stitching, Bounded LRU & Hot-Swap Lifecycle (`REQ-MAP-071.2`)*: `MapsforgeOfflineTileProvider` (`ui/map/offline/`) SHALL implement `com.google.android.gms.maps.model.TileProvider` backed by `MultiMapDataStore(DataPolicy.RETURN_ALL)` across valid readable `*.map` files in `OfflineMapStorage.getMapsDirectory(context)` (skipping empty/corrupt/partial files individually), validate Web Mercator bounds (`zoom in 0..22`, `x, y in 0 until (1 shl zoom)`), normalize `DisplayModel.userScaleFactor` against `deviceScaleFactor` to prevent HiDPI double-scaling, use `DatabaseRenderer(renderLabels = true, cacheLabels = false)` with zero-memory `NoOpMapsforgeTileCache` + synchronously executed `RenderThemeFuture`, guard lifecycle via `ReentrantReadWriteLock`, serialize `DatabaseRenderer.executeJob(...)` under `renderLock` with `finally` bitmap ref-decrement, attach a pure-JVM generation-fenced byte-bounded PNG LRU (`<= 16 MiB`), return `TileProvider.NO_TILE` when closed/empty/unsupported, and expose thread-safe `reload(mapFiles, renderTheme)` and `close()` updating a reactive `revision: StateFlow<Long>` for `ATT-8174` and `ATT-8173`.
+  3. *Orthogonal Binary Base-Map Source Persistence (`REQ-MAP-071.3`)*: `OfflineMapPreferences` (`ui/map/offline/`, isolated `"offline_map_prefs"`, zero changes to `SettingsDataStore.kt` or `MyPreferenceManager.kt`) SHALL persist binary `MapBaseSource { GOOGLE, OFFLINE_OSM }` (default `GOOGLE`) via a reactive `StateFlow<MapBaseSource>` orthogonal to `WorkoutBaseMapType` so switching between Google and Offline OSM preserves the user's Google base-map style.
+  4. *`ATrainingTrackerMap` Integration, Z-Order, Attribution, Fallback & Snapshot Compatibility (`REQ-MAP-071.4`)*: When `baseSource == MapBaseSource.OFFLINE_OSM` and `installedMapCount > 0`, `ATrainingTrackerMap` SHALL configure `MapProperties(mapType = MapType.NONE, mapStyleOptions = null)`, mount the process-shared, referentially stable (`===` across 1-Hz tracking per `REQ-MAP-051`) `MapsforgeOfflineTileProvider` via `TileOverlay(zIndex = -100f)` strictly beneath all tracks, routes, segments, climbs, heatmaps, and markers (clearing Google Maps' overlay tile cache on `providerRevision > 0L` updates), display a compact `© OpenStreetMap contributors` attribution badge (`R.string.offline_map_osm_attribution`, `Alignment.BottomEnd` respecting `contentPadding` to clear the bottom-start Google watermark and bottom sheets), and remain compatible with `map.snapshot` (`WorkoutShareBottomSheet` / `MapDetailLayout`). When `baseSource == MapBaseSource.GOOGLE` or `installedMapCount == 0`, `ATrainingTrackerMap` SHALL fall back seamlessly to the existing Google `MapProperties` resolution.
+  5. *`PathPreviewMap` Lite-Mode Scope Boundary (`REQ-MAP-071.5`)*: `PathPreviewMap.kt` MUST remain unchanged (`0` LoC modified) on its Lite Mode / offline Canvas fallback regardless of `MapBaseSource`.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `>= 1` valid `.map` file in the offline maps directory and `MapBaseSource.OFFLINE_OSM`,
+  • *When* opening Cockpit Map, Global Map, Workout Details, or Full-Screen Map offline,
+  • *Then* `ATrainingTrackerMap` renders Mapsforge vector tiles at `zIndex = -100f` under `MapType.NONE` beneath all existing overlays with `© OpenStreetMap contributors` visible and `map.snapshot` working, and switching back to `GOOGLE` restores `WorkoutBaseMapType`.
+  • *Given* two adjacent `.map` files loaded into `MultiMapDataStore(DataPolicy.RETURN_ALL)` (or zero `.map` files installed),
+  • *When* requesting border tiles (or opening the map with zero `.map` files),
+  • *Then* border tiles combine without seams, out-of-bounds tiles return `TileProvider.NO_TILE`, and zero files fall back cleanly to Google without crashes.
+  • *Given* 1-Hz live tracking and concurrent `getTile()` threads during `reload()`/`close()`,
+  • *When* location updates and file/theme hot-swaps occur,
+  • *Then* `MapsforgeOfflineTileProvider` stays referentially stable (`===`), LRU hits avoid re-rasterization, and zero crashes or stale-generation cache pollution occur.
+  • *Given* `MapBaseSource.OFFLINE_OSM` is active,
+  • *When* viewing list/card previews rendered by `PathPreviewMap`,
+  • *Then* `PathPreviewMap` stays on Lite Mode / offline Canvas fallback without mounting unsupported tile overlays.
+- **Invariants**: Preserves default `MapBaseSource.GOOGLE` behavior, `WorkoutBaseMapType` orthogonality (`REQ-MAP-069.3`), `DarkMapStyle` (`REQ-MAP-021`), 1-Hz referential stability (`REQ-MAP-051`), `PathPreviewMap` Lite Mode (`REQ-MAP-068`), `TrainingApplication.java <= 2,050` LoC, `SDK_INT == 0` plain-JVM isolation, and 9-language localization parity (`REQ-LOC-001`).
+
 ---
 
 ## Change History
@@ -2950,3 +2981,5 @@
 | `1.0.9` | 2026-11-24 | Lane 1 Author (`ATT-9029`, `--as agent1`) | `ATT-9029` | Added & verified (`[Verified]`) `REQ-MAP-069` for full-screen workout map mode with spatial overlays, base-map type toggles, DataStore persistence, 9-language localization, and live `emulator-5554` verification. |
 | `1.0.10` | 2026-11-24 | Lane 1 Author (`ATT-9029`, `--as agent1`) | `ATT-9029` | Refined `REQ-MAP-069.3` after Stage 6 BOUNCE 1/5: theme-aware unset base-map default (`NORMAL` in Dark/AMOLED per `REQ-MAP-021`, `TERRAIN` in Light), inherited host `MaterialTheme`, reactive cold-start climbs/locations hydration, and non-`BEST` fallback technical track toggleability. |
 | `1.0.11` | 2026-11-24 | Lane 2 Author (`ATT-9030`, `--as agent1`) | `ATT-9030` | Added & verified (`[Verified]`) `REQ-MAP-070` for collapsible metric scrubber graph, dynamic metric selector, live floating scrub readout pill, bidirectional Workout Details scrub sync, 9-language localization, and live `emulator-5554` verification. |
+| `1.0.13` | 2026-11-25 | Lane 3 Author (`ATT-8175`, `--as agent1`) | `ATT-8175` | Added `REQ-MAP-071` (`[Planned]`) specifying Mapsforge `0.25.0` on-device vector `TileProvider`, orthogonal `MapBaseSource`, `ATrainingTrackerMap` `MapType.NONE` + `TileOverlay(zIndex = -100f)` integration, OSM attribution, and `PathPreviewMap` Lite-Mode invariance. |
+| `1.0.14` | 2026-11-25 | Lane 3 Author (`ATT-8175`, `--as agent1`) | `ATT-8175` | Promoted `REQ-MAP-071` to `[Verified]` following `71/71` targeted Tier 1 unit/Compose/ProGuard/localization/architecture PASS and live `emulator-5554` Light & Dark visual verification (`monaco.map`, `NoOpMapsforgeTileCache`, HiDPI scale normalization, `Alignment.BottomEnd` watermark clearance). |

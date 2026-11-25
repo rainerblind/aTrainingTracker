@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutPhotoManagerTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-25T07:41:14.178Z" hostname="rainer-HP-EliteBook-850-G5" time="16.244">
+  <properties/>
+  <testcase name="testCalculateWorkoutTimeWindow_customTolerance" classname="com.atrainingtracker.trainingtracker.database.WorkoutPhotoManagerTest" time="9.034"/>
+  <testcase name="testQueryWorkoutTimePhotos_fallbackToDateAddedWhenDateTakenZero" classname="com.atrainingtracker.trainingtracker.database.WorkoutPhotoManagerTest" time="5.689"/>
+  <testcase name="testUpdatePhotoCoordinatesInDatabase" classname="com.atrainingtracker.trainingtracker.database.WorkoutPhotoManagerTest" time="0.198"/>
+  <testcase name="testInterpolateCoordinatesFromPoints" classname="com.atrainingtracker.trainingtracker.database.WorkoutPhotoManagerTest" time="0.127"/>
+  <testcase name="testSelfHealPhotos_nullIslandCoordinatesResetToNullWhenNoTrack" classname="com.atrainingtracker.trainingtracker.database.WorkoutPhotoManagerTest" time="0.111"/>
+  <testcase name="testQueryWorkoutTimePhotos_invalidTimestamps_returnsEmptyList" classname="com.atrainingtracker.trainingtracker.database.WorkoutPhotoManagerTest" time="0.19"/>
+  <testcase name="testQueryWorkoutTimePhotos_matchingWindow" classname="com.atrainingtracker.trainingtracker.database.WorkoutPhotoManagerTest" time="0.192"/>
+  <testcase name="testGetWorkoutPhotosDirCreatesAndReturnsExpectedPath" classname="com.atrainingtracker.trainingtracker.database.WorkoutPhotoManagerTest" time="0.171"/>
+  <testcase name="testCalculateWorkoutTimeWindow_defaultTolerance" classname="com.atrainingtracker.trainingtracker.database.WorkoutPhotoManagerTest" time="0.127"/>
+  <testcase name="testExtractExifMetadata_emptyFile_returnsNullCoordinates" classname="com.atrainingtracker.trainingtracker.database.WorkoutPhotoManagerTest" time="0.286"/>
+  <testcase name="testParseExifDateTime" classname="com.atrainingtracker.trainingtracker.database.WorkoutPhotoManagerTest" time="0.116"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

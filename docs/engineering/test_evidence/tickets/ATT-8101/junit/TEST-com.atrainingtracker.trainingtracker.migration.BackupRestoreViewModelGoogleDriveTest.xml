@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModelGoogleDriveTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-25T05:55:17.969Z" hostname="rainer-HP-EliteBook-850-G5" time="4.32">
+  <properties/>
+  <testcase name="testBulkRecoverGoogleDriveData_whenConnected_executesRecoveryAndEmitsSuccess" classname="com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModelGoogleDriveTest" time="1.81"/>
+  <testcase name="testBulkRecoverGoogleDriveData_whenZeroScanned_emitsDiagnosticMessage" classname="com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModelGoogleDriveTest" time="1.725"/>
+  <testcase name="testBulkRecoverGoogleDriveData_whenDisconnected_emitsErrorState" classname="com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModelGoogleDriveTest" time="0.785"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

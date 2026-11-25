@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepositoryEquipmentSyncTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-25T13:00:35.668Z" hostname="rainer-HP-EliteBook-850-G5" time="13.135">
+  <properties/>
+  <testcase name="testUpdateDevice_wheelPositionChange_refreshesUnswappedSiblingSensorConflictsInAllDevices" classname="com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepositoryEquipmentSyncTest" time="2.428"/>
+  <testcase name="testEditDeviceViewModel_deviceNotFound_whenSnapshotIsNull" classname="com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepositoryEquipmentSyncTest" time="1.458"/>
+  <testcase name="testUpdateDevice_wheelSpeedAndCadence_unlinksRemovedAndSetsNewPosition" classname="com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepositoryEquipmentSyncTest" time="1.741"/>
+  <testcase name="testUpdateDevice_wheelPositionOnlyChange_commitsViaSetWheelSensorLinkWithSwap" classname="com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepositoryEquipmentSyncTest" time="1.716"/>
+  <testcase name="testEquipmentLinksChanged_notifiesDeviceDataRepository_refreshesAffectedDevice" classname="com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepositoryEquipmentSyncTest" time="1.122"/>
+  <testcase name="testEditDeviceViewModel_loadInitialDeviceData_alwaysFetchesFreshSnapshot" classname="com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepositoryEquipmentSyncTest" time="1.254"/>
+  <testcase name="testDeleteDevice_broadcastsPairingChangedWithUnpairedFlag" classname="com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepositoryEquipmentSyncTest" time="1.592"/>
+  <testcase name="testUpdateDevice_polarLiveImuToggle_emitsPolarLiveImuChangedBroadcast" classname="com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepositoryEquipmentSyncTest" time="1.823"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

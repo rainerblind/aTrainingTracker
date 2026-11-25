@@ -20,6 +20,7 @@ package com.atrainingtracker.banalservice.replay
 
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.odometry.PhoneCarriageMode
+import com.atrainingtracker.banalservice.odometry.SportSpeedPriors
 import java.io.File
 import java.util.Locale
 
@@ -66,7 +67,8 @@ data class ReplayConfig(
     val altitudeRGps: Double = 9.0,
     val gnssMaxAccuracyM: Double = 50.0,
     val enableErtsSmoothing: Boolean = true,
-    val gnssSource: ReplayGnssSource = ReplayGnssSource.AUTO
+    val gnssSource: ReplayGnssSource = ReplayGnssSource.AUTO,
+    val sportSpeedPriors: SportSpeedPriors = SportSpeedPriors.DEFAULT
 )
 
 /**
@@ -171,7 +173,9 @@ data class OfflineReplayScorecard(
     val ertsMinSlopePct: Double?,
     val ertsMaxSlopePct: Double?,
     val coldStartTimeToMotionSec: Double?,
-    val phoneTotalStrides: Int = 0
+    val phoneTotalStrides: Int = 0,
+    val multisportEstablishedSport: BSportType = BSportType.UNKNOWN,
+    val multisportTransitionCount: Int = 0
 ) {
     /**
      * Formats a concise human-readable scorecard table for CLI output.
@@ -183,7 +187,7 @@ data class OfflineReplayScorecard(
         val sb = StringBuilder(512)
         sb.appendLine("=== Offline Telemetry Replay Scorecard ===")
         sb.appendLine("Duration: ${f(durationSec, 1)} s | Events: $totalEventsProcessed (phone=$phoneEventsProcessed, polar=$polarEventsProcessed)")
-        sb.appendLine("Sport (inferred): $inferredSport | Cold-start latency: ${f(coldStartTimeToMotionSec, 2)} s")
+        sb.appendLine("Sport (inferred): $inferredSport | Multisport: established=$multisportEstablishedSport, transitions=$multisportTransitionCount | Cold-start latency: ${f(coldStartTimeToMotionSec, 2)} s")
         sb.appendLine("Carriage: dominant=$dominantCarriageMode (${f(dominantCarriagePct, 1)}%), transitions=$carriageTransitionCount")
         val distStr = carriageModeDistributionPct.entries
             .sortedByDescending { it.value }
@@ -225,6 +229,8 @@ data class OfflineReplayScorecard(
             append(",\"carriageTransitionCount\":").append(carriageTransitionCount)
             append(",\"carriageModeDistributionPct\":{").append(modesJson).append('}')
             append(",\"inferredSport\":\"").append(inferredSport.name).append('"')
+            append(",\"multisportEstablishedSport\":\"").append(multisportEstablishedSport.name).append('"')
+            append(",\"multisportTransitionCount\":").append(multisportTransitionCount)
             append(",\"phoneCadenceMeanSpm\":").append(numOrNull(phoneCadence.meanSpm))
             append(",\"phoneTotalStrides\":").append(phoneTotalStrides)
             append(",\"polarH10CadenceMeanSpm\":").append(numOrNull(polarH10Cadence.meanSpm))

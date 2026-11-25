@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutSummariesRealSqliteMigrationTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:12:27.060Z" hostname="rainer-HP-EliteBook-850-G5" time="0.848">
+  <properties/>
+  <testcase name="testIncrementalUpgradeV27ToV28AddsRecordingErrorsColumn" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesRealSqliteMigrationTest" time="0.096"/>
+  <testcase name="testLegacyUpgradeV3ToV25RealSqlite" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesRealSqliteMigrationTest" time="0.077"/>
+  <testcase name="testIncrementalUpgradeV24ToV25AddsCountColumnToExtrema" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesRealSqliteMigrationTest" time="0.064"/>
+  <testcase name="testDatabaseOpenIsInstantaneousWithoutSynchronousBackfill" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesRealSqliteMigrationTest" time="0.059"/>
+  <testcase name="testFullUpgradeV22ToV25PreservesDataAndAllowsNewV25Inserts" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesRealSqliteMigrationTest" time="0.067"/>
+  <testcase name="testIncrementalUpgradeV23ToV24AddsSourceColumn" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesRealSqliteMigrationTest" time="0.067"/>
+  <testcase name="testIncrementalUpgradeV22ToV23AddsRaceColumn" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesRealSqliteMigrationTest" time="0.063"/>
+  <testcase name="testIncrementalUpgradeV29ToV30AddsRpeAndFeelColumns" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesRealSqliteMigrationTest" time="0.069"/>
+  <testcase name="testIncrementalUpgradeV28ToV29CreatesCardioPowerDynamicsTable" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesRealSqliteMigrationTest" time="0.084"/>
+  <testcase name="testIncrementalUpgradeV26ToV27CreatesWorkoutPhotosTableAndIndex" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesRealSqliteMigrationTest" time="0.07"/>
+  <testcase name="testSchemaRegistryMatchesDbVersion" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesRealSqliteMigrationTest" time="0.053"/>
+  <testcase name="testLegacyUpgradeV10ToV25SyntaxAndColumnGuards" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesRealSqliteMigrationTest" time="0.079"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

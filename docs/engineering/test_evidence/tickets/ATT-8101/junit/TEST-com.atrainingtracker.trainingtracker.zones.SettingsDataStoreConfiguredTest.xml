@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreConfiguredTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-25T05:58:14.650Z" hostname="rainer-HP-EliteBook-850-G5" time="0.174">
+  <properties/>
+  <testcase name="testHrMigrationFallback_hrMaxResolvesToTrue" classname="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreConfiguredTest" time="0.039"/>
+  <testcase name="testPwrMigrationFallback_ftpResolvesToTrue" classname="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreConfiguredTest" time="0.022"/>
+  <testcase name="testAutoCalculation_setsConfiguredFlag" classname="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreConfiguredTest" time="0.031"/>
+  <testcase name="testHrMigrationFallback_customizedFlagResolvesToTrue" classname="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreConfiguredTest" time="0.02"/>
+  <testcase name="testExplicitMutators_overrideFallback" classname="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreConfiguredTest" time="0.024"/>
+  <testcase name="testManualSave_setsConfiguredFlag" classname="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreConfiguredTest" time="0.018"/>
+  <testcase name="testFreshInstall_defaultsToFalse" classname="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreConfiguredTest" time="0.009"/>
+  <testcase name="testPwrMigrationFallback_customizedFlagResolvesToTrue" classname="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreConfiguredTest" time="0.01"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

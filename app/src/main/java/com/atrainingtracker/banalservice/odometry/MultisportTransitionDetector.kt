@@ -76,10 +76,11 @@ data class MultisportTransitionEvent(
  *   transitions) and `< 15 s` opposite-sport blip rejection.
  */
 @Suppress("MagicNumber", "ComplexMethod", "ReturnCount")
-class MultisportTransitionDetector(
+class MultisportTransitionDetector @JvmOverloads constructor(
     private val confirmationWindowMs: Long = DEFAULT_CONFIRMATION_WINDOW_MS,
     private val establishWindowMs: Long = DEFAULT_ESTABLISH_WINDOW_MS,
-    private val maxAnchorHistory: Int = DEFAULT_MAX_ANCHOR_HISTORY
+    private val maxAnchorHistory: Int = DEFAULT_MAX_ANCHOR_HISTORY,
+    sportSpeedPriors: SportSpeedPriors = SportSpeedPriors.DEFAULT
 ) {
     companion object {
         const val DEFAULT_CONFIRMATION_WINDOW_MS = 15_000L
@@ -121,6 +122,15 @@ class MultisportTransitionDetector(
     private var candidateCorroboratedMs: Long = 0L
     private var lastCandidateTickMs: Long = Long.MIN_VALUE
     private var lastTickTimestampMs: Long = Long.MIN_VALUE
+    private var sportSpeedPriors: SportSpeedPriors = sportSpeedPriors.clamped()
+
+    val currentSportSpeedPriors: SportSpeedPriors
+        @Synchronized get() = sportSpeedPriors
+
+    @Synchronized
+    fun setSportSpeedPriors(priors: SportSpeedPriors) {
+        sportSpeedPriors = priors.clamped()
+    }
 
     val currentEstablishedSport: BSportType
         @Synchronized get() = establishedSport
@@ -239,9 +249,18 @@ class MultisportTransitionDetector(
                     establishedSport = BSportType.RUN
                     clearInitialCandidate()
                 }
-            } else if (pendingInitialActiveMs >= establishWindowMs) {
-                establishedSport = observedSport
-                clearInitialCandidate()
+            } else if (observedSport == BSportType.BIKE) {
+                if (evaluateBikeWindow(
+                        window = initialWindow,
+                        currentActiveMs = pendingInitialActiveMs,
+                        currentAnchor = anchor,
+                        spanMs = establishWindowMs,
+                        hasActiveBikeHardware = hardwareSignals.hasActiveBikeHardware
+                    ) != null
+                ) {
+                    establishedSport = BSportType.BIKE
+                    clearInitialCandidate()
+                }
             }
             return null
         }
@@ -294,7 +313,7 @@ class MultisportTransitionDetector(
                         CandidateWindowSample(candidateConfirmedActiveMs, anchor.totalDistanceM, candidateCorroboratedMs, anchor)
                     )
                     pruneSlidingWindow(candidateWindow, candidateConfirmedActiveMs, confirmationWindowMs)
-                    if (targetSport == BSportType.RUN) {
+                    if (targetSport == BSportType.RUN || targetSport == BSportType.BIKE) {
                         enterAnchor = candidateWindow.peekFirst()?.anchor ?: enterAnchor
                     }
                 }
@@ -323,19 +342,27 @@ class MultisportTransitionDetector(
                         clearPendingTransition()
                         return event
                     }
-                } else if (candidateConfirmedActiveMs >= confirmationWindowMs) {
-                    val confirmedExit = exitAnchor ?: anchor
-                    val confirmedEnter = enterAnchor ?: anchor
-                    val event = MultisportTransitionEvent(
-                        fromSport = establishedSport,
-                        toSport = targetSport,
-                        exitAnchor = confirmedExit,
-                        enterAnchor = confirmedEnter,
-                        confirmAnchor = anchor
+                } else if (targetSport == BSportType.BIKE) {
+                    val qualifyingEnter = evaluateBikeWindow(
+                        window = candidateWindow,
+                        currentActiveMs = candidateConfirmedActiveMs,
+                        currentAnchor = anchor,
+                        spanMs = confirmationWindowMs,
+                        hasActiveBikeHardware = hardwareSignals.hasActiveBikeHardware
                     )
-                    establishedSport = targetSport
-                    clearPendingTransition()
-                    return event
+                    if (qualifyingEnter != null) {
+                        val confirmedExit = exitAnchor ?: qualifyingEnter
+                        val event = MultisportTransitionEvent(
+                            fromSport = establishedSport,
+                            toSport = targetSport,
+                            exitAnchor = confirmedExit,
+                            enterAnchor = qualifyingEnter,
+                            confirmAnchor = anchor
+                        )
+                        establishedSport = targetSport
+                        clearPendingTransition()
+                        return event
+                    }
                 }
                 return null
             }
@@ -452,6 +479,32 @@ class MultisportTransitionDetector(
 
         val windowCorroboratedMs = (currentCorroboratedMs - head.cumulativeCorroboratedMs).coerceAtLeast(0L)
         return if (windowCorroboratedMs >= minCorroborationMs) head.anchor else null
+    }
+
+    /**
+     * Symmetric sliding-window `BIKE` speed/displacement guardrail (`REQ-FIL-047.3`, `ATT-9694`):
+     * bypassed strictly when active bike hardware telemetry is present or `spanMs <= 0L`; otherwise
+     * requires bounded active-unpaused displacement and mean speed `>= sportSpeedPriors.minBikeSpeedMps`.
+     */
+    private fun evaluateBikeWindow(
+        window: ArrayDeque<CandidateWindowSample>,
+        currentActiveMs: Long,
+        currentAnchor: MultisportTelemetryAnchor,
+        spanMs: Long,
+        hasActiveBikeHardware: Boolean
+    ): MultisportTelemetryAnchor? {
+        val head = window.peekFirst() ?: return null
+        val windowActiveMs = currentActiveMs - head.activeMs
+        if (windowActiveMs < spanMs) return null
+        if (hasActiveBikeHardware || spanMs <= 0L) return head.anchor
+
+        val windowActiveSec = windowActiveMs / 1000.0
+        if (windowActiveSec <= 0.0) return null
+        val minBikeSpeedMps = sportSpeedPriors.minBikeSpeedMps
+        val windowDistM = safeDistanceDeltaM(head.totalDistanceM, currentAnchor.totalDistanceM)
+        val minWindowDistM = minBikeSpeedMps * (spanMs / 1000.0)
+        val windowAvgSpeedMps = windowDistM / windowActiveSec
+        return if (windowDistM >= minWindowDistM && windowAvgSpeedMps >= minBikeSpeedMps) head.anchor else null
     }
 
     private fun safeDistanceDeltaM(fromDistanceM: Double, toDistanceM: Double): Double {

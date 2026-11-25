@@ -28,7 +28,7 @@ import org.junit.Test
 /**
  * Pure-JVM unit tests for [MultisportTransitionDetector] (`ATT-8917`, `REQ-FIL-031.1`, `TST-FIL-031.1`).
  */
-// Linked test specs: TST-FIL-031, TST-FIL-044
+// Linked test specs: TST-FIL-031, TST-FIL-044, TST-FIL-047
 class MultisportTransitionDetectorTest {
 
     private val baseEpochMs = 1_760_000_000_000L
@@ -511,5 +511,83 @@ class MultisportTransitionDetectorTest {
             setOf(5, 6),
             bridgeMethods
         )
+    }
+
+    // REQ-FIL-047.3 / TST-FIL-047.3: Symmetric sliding-window BIKE Phase 1 & Phase 2 guardrails with bounded SportSpeedPriors
+    @Test
+    fun testBikeEstablishmentAndRunToBikeGuardrails_blockWalkingSpeedsAndRespectPriorsAndHardware_tstFil047_3() {
+        // (a) Phase 1 walking-speed BIKE_FRONT_POCKET (0.53–1.80 m/s, mirroring Essen gehen rows 3..10 & brisk walk)
+        //     must NEVER lock establishedSport = BIKE even after 30 s!
+        val walkDet = MultisportTransitionDetector()
+        var dist = 0.0
+        for (s in 0..30) {
+            if (s > 0) dist += if (s <= 10) 0.70 else 1.80
+            assertNull(tick(walkDet, s, PhoneCarriageMode.BIKE_FRONT_POCKET, BSportType.BIKE, distM = dist))
+        }
+        assertEquals("Walking-speed BIKE_FRONT_POCKET must never lock BIKE", BSportType.UNKNOWN, walkDet.currentEstablishedSport)
+
+        // (b) Custom SportSpeedPriors (Einkaufen minBike = 2.78 m/s): 2.5 m/s rejected in Phase 1, 3.0 m/s establishes BIKE
+        val customPriors = SportSpeedPriors(maxWalkSpeedMps = 2.0, minBikeSpeedMps = 2.78, maxRunSpeedMps = 4.0)
+        val priorDet = MultisportTransitionDetector(sportSpeedPriors = customPriors)
+        var dPrior = 0.0
+        for (s in 0..10) {
+            if (s > 0) dPrior += 2.5
+            assertNull(tick(priorDet, s, PhoneCarriageMode.BIKE_FRONT_POCKET, BSportType.BIKE, distM = dPrior))
+        }
+        assertEquals("2.5 m/s < configured minBike 2.78 m/s must not establish BIKE", BSportType.UNKNOWN, priorDet.currentEstablishedSport)
+        for (s in 11..15) {
+            dPrior += 3.0
+            assertNull(tick(priorDet, s, PhoneCarriageMode.BIKE_FRONT_POCKET, BSportType.BIKE, distM = dPrior))
+        }
+        assertEquals("3.0 m/s >= configured minBike 2.78 m/s must establish BIKE", BSportType.BIKE, priorDet.currentEstablishedSport)
+
+        // (c) Phase 2 RUN -> BIKE rejects walking speeds (1.5 m/s & 2.4 m/s < 2.78 m/s), then recovers cleanly at 4.5 m/s
+        //     anchoring enterAnchor to qualifying 15 s window head while preserving T1 exitAnchor!
+        val runToBikeDet = MultisportTransitionDetector(sportSpeedPriors = customPriors)
+        var dRb = 0.0
+        for (s in 0..29) {
+            if (s > 0) dRb += 3.2
+            assertNull(tick(runToBikeDet, s, PhoneCarriageMode.RUN_WAIST_HIP, BSportType.RUN, distM = dRb, hasActiveRunFootstrike = true))
+        }
+        assertEquals(BSportType.RUN, runToBikeDet.currentEstablishedSport)
+        // T1 dismount at t = 30
+        assertNull(tick(runToBikeDet, 30, PhoneCarriageMode.WALKING_TRANSITION, BSportType.RUN, distM = dRb))
+        // 20 s walking-speed BIKE_FRONT_POCKET at 1.5 m/s -> 0 transitions
+        for (s in 31..50) {
+            dRb += 1.5
+            assertNull("1.5 m/s walking must not confirm RUN->BIKE at t=$s", tick(runToBikeDet, s, PhoneCarriageMode.BIKE_FRONT_POCKET, BSportType.BIKE, distM = dRb))
+        }
+        assertEquals(BSportType.RUN, runToBikeDet.currentEstablishedSport)
+        // Genuine 4.5 m/s triathlon bike leg starts at t = 51 -> confirms cleanly within <= 15 s with exitAnchor=30
+        var confirmedBike: MultisportTransitionEvent? = null
+        for (s in 51..68) {
+            dRb += 4.5
+            val ev = tick(runToBikeDet, s, PhoneCarriageMode.BIKE_FRONT_POCKET, BSportType.BIKE, distM = dRb)
+            if (ev != null) {
+                confirmedBike = ev
+                break
+            }
+        }
+        assertNotNull("Genuine 4.5 m/s RUN->T1->BIKE must confirm cleanly after slow start", confirmedBike)
+        assertEquals(BSportType.RUN, confirmedBike!!.fromSport)
+        assertEquals(BSportType.BIKE, confirmedBike.toSport)
+        assertEquals("T1 exitAnchor must stay preserved at t=30", 30, confirmedBike.exitAnchor.activeTimeS)
+        assertEquals(confirmedBike.confirmAnchor.activeTimeS - 15, confirmedBike.enterAnchor.activeTimeS)
+        assertTrue(
+            "enterAnchor must advance past slow-start t=31 (was ${confirmedBike.enterAnchor.activeTimeS})",
+            confirmedBike.enterAnchor.activeTimeS >= 42
+        )
+        assertEquals(BSportType.BIKE, runToBikeDet.currentEstablishedSport)
+
+        // (d) Active bike hardware bypasses low-speed floor (e.g., 1.8 m/s steep MTB climb with wheel/power sensor)
+        val hwDet = MultisportTransitionDetector(sportSpeedPriors = customPriors)
+        val activeBikeHw = MultisportHardwareSignals(hasActiveBikeHardware = true, hardwareSportType = BSportType.BIKE)
+        for (s in 0..4) {
+            assertNull(tick(hwDet, s, PhoneCarriageMode.BIKE_HANDLEBAR, BSportType.BIKE, hw = activeBikeHw, distM = s * 1.5))
+        }
+        assertEquals("Active bike hardware must bypass low-speed floor", BSportType.BIKE, hwDet.currentEstablishedSport)
+
+        hwDet.reset()
+        assertEquals("reset() must retain loaded SportSpeedPriors", customPriors, hwDet.currentSportSpeedPriors)
     }
 }

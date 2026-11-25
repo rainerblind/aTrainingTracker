@@ -384,4 +384,49 @@ class AthleteMetricsDtoAndMathTest {
         val topZeroY = AthleteMetricsPlotMath.computePmcZeroBaselineY(-40f, -10f, topPad, plotH)
         assertEquals(topPad, topZeroY, 1e-3f)
     }
+
+    @Test
+    fun `sport-specific AthleteMetricType bounds and unknown token batch skip (TST-SET-135_1)`() {
+        assertTrue(AthleteMetricType.HR_MAX_RUN_BPM.isValidMetricValue(80.0))
+        assertTrue(AthleteMetricType.HR_MAX_RUN_BPM.isValidMetricValue(240.0))
+        assertFalse(AthleteMetricType.HR_MAX_RUN_BPM.isValidMetricValue(79.9))
+        assertFalse(AthleteMetricType.HR_MAX_RUN_BPM.isValidMetricValue(240.1))
+
+        assertTrue(AthleteMetricType.HR_MAX_BIKE_BPM.isValidMetricValue(188.0))
+        assertFalse(AthleteMetricType.HR_MAX_BIKE_BPM.isValidMetricValue(Double.NaN))
+
+        assertTrue(AthleteMetricType.LTHR_RUN_BPM.isValidMetricValue(80.0))
+        assertTrue(AthleteMetricType.LTHR_RUN_BPM.isValidMetricValue(230.0))
+        assertFalse(AthleteMetricType.LTHR_RUN_BPM.isValidMetricValue(79.0))
+        assertFalse(AthleteMetricType.LTHR_BIKE_BPM.isValidMetricValue(231.0))
+
+        assertTrue(AthleteMetricType.LT1_HR_RUN_BPM.isValidMetricValue(60.0))
+        assertTrue(AthleteMetricType.LT1_HR_BIKE_BPM.isValidMetricValue(220.0))
+        assertFalse(AthleteMetricType.LT1_HR_RUN_BPM.isValidMetricValue(59.0))
+        assertFalse(AthleteMetricType.LT1_HR_BIKE_BPM.isValidMetricValue(221.0))
+
+        assertTrue(AthleteMetricType.LT1_PWR_BIKE_WATTS.isValidMetricValue(30.0))
+        assertTrue(AthleteMetricType.LT1_PWR_BIKE_WATTS.isValidMetricValue(500.0))
+        assertFalse(AthleteMetricType.LT1_PWR_BIKE_WATTS.isValidMetricValue(29.0))
+        assertFalse(AthleteMetricType.LT1_PWR_BIKE_WATTS.isValidMetricValue(501.0))
+
+        assertNull(AthleteMetricType.fromNameOrNull("FUTURE_VO2MAX_ML_KG"))
+        assertEquals(AthleteMetricType.LTHR_RUN_BPM, AthleteMetricType.fromNameOrNull("LTHR_RUN_BPM"))
+
+        val columns = listOf(
+            AthleteMetricsDbHelper.C_ID,
+            AthleteMetricsDbHelper.TIMESTAMP_MS,
+            AthleteMetricsDbHelper.METRIC_TYPE,
+            AthleteMetricsDbHelper.VALUE
+        )
+        val rows = listOf(
+            listOf<Any?>(1L, 1_700_000_000_000L, "LTHR_RUN_BPM", 172.0),
+            listOf<Any?>(2L, 1_700_000_001_000L, "FUTURE_UNKNOWN_THRESHOLD", 99.0),
+            listOf<Any?>(3L, 1_700_000_002_000L, "LT1_PWR_BIKE_WATTS", 215.0)
+        )
+        val batch = AthleteMetricEntry.fromCursorBatch(MockCursorFactory.create(columns, rows))
+        assertEquals(2, batch.size)
+        assertEquals(AthleteMetricType.LTHR_RUN_BPM, batch[0].metricType)
+        assertEquals(AthleteMetricType.LT1_PWR_BIKE_WATTS, batch[1].metricType)
+    }
 }

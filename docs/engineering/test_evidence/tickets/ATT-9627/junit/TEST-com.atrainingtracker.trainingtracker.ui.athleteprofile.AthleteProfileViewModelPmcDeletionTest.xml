@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileViewModelPmcDeletionTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-25T11:44:31.832Z" hostname="rainer-HP-EliteBook-850-G5" time="9.119">
+  <properties/>
+  <testcase name="testColdStartHydration_withRealMultiThreadedIoDispatcher_neverDropsInitialTrigger" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileViewModelPmcDeletionTest" time="1.767"/>
+  <testcase name="testSportingJourneyViewModel_reloadsOnWorkoutDeletedEvent" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileViewModelPmcDeletionTest" time="1.462"/>
+  <testcase name="testUnhydratedAllWorkouts_deletedEventClearsPmcPeakAndCardioPoint" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileViewModelPmcDeletionTest" time="1.275"/>
+  <testcase name="testEquipmentViewModel_reloadsStatsOnWorkoutDeletedEvent" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileViewModelPmcDeletionTest" time="1.945"/>
+  <testcase name="testUnfinishedLiveWorkoutUpdates_triggerZeroHistoricalDbRequeries" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileViewModelPmcDeletionTest" time="1.317"/>
+  <testcase name="testBulkDeletedEvent_recalculatesPmcImmediately" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileViewModelPmcDeletionTest" time="1.353"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,7 +1,7 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 2 of 3)
 
 **Document ID**: `DOC-REQ-TRK-P2`  
-**Version**: 1.0.110  
+**Version**: 1.0.111  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -1748,21 +1748,21 @@
 
 **Invariants**: Zero `RejectedExecutionException`; strict single-thread FIFO execution on `mDbExecutor`; zero state cross-contamination between consecutive sessions; clean service and executor destruction on terminal exit.
 
-### REQ-SEN-028: Pairable Virtual Sensor ATT Fused (Position und Geschwindigkeit) with Priority Routing and Input Source Guards [Verified]
+### REQ-SEN-028: Pairable Virtual Sensor Odometry Fused (Odometrie-Fusion) with Priority Routing, Virtual Manufacturer Attribution, and Input Source Guards [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-SEN-028`
 - **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-003`, `SYSREQ-TRK-010`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
-- **Implementation**: `DeviceType.java`, `SpeedAndLocationDevice_ATTFused.kt`, `DeviceManager.java`, `MySensorManager.java`, `DevicesDatabaseManager.java`, `DatabaseSchemaRegistry.kt`, `SensorType.java`, `TrackerService.java`, `EditDeviceDialog.kt`, `strings_devices.xml`
-- **Rationale**: Expose the 5-state unicycle odometry fusion engine (ATT-131) as an activatable/pairable virtual Smartphone device with MySensorManager priority routing, 1-Hz world yaw-rate persistence in WorkoutSamples.db for post-workout ERTS replay (ATT-7750), and guarded UI source configuration in EditDeviceDialog.kt (ATT-7751, extending REQ-TRK-024 and REQ-FIL-007..010):
+- **Implementation**: `DeviceType.java`, `SpeedAndLocationDevice_ATTFused.kt`, `DeviceManager.java`, `MySensorManager.java`, `DevicesDatabaseManager.java`, `DevicesDatabaseMigrationV16Helper.kt`, `Manufacturer.java`, `DeviceData.kt`, `DatabaseSchemaRegistry.kt`, `SensorType.java`, `TrackerService.java`, `EditDeviceDialog.kt`, `strings_devices.xml`
+- **Rationale**: Expose the 5-state unicycle odometry fusion engine (ATT-131) as an activatable/pairable virtual Smartphone device with MySensorManager priority routing, 1-Hz world yaw-rate persistence in WorkoutSamples.db for post-workout ERTS replay (ATT-7750), clean non-`'ATT'` sensor list titles & `'a Training Tracker'`/`'Google'` manufacturer attribution (ATT-8111), and guarded UI source configuration in EditDeviceDialog.kt (ATT-7751, extending REQ-TRK-024 and REQ-FIL-007..010):
 - **Description**:
-  1. *Pairable Smartphone Virtual Device & Schema Migration (`REQ-SEN-028.1`)*:
+  1. *Pairable Smartphone Virtual Device, Clean Titles, Manufacturer Attribution & Schema Migration (`REQ-SEN-028.1`)*:
      - `DeviceType.SPEED_AND_LOCATION_ATT_FUSED` SHALL be declared under `Protocol.SMARTPHONE`, providing `LATITUDE`, `LONGITUDE`, `SPEED_mps`, `PACE_spm`, `DISTANCE_m`, `DISTANCE_m_LAP`, `LINE_DISTANCE_m`, `BEARING`, and `ACCURACY`.
-     - `DevicesDbHelper.DB_VERSION` SHALL be incremented to `11`.
-     - An idempotent migration `migrateAddSpeedAndLocationAttFused()` SHALL insert the `SPEED_AND_LOCATION_ATT_FUSED` device row into `Devices4` table with default `PAIRED = 0` (unpaired/opt-in) on upgrade (`oldVersion <= 10`) and on fresh database creation (`addLocationDevicesToDb`).
-     - Display name strings `devices_location_ATT_fused` SHALL be localized across all 9 supported languages ("ATT Fused (Position und Geschwindigkeit)" / "ATT Fused (Location & Speed)").
+     - `DevicesDbHelper.DB_VERSION` SHALL insert `SPEED_AND_LOCATION_ATT_FUSED` (`PAIRED = 0`) on v11 migration / fresh install, and at `DB_VERSION = 16` (`DevicesDatabaseMigrationV16Helper`) idempotently remove legacy `"ATT "` prefixes from default `SPEED_AND_LOCATION_ATT_FUSED` names across all 9 locales while preserving custom user renames (`ATT-8111`).
+     - `Manufacturer.getSmartphoneManufacturer` and `DeviceData.formatDeviceManufacturer` SHALL attribute virtual fused/derived smartphone sensors (`SPEED_AND_LOCATION_ATT_FUSED`, `ALTITUDE_AND_SLOPE_ATT_FUSED`, `ALTITUDE_FROM_POSITION`) to `"a Training Tracker"` (preserving lowercase `'a'`) and `SPEED_AND_LOCATION_GOOGLE_FUSED` to `"Google"`, while retaining `Build.BRAND` for physical phone hardware sensors (`SPEED_AND_LOCATION_GPS`, `ALTITUDE_FROM_PRESSURE`).
+     - Display name strings `devices_location_ATT_fused` SHALL be localized without any `'ATT '` prefix across all 9 supported languages ("Odometrie-Fusion" / "Odometry Fused").
   2. *MySensorManager Priority Hierarchy Integration (`REQ-SEN-028.2`)*:
      - In `MySensorManager.java`, `SPEED_AND_LOCATION_ATT_FUSED` SHALL be placed at index 0 of `LOCATION_PRIORITY` (ahead of `SPEED_AND_LOCATION_GOOGLE_FUSED` and `SPEED_AND_LOCATION_GPS`).
      - `SPEED_AND_LOCATION_ATT_FUSED` SHALL be integrated at index 0 of `SPEED_PRIORITY` when active and paired, ensuring fused speed and distance incorporating calibrated wheel revolutions take precedence over raw speed, and cleanly falling back to standard hardware/GNSS priority when unpaired.
@@ -1787,30 +1787,30 @@
 4. *Preservation of Core Invariants*: Default state is unpaired (`PAIRED = 0`). When inactive, priority routing, battery drain, and sensor behavior are 100% identical to baseline. Independent device-attributed columns in `WorkoutSamples.db` remain preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
-• *Given* the Smartphone sensor list on fresh install or upgrade to DB_VERSION 11,
+• *Given* the Smartphone sensor list on fresh install or upgrade to `DB_VERSION 16`,
 • *When* the user views available sensors,
-• *Then* `ATT Fused (Position und Geschwindigkeit)` is listed with default unpaired state (`PAIRED = 0`) across all 9 supported languages.
-• *Given* `ATT Fused (Position und Geschwindigkeit)` is paired/activated,
+• *Then* `Odometrie-Fusion` / `Odometry Fused` (without `'ATT '` prefix, preserving custom user renames) is listed with manufacturer `"a Training Tracker"` (and `Google Location (Fused)` with `"Google"`) in default unpaired state (`PAIRED = 0`) across all 9 supported languages.
+• *Given* `Odometrie-Fusion` (`SPEED_AND_LOCATION_ATT_FUSED`) is paired/activated,
 • *When* tracking runs,
 • *Then* `MySensorManager` prioritizes its fused coordinates, bearing, speed, and distance above Google Fused and GPS, and `WorkoutSamples.db` persists separate device-attributed columns and 1-Hz `WORLD_YAW_RATE_radps`.
-• *Given* the user opens `EditDeviceDialog.kt` for `ATT Fused`,
+• *Given* the user opens `EditDeviceDialog.kt` for `Odometrie-Fusion`,
 • *When* hardware gyroscopes or external speed sensors are absent/unpaired,
 • *Then* the corresponding toggle is greyed out with a clear localized hint and zero text clipping.
-• *Given* `ATT Fused` is deactivated in the sensor list,
+• *Given* `Odometrie-Fusion` is deactivated in the sensor list,
 • *When* a workout is recorded,
 • *Then* location and speed routing cleanly reverts to standard GPS/Google Fused/wheel priority with zero background gyro drain.
 
 **Invariants**: Unpaired by default; zero battery consumption when inactive; thread safety on sensor single-thread dispatchers; 9-language localization parity; 100% clean-room test pass rate.
 
-### REQ-FIL-016: Kinematic Terrain-Slope Altitude Fusion Engine & Pairable ATT Fused (Höhe und Steigung) Virtual Device [Verified]
+### REQ-FIL-016: Kinematic Terrain-Slope Altitude Fusion Engine & Pairable Fused (Höhe und Steigung) Virtual Device [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-FIL-016`
 - **System Requirement(s)**: `SYSREQ-TRK-003`, `SYSREQ-TRK-004`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
-- **Implementation**: `KinematicAltitudeSlopeEkf.kt`, `AltitudeAndSlopeDevice_ATTFused.kt`, `BarometricAltitudeFilter.kt`, `DeviceType.java`, `DeviceManager.java`, `MySensorManager.java`, `DevicesDatabaseManager.java`, `EditDeviceDialog.kt`, `strings_devices.xml`
-- **Rationale**: Provide a coupled kinematic altitude and slope estimation engine ($dh = g \cdot ds$) with observability-aware 2-State $[h_k, g_k]^T$ and 3-State $[h_k, g_k, b_{baro,k}]^T$ filtering, standstill altitude clamping, and paired-source UI configuration guards, exposed as pairable virtual sensor ATT Fused (Höhe und Steigung) (ATT-6279, extending REQ-FIL-012, REQ-SEN-025, and REQ-SEN-026):
+- **Implementation**: `KinematicAltitudeSlopeEkf.kt`, `AltitudeAndSlopeDevice_ATTFused.kt`, `BarometricAltitudeFilter.kt`, `DeviceType.java`, `DeviceManager.java`, `MySensorManager.java`, `DevicesDatabaseManager.java`, `DevicesDatabaseMigrationV16Helper.kt`, `Manufacturer.java`, `DeviceData.kt`, `EditDeviceDialog.kt`, `strings_devices.xml`
+- **Rationale**: Provide a coupled kinematic altitude and slope estimation engine ($dh = g \cdot ds$) with observability-aware 2-State $[h_k, g_k]^T$ and 3-State $[h_k, g_k, b_{baro,k}]^T$ filtering, standstill altitude clamping, clean non-`'ATT'` title & `'a Training Tracker'` manufacturer attribution (`ATT-8111`), and paired-source UI configuration guards, exposed as pairable virtual sensor Fused (Höhe und Steigung) (ATT-6279, extending REQ-FIL-012, REQ-SEN-025, and REQ-SEN-026):
 - **Description**:
   1. *Kinematic Terrain-Slope EKF & Observability Modes (`REQ-FIL-016.1`)*:
      - The system SHALL maintain state elevation $h$ (meters) and terrain slope grade $g$ (dimensionless, $\frac{dh}{ds}$) coupled to horizontal ground displacement $\Delta s_k = v_k \cdot \Delta t_k$ via $h_k = h_{k-1} + g_{k-1} \cdot \Delta s_k$.
@@ -1820,10 +1820,10 @@
      - When horizontal speed $v = 0$ ($\Delta s_k = 0$), slope process noise SHALL be zero ($Q_g = 0$) and ground altitude SHALL be clamped ($dh = 0$), preventing stationary barometric weather/temperature drift from accumulating false climbing meters or oscillating slope.
      - In 3-State mode, standstill barometric drift SHALL update barometric bias $b_{baro,k}$ directly.
      - `BarometricAltitudeFilter.kt` SHALL expose `filterSlewOnly(rawAltitude, timestampMs)` (or equivalent) providing median-filtered and slew-rate clamped raw elevation, which `AltitudeAndSlopeDevice_ATTFused` SHALL ingest to prevent cascaded double-EMA phase lag.
-  3. *Pairable Virtual Device & Devices.db Schema v12 Migration (`REQ-FIL-016.3`)*:
+  3. *Pairable Virtual Device, Clean Titles, Manufacturer Attribution & Devices.db Schema Migration (`REQ-FIL-016.3`)*:
      - `DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED` SHALL be declared under `Protocol.SMARTPHONE`, providing `ALTITUDE`, `SLOPE`, `VERTICAL_SPEED`, `ASCENT`, and `DESCENT`.
-     - `DevicesDbHelper.DB_VERSION` SHALL be incremented to `12`. Idempotent migration `migrateAddAltitudeAndSlopeAttFused()` SHALL insert the device row with default `PAIRED = 0` (unpaired/opt-in) on upgrade (`oldVersion <= 11`) and fresh install.
-     - Display name strings `devices_altitude_slope_ATT_fused` SHALL be localized across all 9 supported languages ("ATT Fused (Höhe und Steigung)" / "ATT Fused (Altitude & Slope)").
+     - `DevicesDbHelper` SHALL insert `ALTITUDE_AND_SLOPE_ATT_FUSED` with default `PAIRED = 0` on v12 migration / fresh install, and at `DB_VERSION = 16` (`DevicesDatabaseMigrationV16Helper`) idempotently remove legacy `"ATT "` prefixes from default titles while preserving custom user renames and assigning manufacturer `"a Training Tracker"` (`ATT-8111`).
+     - Display name strings `devices_altitude_slope_ATT_fused` SHALL be localized without any `'ATT '` prefix across all 9 supported languages ("Fused (Höhe und Steigung)" / "Fused (Altitude & Slope)").
   4. *MySensorManager Priority Hierarchy Integration (`REQ-FIL-016.4`)*:
      - When paired, `ALTITUDE_AND_SLOPE_ATT_FUSED` SHALL be placed at index 0 of `ALTITUDE_PRIORITY` (ahead of `ALTITUDE_FROM_POSITION` and `ALTITUDE_FROM_PRESSURE`).
      - Dedicated priority arrays SHALL be established in `MySensorManager.java` for `SLOPE`, `VERTICAL_SPEED`, `ASCENT`, and `DESCENT` prioritizing `ALTITUDE_AND_SLOPE_ATT_FUSED` at index 0 over `VERTICAL_SPEED_AND_SLOPE`.
@@ -1844,19 +1844,19 @@
 4. *Preservation of Core Invariants*: Default state is unpaired (`PAIRED = 0`). When inactive, priority routing, battery drain, and sensor behavior are 100% identical to baseline. Independent device-attributed columns in `WorkoutSamples.db` remain preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
-• *Given* the Smartphone sensor list on fresh install or upgrade to DB_VERSION 12,
+• *Given* the Smartphone sensor list on fresh install or upgrade to `DB_VERSION 16`,
 • *When* the user views available sensors,
-• *Then* `ATT Fused (Höhe und Steigung)` is listed with default unpaired state (`PAIRED = 0`) across all 9 supported languages.
-• *Given* `ATT Fused (Höhe und Steigung)` is configured with Barometer + Speed only (DEM disabled),
+• *Then* `Fused (Höhe und Steigung)` / `Fused (Altitude & Slope)` (without `'ATT '` prefix, preserving custom user renames) is listed with manufacturer `"a Training Tracker"` in default unpaired state (`PAIRED = 0`) across all 9 supported languages.
+• *Given* `Fused (Höhe und Steigung)` is configured with Barometer + Speed only (DEM disabled),
 • *When* the user moves and then stops ($v = 0$),
 • *Then* the filter operates in 2-State mode $[h_k, g_k]^T$ without double-EMA lag and clamps altitude changes during standstills to prevent false climb accumulation.
-• *Given* `ATT Fused (Höhe und Steigung)` is configured with Barometer + DEM + Speed,
+• *Given* `Fused (Höhe und Steigung)` is configured with Barometer + DEM + Speed,
 • *When* DEM elevation updates arrive,
 • *Then* the filter operates in 3-State mode $[h_k, g_k, b_{baro,k}]^T$, isolating barometric thermal/weather drift into $b_{baro}$ while maintaining smooth altitude and slope without 1m staircase artifacts.
-• *Given* the user opens `EditDeviceDialog.kt` for `ATT Fused (Höhe und Steigung)`,
+• *Given* the user opens `EditDeviceDialog.kt` for `Fused (Höhe und Steigung)`,
 • *When* `ALTITUDE_FROM_PRESSURE` or `ALTITUDE_FROM_POSITION` is not paired,
 • *Then* the corresponding toggle is greyed out with a clear localized hint and zero text clipping.
-• *Given* `ATT Fused (Höhe und Steigung)` is deactivated in the sensor list,
+• *Given* `Fused (Höhe und Steigung)` is deactivated in the sensor list,
 • *When* a workout is recorded,
 • *Then* altitude, slope, and VAM cleanly revert to `VerticalSpeedAndSlopeDevice` and standard altitude priority.
 

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.exporter.uploader.DropboxUploaderTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-25T09:09:38.767Z" hostname="rainer-HP-EliteBook-850-G5" time="6.127">
+  <properties/>
+  <testcase name="testDoExport_serverException_returnsShallRetryTrue" classname="com.atrainingtracker.trainingtracker.exporter.uploader.DropboxUploaderTest" time="0.83"/>
+  <testcase name="testDoExport_nullCredential_returnsError" classname="com.atrainingtracker.trainingtracker.exporter.uploader.DropboxUploaderTest" time="0.617"/>
+  <testcase name="testDoExport_dbxException_returnsError" classname="com.atrainingtracker.trainingtracker.exporter.uploader.DropboxUploaderTest" time="0.803"/>
+  <testcase name="testDoExport_missingLocalFile_returnsError" classname="com.atrainingtracker.trainingtracker.exporter.uploader.DropboxUploaderTest" time="0.62"/>
+  <testcase name="testDoExport_successfulUpload" classname="com.atrainingtracker.trainingtracker.exporter.uploader.DropboxUploaderTest" time="0.791"/>
+  <testcase name="testDoExport_ioException_returnsError" classname="com.atrainingtracker.trainingtracker.exporter.uploader.DropboxUploaderTest" time="0.813"/>
+  <testcase name="testDoExport_genericDbxException_returnsShallRetryFalse" classname="com.atrainingtracker.trainingtracker.exporter.uploader.DropboxUploaderTest" time="0.844"/>
+  <testcase name="testDoExport_retryException_returnsShallRetryTrue" classname="com.atrainingtracker.trainingtracker.exporter.uploader.DropboxUploaderTest" time="0.808"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

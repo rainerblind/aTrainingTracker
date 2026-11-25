@@ -27,15 +27,20 @@ import android.provider.MediaStore
 import android.util.Log
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.routes.GeoUtils
+import com.atrainingtracker.trainingtracker.ui.aftermath.StravaActivityPhoto
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import java.io.File
+import java.security.MessageDigest
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 /**
  * Manager coordinating workout photo filesystem storage, EXIF metadata extraction,
@@ -44,6 +49,9 @@ import java.util.UUID
 object WorkoutPhotoManager {
 
     private const val TAG = "WorkoutPhotoManager"
+    private const val PHOTO_DEDUP_TIMESTAMP_TOLERANCE_MS = 2_000L
+    private const val MAX_REMOTE_PHOTO_BYTES = 25L * 1024L * 1024L
+    private const val REMOTE_PHOTO_CALL_TIMEOUT_SECONDS = 30L
 
     private val EXIF_DATE_FORMAT = SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US).apply {
         timeZone = TimeZone.getDefault()
@@ -331,7 +339,34 @@ object WorkoutPhotoManager {
                 }
             } ?: return@withContext null
 
-            val exif = extractExifMetadata(destFile)
+            registerPhotoFile(
+                context = context,
+                workoutId = workoutId,
+                photoFile = destFile,
+                caption = caption
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Error adding photo from $sourceUri for workout $workoutId", e)
+            null
+        }
+    }
+
+    /**
+     * Registers a local photo file in `workout_photos` with consistent EXIF extraction,
+     * fallback timestamp/coordinate resolution, trackpoint interpolation, and Null-Island (0.0, 0.0) filtering.
+     */
+    internal fun registerPhotoFile(
+        context: Context,
+        workoutId: Long,
+        photoFile: File,
+        fallbackTakenAtMs: Long? = null,
+        fallbackLatitude: Double? = null,
+        fallbackLongitude: Double? = null,
+        caption: String? = null,
+        preExtractedExif: ExifMetadata? = null
+    ): WorkoutPhotoEntry? {
+        return try {
+            val exif = preExtractedExif ?: extractExifMetadata(photoFile)
             var takenAtMs = exif.takenAtMs
             var latitude = exif.latitude
             var longitude = exif.longitude
@@ -350,7 +385,14 @@ object WorkoutPhotoManager {
             } ?: 0L
 
             if (takenAtMs == null) {
-                takenAtMs = if (startTimeMs > 0) startTimeMs else System.currentTimeMillis()
+                takenAtMs = fallbackTakenAtMs ?: if (startTimeMs > 0) startTimeMs else System.currentTimeMillis()
+            }
+
+            if ((latitude == null || longitude == null) &&
+                GeoUtils.isValidGpsCoordinate(fallbackLatitude, fallbackLongitude)
+            ) {
+                latitude = fallbackLatitude
+                longitude = fallbackLongitude
             }
 
             if ((latitude == null || longitude == null) && baseFileName != null && startTimeMs > 0) {
@@ -365,7 +407,7 @@ object WorkoutPhotoManager {
                             longitude = interpolated.longitude
                         }
                     } catch (e: Exception) {
-                        Log.w(TAG, "Failed to interpolate coordinates for ${destFile.name}", e)
+                        Log.w(TAG, "Failed to interpolate coordinates for ${photoFile.name}", e)
                     }
                 }
             }
@@ -376,15 +418,234 @@ object WorkoutPhotoManager {
                 longitude = null
             }
 
-            val id = summariesDb.insertPhoto(workoutId, destFile.absolutePath, takenAtMs, latitude, longitude, caption)
+            val id = summariesDb.insertPhoto(workoutId, photoFile.absolutePath, takenAtMs, latitude, longitude, caption)
             if (id > 0) {
-                WorkoutPhotoEntry(id, workoutId, destFile.absolutePath, takenAtMs, latitude, longitude, caption)
+                WorkoutPhotoEntry(id, workoutId, photoFile.absolutePath, takenAtMs, latitude, longitude, caption)
             } else {
-                destFile.delete()
+                photoFile.delete()
                 null
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error adding photo from $sourceUri for workout $workoutId", e)
+            Log.e(TAG, "Error registering photo ${photoFile.name} for workout $workoutId", e)
+            null
+        }
+    }
+
+    /**
+     * Downloads and registers Strava activity photos into `workout_photos`, deduplicating
+     * against locally stored camera/gallery photos, bulk-imported photos, and prior Strava syncs.
+     *
+     * @return Number of newly downloaded and registered photos.
+     */
+    fun importStravaPhotos(
+        context: Context,
+        workoutId: Long,
+        photos: List<StravaActivityPhoto>,
+        httpClient: OkHttpClient
+    ): Int {
+        if (workoutId <= 0L || photos.isEmpty()) return 0
+
+        val summariesDb = WorkoutSummariesDatabaseManager.getInstance(context)
+        val existingPhotos = summariesDb.getPhotosForWorkout(workoutId)
+        val dir = getWorkoutPhotosDir(context, workoutId)
+
+        val knownFileStems = existingPhotos
+            .map { File(it.filePath).nameWithoutExtension.lowercase(Locale.ROOT) }
+            .toMutableSet()
+
+        val knownHashes = existingPhotos
+            .mapNotNull { entry ->
+                val f = entry.file
+                if (f.exists() && f.isFile && f.length() > 0L) computeSha256Hex(f) else null
+            }
+            .toMutableSet()
+
+        val preExistingTimestamps = existingPhotos
+            .filter { !File(it.filePath).name.lowercase(Locale.ROOT).startsWith("strava_") }
+            .mapNotNull { it.takenAtMs }
+
+        val boundedClient = httpClient.newBuilder()
+            .callTimeout(REMOTE_PHOTO_CALL_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .build()
+        val canonicalDir = dir.canonicalFile
+
+        var importedCount = 0
+
+        for (photo in photos) {
+            if (!photo.url.startsWith("https://", ignoreCase = true)) {
+                Log.w(TAG, "Rejecting non-HTTPS Strava photo URL for ${photo.uniqueId}")
+                continue
+            }
+            if (!isSafePhotoIdentifier(photo.uniqueId)) {
+                Log.w(TAG, "Rejecting unsafe Strava photo identifier: ${photo.uniqueId}")
+                continue
+            }
+
+            val stemStrava = "strava_${photo.uniqueId}".lowercase(Locale.ROOT)
+            val stemRaw = photo.uniqueId.lowercase(Locale.ROOT)
+
+            // 1. Pre-download deduplication by Strava ID / bulk-import filename stem
+            if (stemStrava in knownFileStems || stemRaw in knownFileStems) {
+                Log.d(TAG, "Skipping duplicate Strava photo ${photo.uniqueId} (already stored by filename)")
+                continue
+            }
+
+            // 2. Pre-download deduplication by capture timestamp against pre-existing local photos
+            if (photo.createdAtMs != null && hasMatchingTimestamp(photo.createdAtMs, preExistingTimestamps)) {
+                Log.d(TAG, "Skipping duplicate Strava photo ${photo.uniqueId} (matches local capture timestamp)")
+                continue
+            }
+
+            var tempFile: File? = null
+            try {
+                val request = Request.Builder()
+                    .url(photo.url)
+                    .get()
+                    .build()
+
+                boundedClient.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        Log.w(TAG, "Failed downloading Strava photo ${photo.uniqueId}: HTTP ${response.code}")
+                        return@use
+                    }
+                    val body = response.body
+                    val contentTypeHeader = response.header("Content-Type")
+                        ?: body.contentType()?.let { "${it.type}/${it.subtype}" }
+                    val normalizedContentType = contentTypeHeader?.substringBefore(';')?.trim()?.lowercase(Locale.ROOT)
+                    if (!normalizedContentType.isNullOrBlank() && !normalizedContentType.startsWith("image/")) {
+                        Log.w(TAG, "Rejecting non-image Content-Type '$contentTypeHeader' for Strava photo ${photo.uniqueId}")
+                        return@use
+                    }
+                    val ext = resolveImageExtension(contentTypeHeader, photo.url)
+                    val candidateTemp = File(dir, ".tmp_strava_${photo.uniqueId}_${UUID.randomUUID().toString().take(8)}.$ext")
+                    if (candidateTemp.canonicalFile.parentFile != canonicalDir) {
+                        Log.w(TAG, "Rejecting temp photo path escaping workout photos directory: ${photo.uniqueId}")
+                        return@use
+                    }
+                    tempFile = candidateTemp
+
+                    var totalBytes = 0L
+                    body.byteStream().use { input ->
+                        candidateTemp.outputStream().use { output ->
+                            val buffer = ByteArray(8192)
+                            while (true) {
+                                val read = input.read(buffer)
+                                if (read < 0) break
+                                totalBytes += read
+                                if (totalBytes > MAX_REMOTE_PHOTO_BYTES) {
+                                    throw IllegalStateException("Strava photo exceeds max size limit")
+                                }
+                                output.write(buffer, 0, read)
+                            }
+                        }
+                    }
+
+                    if (!candidateTemp.exists() || candidateTemp.length() <= 0L) {
+                        Log.w(TAG, "Downloaded Strava photo ${photo.uniqueId} is empty, skipping")
+                        return@use
+                    }
+
+                    // 3. Post-download deduplication by SHA-256 content hash
+                    val contentHash = computeSha256Hex(candidateTemp)
+                    if (contentHash != null && contentHash in knownHashes) {
+                        Log.d(TAG, "Skipping duplicate Strava photo ${photo.uniqueId} (identical SHA-256 content)")
+                        return@use
+                    }
+
+                    // 4. Post-download deduplication by EXIF capture timestamp against local photos
+                    val exif = extractExifMetadata(candidateTemp)
+                    if (exif.takenAtMs != null && hasMatchingTimestamp(exif.takenAtMs, preExistingTimestamps)) {
+                        Log.d(TAG, "Skipping duplicate Strava photo ${photo.uniqueId} (EXIF timestamp matches local photo)")
+                        return@use
+                    }
+
+                    val destFile = resolveUniqueDestinationFile(dir, "strava_${photo.uniqueId}", ext)
+                    if (destFile.canonicalFile.parentFile != canonicalDir) {
+                        Log.w(TAG, "Rejecting destination photo path escaping workout photos directory: ${photo.uniqueId}")
+                        return@use
+                    }
+                    if (!candidateTemp.renameTo(destFile)) {
+                        candidateTemp.copyTo(destFile, overwrite = false)
+                        candidateTemp.delete()
+                    }
+
+                    val entry = registerPhotoFile(
+                        context = context,
+                        workoutId = workoutId,
+                        photoFile = destFile,
+                        fallbackTakenAtMs = photo.createdAtMs,
+                        fallbackLatitude = photo.latitude,
+                        fallbackLongitude = photo.longitude,
+                        caption = photo.caption,
+                        preExtractedExif = exif
+                    )
+                    if (entry != null) {
+                        importedCount++
+                        knownFileStems.add(stemStrava)
+                        if (contentHash != null) {
+                            knownHashes.add(contentHash)
+                        }
+                        Log.d(TAG, "Imported Strava API photo ${destFile.name} for workout $workoutId")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Error importing Strava photo ${photo.uniqueId} for workout $workoutId", e)
+            } finally {
+                tempFile?.let { if (it.exists()) it.delete() }
+            }
+        }
+
+        return importedCount
+    }
+
+    private fun isSafePhotoIdentifier(uniqueId: String): Boolean {
+        if (uniqueId.isBlank()) return false
+        if (uniqueId.contains("..") || uniqueId.contains('/') || uniqueId.contains('\\') || uniqueId.contains('\u0000')) {
+            return false
+        }
+        return uniqueId != "."
+    }
+
+    private fun hasMatchingTimestamp(targetMs: Long, candidateTimestampsMs: List<Long>): Boolean {
+        return candidateTimestampsMs.any { kotlin.math.abs(it - targetMs) <= PHOTO_DEDUP_TIMESTAMP_TOLERANCE_MS }
+    }
+
+    private fun resolveUniqueDestinationFile(dir: File, baseName: String, ext: String): File {
+        val primary = File(dir, "$baseName.$ext")
+        if (!primary.exists()) return primary
+        return File(dir, "${baseName}_${UUID.randomUUID().toString().take(8)}.$ext")
+    }
+
+    private fun resolveImageExtension(contentType: String?, url: String): String {
+        val normalizedType = contentType?.substringBefore(';')?.trim()?.lowercase(Locale.ROOT)
+        return when (normalizedType) {
+            "image/png" -> "png"
+            "image/webp" -> "webp"
+            "image/jpeg", "image/jpg" -> "jpg"
+            else -> {
+                val path = url.substringBefore('?').substringBefore('#').lowercase(Locale.ROOT)
+                when {
+                    path.endsWith(".png") -> "png"
+                    path.endsWith(".webp") -> "webp"
+                    else -> "jpg"
+                }
+            }
+        }
+    }
+
+    private fun computeSha256Hex(file: File): String? {
+        return try {
+            val digest = MessageDigest.getInstance("SHA-256")
+            file.inputStream().use { input ->
+                val buffer = ByteArray(8192)
+                while (true) {
+                    val read = input.read(buffer)
+                    if (read < 0) break
+                    digest.update(buffer, 0, read)
+                }
+            }
+            digest.digest().joinToString("") { "%02x".format(it) }
+        } catch (e: Exception) {
             null
         }
     }

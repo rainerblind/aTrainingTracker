@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterMergeDialogContractTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:21:26.290Z" hostname="rainer-HP-EliteBook-850-G5" time="0.132">
+  <properties/>
+  <testcase name="testTwoStepDialogTransition_cancelConfirmationResetsStateCleanly" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterMergeDialogContractTest" time="0.002"/>
+  <testcase name="testMergeStrings_existAcrossAll9LocalesWithZeroEmojisAndValidSpecifiers" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterMergeDialogContractTest" time="0.128"/>
+  <testcase name="testLegacyCoupledStateTrap_demonstratesWhyOldLogicFailedOnFirstTap" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterMergeDialogContractTest" time="0.002"/>
+  <testcase name="testTwoStepDialogTransition_firstTapOpensConfirmationDialogImmediately" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterMergeDialogContractTest" time="0.0"/>
+  <testcase name="testTwoStepDialogTransition_dismissWithoutSelectionDoesNotTriggerConfirmation" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterMergeDialogContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

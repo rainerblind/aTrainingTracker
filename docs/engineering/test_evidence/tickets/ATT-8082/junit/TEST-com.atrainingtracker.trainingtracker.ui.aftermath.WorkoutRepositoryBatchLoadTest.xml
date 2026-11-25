@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryBatchLoadTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-25T09:09:59.713Z" hostname="rainer-HP-EliteBook-850-G5" time="8.537">
+  <properties/>
+  <testcase name="testLoadAllWorkouts_50WorkoutChunk_executesBoundedBatchQueriesAndZeroPerWorkoutFallbacks_TST_DAT_041_4" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryBatchLoadTest" time="8.537"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[System.logW: A resource was acquired at attached stack trace but never released. See java.io.Closeable for information on avoiding resource leaks.
+java.lang.Throwable: Explicit termination method 'close' not called
+	at dalvik.system.CloseGuard.$$robo$$dalvik_system_CloseGuard$openWithCallSite(CloseGuard.java:288)
+	at dalvik.system.CloseGuard.openWithCallSite(CloseGuard.java)
+	at dalvik.system.CloseGuard.$$robo$$dalvik_system_CloseGuard$open(CloseGuard.java:257)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.robolectric.shadows.ShadowCloseGuard$CloseGuardReflector$$Reflector66.open(Unknown Source)
+	at org.robolectric.shadows.ShadowCloseGuard.open(ShadowCloseGuard.java:38)
+	at dalvik.system.CloseGuard.open(CloseGuard.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openInner(SQLiteDatabase.java:1088)
+	at android.database.sqlite.SQLiteDatabase.openInner(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$open(SQLiteDatabase.java:1067)
+	at android.database.sqlite.SQLiteDatabase.open(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openDatabase(SQLiteDatabase.java:931)
+	at android.database.sqlite.SQLiteDatabase.openDatabase(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openDatabase(SQLiteDatabase.java:920)
+	at android.database.sqlite.SQLiteDatabase.openDatabase(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteOpenHelper.$$robo$$android_database_sqlite_SQLiteOpenHelper$getDatabaseLocked(Unknown Source)
+	at android.database.sqlite.SQLiteOpenHelper.getDatabaseLocked(Unknown Source)
+	at android.database.sqlite.SQLiteOpenHelper.$$robo$$android_database_sqlite_SQLiteOpenHelper$getWritableDatabase(Unknown Source)
+	at android.database.sqlite.SQLiteOpenHelper.getWritableDatabase(Unknown Source)
+	at com.atrainingtracker.database.TrackingSQLiteOpenHelper.getWritableDatabase(Unknown Source)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager.getDatabase(Unknown Source)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager.getAllClusters(Unknown Source)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository.getAllClustersSync(WorkoutClusterRepository.kt:1001)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine$dbManager$1.getAllClusters(WorkoutClusterEngine.kt:50)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.migrateHistory(WorkoutClusterEngine.kt:641)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.migrateHistory$default(WorkoutClusterEngine.kt:620)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.migrateHistory(WorkoutClusterEngine.kt)
+	at com.atrainingtracker.trainingtracker.TrainingApplication.lambda$runWorkoutClusterMigration$0(Unknown Source)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+
+]]></system-err>
+</testsuite>

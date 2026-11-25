@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEPayloadDispatchTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-25T12:59:05.389Z" hostname="rainer-HP-EliteBook-850-G5" time="9.4">
+  <properties/>
+  <testcase name="testBleNotificationPayloadClonedAndDecoupled_LegacySignature" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEPayloadDispatchTest" time="1.723"/>
+  <testcase name="testBleNotificationPayloadClonedAndDecoupled_Api33Signature" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEPayloadDispatchTest" time="1.445"/>
+  <testcase name="testMeasurementRunnable_droppedWhenGattDisconnected" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEPayloadDispatchTest" time="1.568"/>
+  <testcase name="testCharacteristicPoolConcurrentAccess" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEPayloadDispatchTest" time="1.603"/>
+  <testcase name="testCharacteristicReadClonesPayloadOnSuccess" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEPayloadDispatchTest" time="1.525"/>
+  <testcase name="testCharacteristicSnapshot_distinctAllocationsPreservePayloads" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BLEPayloadDispatchTest" time="1.535"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

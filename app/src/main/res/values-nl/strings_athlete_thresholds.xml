@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Sport-Specific Physiological Thresholds & Zones Editor (ATT-9628 / ATT-9627 / REQ-SET-135 / REQ-SET-136) -->
+    <string name="athlete_profile_metric_hr_max_run">HFmax (Hardlopen)</string>
+    <string name="athlete_profile_metric_hr_max_bike">HFmax (Fietsen)</string>
+    <string name="athlete_profile_metric_lthr_run">LTHR (Hardlopen)</string>
+    <string name="athlete_profile_metric_lthr_bike">LTHR (Fietsen)</string>
+    <string name="athlete_profile_metric_lt1_hr_run">LT1 HF (Hardlopen)</string>
+    <string name="athlete_profile_metric_lt1_hr_bike">LT1 HF (Fietsen)</string>
+    <string name="athlete_profile_metric_lt1_pwr_bike">LT1 Vermogen (Fietsen)</string>
+    <string name="zone_thresholds_card_title">Fysiologische drempels</string>
+    <string name="zone_thresholds_card_subtitle">Werkt geschiedenis bij zonder zones te overschrijven</string>
+    <string name="zone_thresholds_recalculate_cta">Zones herberekenen uit drempels</string>
+    <string name="zone_thresholds_open_cp_estimator">2-punts CP &amp; W\'-schatter</string>
+    <string name="zone_thresholds_field_ftp">FTP</string>
+    <string name="zone_thresholds_field_cp">CP</string>
+    <string name="zone_thresholds_field_w_prime">W\'</string>
+    <string name="zone_thresholds_field_lt1_pwr">LT1 / AeT</string>
+    <string name="zone_thresholds_field_hr_max">HFmax</string>
+    <string name="zone_thresholds_field_hr_rest">HF-rust</string>
+    <string name="zone_thresholds_field_lthr">LTHR / LT2</string>
+    <string name="zone_thresholds_field_lt1_hr">LT1 / AeT</string>
+    <string name="zone_thresholds_error_range">Moet %1$d–%2$d zijn</string>
+    <string name="zone_thresholds_error_w_prime_range">W\' moet 5,0–60,0 kJ zijn</string>
+    <string name="zone_thresholds_error_cp_range">CP moet %1$d–%2$d W zijn</string>
+    <string name="zone_thresholds_error_lt1_pwr_range">LT1 moet %1$d–%2$d W zijn</string>
+    <string name="zone_thresholds_error_lt1_lt_ftp">LT1 moet lager zijn dan FTP</string>
+    <string name="zone_thresholds_error_hr_order">Vereist: HF-rust &lt; LT1 &lt; LTHR &lt; HFmax</string>
+    <string name="zone_calc_method_lthr">LTHR</string>
+    <string name="zone_calc_method_threshold_anchored">LT1 + LTHR</string>
+    <string name="zone_calc_lthr_label">Lactaatdrempel HF (LTHR)</string>
+    <string name="zone_calc_lt1_hr_label">Aerobe drempel HF (LT1)</string>
+    <string name="zone_calc_error_lthr_range">LTHR moet %1$d–%2$d bpm zijn</string>
+    <string name="zone_calc_error_lt1_hr_range">LT1 moet %1$d–%2$d bpm zijn</string>
+    <string name="zone_calc_error_lt1_lt_lthr">LT1 moet lager zijn dan LTHR</string>
+    <string name="zone_calc_error_lthr_lt_hrmax">LTHR moet lager zijn dan HFmax</string>
+    <string name="athlete_profile_edit_in_zones">Bewerken in Zones</string>
+</resources>

@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" tests="32" skipped="0" failures="0" errors="0" timestamp="2026-11-25T07:41:30.482Z" hostname="rainer-HP-EliteBook-850-G5" time="52.685">
+  <properties/>
+  <testcase name="testDuplicateDetectionInStatusField" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="5.311"/>
+  <testcase name="testFindExistingStravaActivityReturnsNullWhenHttpError" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.56"/>
+  <testcase name="testFreshUploadWithCustomNameSendsName" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.625"/>
+  <testcase name="testFindExistingStravaActivityForWorkout_queriesMetadataFromDatabase" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.756"/>
+  <testcase name="testDuplicateReconciliationFetchesAndEnrichesMissingRetiredGear" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.589"/>
+  <testcase name="testFreshUploadSendsSportTypeAndGear" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.824"/>
+  <testcase name="testDuplicateReconciliationEnrichesKnownLocalEquipment" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.581"/>
+  <testcase name="testDuplicateWithStravaDefaultNamePreservesLocalAppNameAndProtectsStrava" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.563"/>
+  <testcase name="testDuplicateWithStravaDefaultNameAndEmojiPreservesLocalAppName" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.542"/>
+  <testcase name="testDuplicateDetectionInErrorField" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.605"/>
+  <testcase name="testFindExistingStravaActivity_rejectsFalseStartDurationMismatch" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.618"/>
+  <testcase name="testDuplicateWithTcxImportedNameEnrichesLocalAndProtectsStrava" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.611"/>
+  <testcase name="testMetadataPreservedAcrossBothPaths" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.709"/>
+  <testcase name="testProcessSegmentEfforts_updatesPrWhenAchievementsArrayContainsPrRank1" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.576"/>
+  <testcase name="testDuplicateWithFallbackNameEnrichesLocalAndProtectsStrava" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.656"/>
+  <testcase name="testDuplicateReconciliationEnrichesDetailedSportType" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.611"/>
+  <testcase name="testFindExistingStravaActivityReturnsNullWhenNoActivities" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.625"/>
+  <testcase name="testFindExistingStravaActivity_filtersAllCandidatesAndMatchesCompatible" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.437"/>
+  <testcase name="testFindExistingStravaActivityMatchesClosestWithinWindow" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.42"/>
+  <testcase name="testStaleLocalActivityIdFallsThroughToPreUploadDiscovery" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.392"/>
+  <testcase name="testIsDefaultStravaNameEvaluation" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.384"/>
+  <testcase name="testNonDuplicateReturnsNull" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.349"/>
+  <testcase name="testDuplicateWithCustomNameProtectsStravaNameAndEnrichesLocal" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.454"/>
+  <testcase name="testFreshUploadWithFallbackNameOmitsName" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.401"/>
+  <testcase name="testPreUploadDiscoveryFindsDefaultTitlePreservesLocalName" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.429"/>
+  <testcase name="testFindExistingStravaActivity_rejectsCrossSportMismatch" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.399"/>
+  <testcase name="testProcessSegmentEfforts_updatesPrWhenRankIs1" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.474"/>
+  <testcase name="testParseTimeToEpochSecondsFormats" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.37"/>
+  <testcase name="testProcessSegmentEfforts_doesNotUpdateRepoWhenDbReturnsFalse" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.404"/>
+  <testcase name="testPreUploadDiscoveryFindsExistingActivityBypassesUploadAndEnrichesCustomName" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.463"/>
+  <testcase name="testFindExistingStravaActivity_skipsUnparseableDate" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.594"/>
+  <testcase name="testDuplicateDetectionWithDirectIdPhrasing" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest" time="1.35"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Possibly running android unit test without robolectric
+java.lang.RuntimeException: Method isLoggable in android.util.Log not mocked. See https://developer.android.com/r/studio-ui/build/not-mocked for details.
+	at android.util.Log.isLoggable(Log.java)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at io.mockk.proxy.jvm.advice.MethodCall.call(MethodCall.kt:17)
+	at io.mockk.proxy.jvm.advice.SelfCallEliminatorCallable.call(SelfCallEliminatorCallable.kt:13)
+	at io.mockk.impl.instantiation.JvmMockFactoryHelper.handleOriginalCall(JvmMockFactoryHelper.kt:122)
+	at io.mockk.impl.instantiation.JvmMockFactoryHelper.access$handleOriginalCall(JvmMockFactoryHelper.kt:28)
+	at io.mockk.impl.instantiation.JvmMockFactoryHelper$mockHandler$1$invocation$1$1.invoke(JvmMockFactoryHelper.kt:45)
+	at io.mockk.impl.stub.MockKStub$handleInvocation$originalPlusToString$1.invoke(MockKStub.kt:258)
+	at io.mockk.impl.stub.SpyKStub.defaultAnswer(SpyKStub.kt:13)
+	at io.mockk.impl.stub.MockKStub.answer(MockKStub.kt:59)
+	at io.mockk.impl.recording.states.AnsweringState.call(AnsweringState.kt:18)
+	at io.mockk.impl.recording.CommonCallRecorder.call(CommonCallRecorder.kt:65)
+	at io.mockk.impl.stub.MockKStub.handleInvocation(MockKStub.kt:297)
+	at io.mockk.impl.instantiation.JvmMockFactoryHelper$mockHandler$1.invocation(JvmMockFactoryHelper.kt:41)
+	at io.mockk.proxy.jvm.advice.Interceptor.call(Interceptor.kt:27)
+	at android.util.Log.isLoggable(Log.java)
+	at okhttp3.internal.platform.android.AndroidLog.enableLogging(AndroidLog.kt:132)
+	at okhttp3.internal.platform.android.AndroidLog.enable(AndroidLog.kt:109)
+	at okhttp3.internal.platform.PlatformRegistry.findPlatform(PlatformRegistry.kt:25)
+	at okhttp3.internal.platform.Platform$Companion.findPlatform(Platform.kt:252)
+	at okhttp3.internal.platform.Platform$Companion.access$findPlatform(Platform.kt:230)
+	at okhttp3.internal.platform.Platform.<clinit>(Platform.kt:231)
+	at okhttp3.OkHttpClient$Builder.<init>(OkHttpClient.kt:607)
+	at okhttp3.OkHttpClient.<init>(OkHttpClient.kt:279)
+	at com.atrainingtracker.trainingtracker.util.AppHttpClient.shared_delegate$lambda$0(AppHttpClient.kt:38)
+	at kotlin.SynchronizedLazyImpl.getValue(LazyJVM.kt:86)
+	at com.atrainingtracker.trainingtracker.util.AppHttpClient.getShared(AppHttpClient.kt:37)
+	at com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploader.<init>(StravaUploader.kt:51)
+	at com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest$TestableStravaUploader.<init>(StravaUploaderNamingTest.kt:101)
+	at com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest$TestableStravaUploader.<init>(StravaUploaderNamingTest.kt:101)
+	at com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderNamingTest.testDuplicateDetectionInStatusField(StravaUploaderNamingTest.kt:448)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:26)
+	at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfters.java:27)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:63)
+	at org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)
+	at org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:413)
+	at org.junit.runner.JUnitCore.run(JUnitCore.java:137)
+	at org.junit.runner.JUnitCore.run(JUnitCore.java:115)
+	at org.gradle.api.internal.tasks.testing.junit.JUnitTestExecutor.runRequest(JUnitTestExecutor.java:175)
+	at org.gradle.api.internal.tasks.testing.junit.JUnitTestExecutor.accept(JUnitTestExecutor.java:84)
+	at org.gradle.api.internal.tasks.testing.junit.JUnitTestExecutor.accept(JUnitTestExecutor.java:47)
+	at org.gradle.api.internal.tasks.testing.junit.AbstractJUnitTestDefinitionProcessor.processTestDefinition(AbstractJUnitTestDefinitionProcessor.java:65)
+	at org.gradle.api.internal.tasks.testing.SuiteTestDefinitionProcessor.processTestDefinition(SuiteTestDefinitionProcessor.java:53)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.gradle.internal.dispatch.MethodInvocation.invokeOn(MethodInvocation.java:77)
+	at org.gradle.internal.dispatch.ReflectionDispatch.dispatch(ReflectionDispatch.java:28)
+	at org.gradle.internal.dispatch.ReflectionDispatch.dispatch(ReflectionDispatch.java:19)
+	at org.gradle.internal.dispatch.ContextClassLoaderDispatch.dispatch(ContextClassLoaderDispatch.java:33)
+	at org.gradle.internal.dispatch.ProxyDispatchAdapter$DispatchingInvocationHandler.invoke(ProxyDispatchAdapter.java:88)
+	at jdk.proxy1/jdk.proxy1.$Proxy4.processTestDefinition(Unknown Source)
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker$2.run(TestWorker.java:178)
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker.executeAndMaintainThreadName(TestWorker.java:126)
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker.execute(TestWorker.java:103)
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker.execute(TestWorker.java:63)
+	at org.gradle.process.internal.worker.child.ActionExecutionWorker.execute(ActionExecutionWorker.java:56)
+	at org.gradle.process.internal.worker.child.SystemApplicationClassLoaderWorker.call(SystemApplicationClassLoaderWorker.java:122)
+	at org.gradle.process.internal.worker.child.SystemApplicationClassLoaderWorker.call(SystemApplicationClassLoaderWorker.java:72)
+	at worker.org.gradle.process.internal.worker.GradleWorkerMain.run(GradleWorkerMain.java:69)
+	at worker.org.gradle.process.internal.worker.GradleWorkerMain.main(GradleWorkerMain.java:74)
+]]></system-err>
+</testsuite>

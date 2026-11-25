@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceAddressAndSearchTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-25T12:58:33.605Z" hostname="rainer-HP-EliteBook-850-G5" time="21.191">
+  <properties/>
+  <testcase name="testScanAssistance_connectsGattUponScanResultDiscovery" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceAddressAndSearchTest" time="2.039"/>
+  <testcase name="testScanAssistance_stopsScanOnDisconnect" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceAddressAndSearchTest" time="1.762"/>
+  <testcase name="testIsRandomStaticAddress_classifiesCorrectly" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceAddressAndSearchTest" time="1.844"/>
+  <testcase name="testScanAssistance_onScanResult_connectsDuringDecoupledBackgroundReconnect" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceAddressAndSearchTest" time="1.938"/>
+  <testcase name="testScanAssistance_startsScanWithAddressFilter" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceAddressAndSearchTest" time="1.999"/>
+  <testcase name="testScanAssistance_connectsRandomStaticAddress" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceAddressAndSearchTest" time="1.99"/>
+  <testcase name="testScanAssistance_connectsPublicAddressWithC0ToFCOui" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceAddressAndSearchTest" time="1.906"/>
+  <testcase name="testScanAssistance_replacesExistingGattAndIgnoresStaleCallbacks" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceAddressAndSearchTest" time="1.954"/>
+  <testcase name="testScanAssistance_stopsScanOnShutDown" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceAddressAndSearchTest" time="1.881"/>
+  <testcase name="testScanAssistance_stopsScanOnTimeout" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceAddressAndSearchTest" time="2.026"/>
+  <testcase name="testStartSearching_scanFailsToStart_fallsBackToDirectConnect" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceAddressAndSearchTest" time="1.852"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

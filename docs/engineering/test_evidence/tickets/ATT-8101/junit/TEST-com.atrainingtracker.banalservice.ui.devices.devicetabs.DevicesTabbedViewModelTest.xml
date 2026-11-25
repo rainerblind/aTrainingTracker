@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModelTest" tests="24" skipped="0" failures="0" errors="0" timestamp="2026-11-25T05:54:13.510Z" hostname="rainer-HP-EliteBook-850-G5" time="7.9">
+  <properties/>
+  <testcase name="testInit_withEmptySavedStateHandle_defaultsToProtocolAllAndTabsAll" classname="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModelTest" time="0.63"/>
+  <testcase name="testDiscovery_nonPhysiologicalSensor_doesNotEmitZonePrompt" classname="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModelTest" time="0.565"/>
+  <testcase name="testSettingsDataStore_deviceSortOrderFlow_defaultsToAlphabeticalAndPersistsAllValues" classname="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModelTest" time="0.33"/>
+  <testcase name="testStopSearching_resetsIsSearchingForNewDevices" classname="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModelTest" time="0.31"/>
+  <testcase name="testInit_withMalformedStringTokens_fallsBackSafely" classname="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModelTest" time="0.284"/>
+  <testcase name="testSettingsDataStore_deviceSortOrderFlow_invalidTokenFallsBackToAlphabetical" classname="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModelTest" time="0.299"/>
+  <testcase name="testStartPairingScan_setsScanningProtocolAndType_andCallsRepository" classname="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModelTest" time="0.292"/>
+  <testcase name="testSortOrder_restoredFromSavedStateHandle" classname="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModelTest" time="0.282"/>
+  <testcase name="testDiscovery_unconfiguredPower_emitsZonePrompt" classname="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModelTest" time="0.319"/>
+  <testcase name="testInit_withExplicitValidParameters_preservesGivenValues" classname="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModelTest" time="0.288"/>
+  <testcase name="testUpdateFilters_updatesSavedStateAndEmitsNewTabsState" classname="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModelTest" time="0.271"/>
+  <testcase name="testNewDeviceFoundBroadcast_emitsResolvedDeviceNameToSharedFlow" classname="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModelTest" time="0.326"/>
+  <testcase name="testUpdateFilters_withNullDeviceType_defaultsToDeviceTypeAll" classname="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModelTest" time="0.312"/>
+  <testcase name="testDismissZonePrompt_resetsPromptStateToNull" classname="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModelTest" time="0.307"/>
+  <testcase name="testSortOrder_invalidStoredValueInDataStore_fallsBackToAlphabeticalOnRestart" classname="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModelTest" time="0.293"/>
+  <testcase name="testSortOrder_persistsAcrossViewModelReinstantiation_simulatingAppRestart" classname="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModelTest" time="0.292"/>
+  <testcase name="testSortOrder_setSortOrderUpdatesFlowAndSavesToSavedStateHandle" classname="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModelTest" time="0.277"/>
+  <testcase name="testDiscovery_configuredPower_doesNotEmitZonePrompt" classname="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModelTest" time="0.296"/>
+  <testcase name="testDiscovery_unconfiguredHrm_emitsZonePrompt" classname="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModelTest" time="0.31"/>
+  <testcase name="testSortOrder_explicitSavedStateAndImmediateSelectionNotOverwrittenByDelayedDataStoreEmission" classname="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModelTest" time="0.324"/>
+  <testcase name="testSortOrder_defaultIsAlphabetical" classname="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModelTest" time="0.298"/>
+  <testcase name="testStopSearching_clearsScanningProtocolAndDeviceType" classname="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModelTest" time="0.281"/>
+  <testcase name="testDiscovery_configuredHrm_doesNotEmitZonePrompt" classname="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModelTest" time="0.307"/>
+  <testcase name="testDeviceDiscoveryReceiver_whenSnapshotNull_routesThroughDeviceDataRepository" classname="com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModelTest" time="0.405"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

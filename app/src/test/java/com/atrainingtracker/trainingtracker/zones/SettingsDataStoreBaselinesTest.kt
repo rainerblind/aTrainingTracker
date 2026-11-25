@@ -246,4 +246,46 @@ class SettingsDataStoreBaselinesTest {
         assertEquals(324, dataStore.getZone5MaxFlow(ZoneType.PWR_BIKE).first())
         assertEquals(405, dataStore.getZone6MaxFlow(ZoneType.PWR_BIKE).first())
     }
+
+    @Test
+    fun sportSpecificThresholdKeys_syncHrMaxFallbackAndSnapshotGetters_TST_SET_135_2() = runBlocking {
+        val (prefsDataStore, dataStore) = createTestDataStore()
+
+        // Legacy KEY_HR_MAX alone serves hrMaxFlow fallback
+        prefsDataStore.edit { it[SettingsDataStore.KEY_HR_MAX] = 186 }
+        assertEquals(186, dataStore.hrMaxFlow.first())
+        assertNull(dataStore.hrMaxRunFlow.first())
+        assertNull(dataStore.hrMaxBikeFlow.first())
+
+        // Sport-specific HRmax updates hrMaxFlow to max(run, bike)
+        dataStore.setHrMaxRun(192)
+        dataStore.setHrMaxBike(184)
+        assertEquals(192, dataStore.hrMaxRunFlow.first())
+        assertEquals(184, dataStore.hrMaxBikeFlow.first())
+        assertEquals(192, dataStore.hrMaxFlow.first())
+
+        // Clearing run falls back to bike; clearing bike clears KEY_HR_MAX too
+        dataStore.setHrMaxRun(null)
+        assertNull(dataStore.hrMaxRunFlow.first())
+        assertEquals(184, dataStore.hrMaxFlow.first())
+        dataStore.setHrMaxBike(null)
+        assertNull(dataStore.hrMaxBikeFlow.first())
+        assertNull(dataStore.hrMaxFlow.first())
+
+        // LTHR and LT1 keys clamp bounds and map into SettingsSnapshot
+        dataStore.setLthrRun(174)
+        dataStore.setLthrBike(168)
+        dataStore.setLt1HrRun(146)
+        dataStore.setLt1HrBike(140)
+        dataStore.setLt1PwrBike(215)
+        dataStore.setHrRest(49)
+
+        val snap = dataStore.snapshotFlow.first()
+        assertEquals(174, snap.lthrRun)
+        assertEquals(168, snap.lthrBike)
+        assertEquals(146, snap.lt1HrRun)
+        assertEquals(140, snap.lt1HrBike)
+        assertEquals(215, snap.lt1PwrBike)
+        assertEquals(49, snap.hrRest)
+    }
 }

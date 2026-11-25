@@ -398,65 +398,110 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
     }
 
     /**
-     * Unidirectionally updates the athlete's cycling Functional Threshold Power (FTP) and calculated
-     * Coggan power zones in SettingsDataStore and AthleteMetrics.db (REQ-PER-037.4).
+     * Unidirectionally updates the athlete's cycling Functional Threshold Power (FTP), optional LT1 power
+     * threshold, and optionally recalculated Coggan power zones in SettingsDataStore and AthleteMetrics.db
+     * (`REQ-PER-037.4`, `REQ-SET-135.4`).
      */
-    fun updateFtp(newFtp: Int) {
+    fun updateFtp(
+        newFtp: Int,
+        lt1PowerWatts: Int? = null,
+        recalculateZones: Boolean = true
+    ) {
         viewModelScope.launch(ioDispatcher) {
             val settingsDataStore = SettingsDataStore.getInstance(getApplication())
-            val thresholds = ZoneCalculationMath.calculateCogganPowerZones(newFtp)
-            val cutoffs = listOf(
-                thresholds.z1Max, thresholds.z2Max, thresholds.z3Max,
-                thresholds.z4Max, thresholds.z5Max, thresholds.z6Max
-            )
-            settingsDataStore.saveCalculatedPowerZones(newFtp, cutoffs)
-            AthleteMetricsRepository.getInstance(getApplication()).addEntry(
+            val metricsRepo = AthleteMetricsRepository.getInstance(getApplication())
+            val thresholds = if (recalculateZones) {
+                ZoneCalculationMath.calculateCogganPowerZones(newFtp).also { t ->
+                    val cutoffs = listOf(t.z1Max, t.z2Max, t.z3Max, t.z4Max, t.z5Max, t.z6Max)
+                    settingsDataStore.saveCalculatedPowerZones(newFtp, cutoffs)
+                }
+            } else null
+
+            metricsRepo.addEntry(
                 metricType = AthleteMetricType.FTP_WATTS,
                 value = newFtp.toDouble()
             )
-            withContext(Dispatchers.Main) {
-                _uiState.value = _uiState.value.copy(powerThresholds = thresholds)
+            if (lt1PowerWatts != null && AthleteMetricType.LT1_PWR_BIKE_WATTS.isValidMetricValue(lt1PowerWatts.toDouble())) {
+                metricsRepo.addEntry(
+                    metricType = AthleteMetricType.LT1_PWR_BIKE_WATTS,
+                    value = lt1PowerWatts.toDouble()
+                )
+            }
+            if (thresholds != null) {
+                withContext(Dispatchers.Main) {
+                    _uiState.value = _uiState.value.copy(powerThresholds = thresholds)
+                }
             }
         }
     }
 
     /**
-     * Updates the athlete's Heart Rate training zones anchored to physiological thresholds HRVT1 and HRVT2
-     * in SettingsDataStore (REQ-PER-037.7).
+     * Persists accepted HRVT1 (`LT1_HR_*`) and HRVT2 (`LTHR_*`) thresholds into [AthleteMetricsRepository]
+     * (syncing [SettingsDataStore]) and optionally recalculates threshold-anchored Heart Rate training zones
+     * (`REQ-PER-037.7`, `REQ-SET-135.4`).
      */
-    fun updateHrZones(newHrvt1: Int, newHrvt2: Int) {
+    fun updateHrZones(
+        newHrvt1: Int,
+        newHrvt2: Int,
+        recalculateZones: Boolean = true
+    ) {
         viewModelScope.launch(ioDispatcher) {
             val settingsDataStore = SettingsDataStore.getInstance(getApplication())
-            val zoneType = if (_uiState.value.bSportType == BSportType.RUN) {
-                SettingsDataStore.ZoneType.HR_RUN
-            } else {
-                SettingsDataStore.ZoneType.HR_BIKE
-            }
-            val configuredHrMax = settingsDataStore.hrMaxFlow.firstOrNull() ?: SettingsDataStore.DEFAULT_HR_MAX
-            val hrMax = if (configuredHrMax > newHrvt2) configuredHrMax else (newHrvt2 + 10).coerceAtMost(ZoneCalculationMath.MAX_HR_MAX)
-            val hrRest = settingsDataStore.hrRestFlow.firstOrNull()
+            val metricsRepo = AthleteMetricsRepository.getInstance(getApplication())
+            val isRun = _uiState.value.bSportType == BSportType.RUN
+            val zoneType = if (isRun) SettingsDataStore.ZoneType.HR_RUN else SettingsDataStore.ZoneType.HR_BIKE
+            val lt1Type = if (isRun) AthleteMetricType.LT1_HR_RUN_BPM else AthleteMetricType.LT1_HR_BIKE_BPM
+            val lthrType = if (isRun) AthleteMetricType.LTHR_RUN_BPM else AthleteMetricType.LTHR_BIKE_BPM
 
-            val thresholds = ZoneCalculationMath.calculateThresholdAnchoredHeartRateZones(
-                hrvt1 = newHrvt1,
-                hrvt2 = newHrvt2,
-                hrMax = hrMax,
-                hrRest = hrRest
-            )
-            val cutoffs = listOf(
-                thresholds.z1Max,
-                thresholds.z2Max,
-                thresholds.z3Max,
-                thresholds.z4Max
-            )
-            settingsDataStore.saveCalculatedHeartRateZones(
-                zoneType = zoneType,
-                hrMax = hrMax,
-                hrRest = hrRest,
-                method = "HRVT_ANCHORS",
-                cutoffs = cutoffs
-            )
-            withContext(Dispatchers.Main) {
-                _uiState.value = _uiState.value.copy(hrThresholds = thresholds)
+            if (lt1Type.isValidMetricValue(newHrvt1.toDouble())) {
+                metricsRepo.addEntry(metricType = lt1Type, value = newHrvt1.toDouble())
+            }
+            if (lthrType.isValidMetricValue(newHrvt2.toDouble())) {
+                metricsRepo.addEntry(metricType = lthrType, value = newHrvt2.toDouble())
+            }
+
+            if (recalculateZones) {
+                val hrMaxType = if (isRun) AthleteMetricType.HR_MAX_RUN_BPM else AthleteMetricType.HR_MAX_BIKE_BPM
+                val sportHrMax = if (isRun) {
+                    settingsDataStore.hrMaxRunFlow.firstOrNull()
+                } else {
+                    settingsDataStore.hrMaxBikeFlow.firstOrNull()
+                }
+                val configuredHrMax = sportHrMax
+                    ?: settingsDataStore.hrMaxFlow.firstOrNull()
+                    ?: SettingsDataStore.DEFAULT_HR_MAX
+                val hrMax = if (configuredHrMax > newHrvt2) {
+                    configuredHrMax
+                } else {
+                    (newHrvt2 + 10).coerceAtMost(ZoneCalculationMath.MAX_HR_MAX)
+                }
+                val hrRest = settingsDataStore.hrRestFlow.firstOrNull()
+                if ((sportHrMax == null || hrMax > configuredHrMax) && hrMaxType.isValidMetricValue(hrMax.toDouble())) {
+                    metricsRepo.addEntry(metricType = hrMaxType, value = hrMax.toDouble())
+                }
+
+                val thresholds = ZoneCalculationMath.calculateThresholdAnchoredHeartRateZones(
+                    hrvt1 = newHrvt1,
+                    hrvt2 = newHrvt2,
+                    hrMax = hrMax,
+                    hrRest = hrRest
+                )
+                val cutoffs = listOf(
+                    thresholds.z1Max,
+                    thresholds.z2Max,
+                    thresholds.z3Max,
+                    thresholds.z4Max
+                )
+                settingsDataStore.saveCalculatedHeartRateZones(
+                    zoneType = zoneType,
+                    hrMax = hrMax,
+                    hrRest = hrRest,
+                    method = "HRVT_ANCHORS",
+                    cutoffs = cutoffs
+                )
+                withContext(Dispatchers.Main) {
+                    _uiState.value = _uiState.value.copy(hrThresholds = thresholds)
+                }
             }
         }
     }

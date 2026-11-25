@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriterTest" tests="19" skipped="0" failures="0" errors="0" timestamp="2026-11-25T09:14:51.414Z" hostname="rainer-HP-EliteBook-850-G5" time="35.04">
+  <properties/>
+  <testcase name="testFitFileWriter_withoutPedalDynamics_omitsFieldsCleanly" classname="com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriterTest" time="1.919"/>
+  <testcase name="testFitFileWriter_allowsWorkoutWithLongPauses" classname="com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriterTest" time="1.781"/>
+  <testcase name="testFitFileWriter_swimStravaNameAndMetricPoolLength_exportsSwimmingLapSession" classname="com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriterTest" time="1.687"/>
+  <testcase name="testFitFileWriter_parseSoftwareVersion_handlesSemverAndBounds_TST_EXP_051_2" classname="com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriterTest" time="1.659"/>
+  <testcase name="testFitFileWriter_generatesValidBinaryFitFile_andDecodesCleanly" classname="com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriterTest" time="1.707"/>
+  <testcase name="testFitFileWriter_encodesPedalDynamicsOnRecordLapSession" classname="com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriterTest" time="1.731"/>
+  <testcase name="testFitFileWriter_swimGcNameAndYardsPoolLength_exportsStatutePoolSession" classname="com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriterTest" time="3.184"/>
+  <testcase name="testFitFileWriter_utcTimestampPreservationUnderDifferentTimezones" classname="com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriterTest" time="1.899"/>
+  <testcase name="testFitFileWriter_deletesPartialFileOnExportFailure" classname="com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriterTest" time="1.76"/>
+  <testcase name="testFitFileWriter_runningDynamics_encodesMillimetersAndMillisecondsAcrossRecordLapSession" classname="com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriterTest" time="1.739"/>
+  <testcase name="testFitFileWriter_indoorWorkoutOmitsCoordinates" classname="com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriterTest" time="1.751"/>
+  <testcase name="testFitFileWriter_failsFastOnSampleCursorException" classname="com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriterTest" time="1.805"/>
+  <testcase name="testFitFileWriter_encodesCreatorFileIdAndDeviceInfoMesg_TST_EXP_051_2" classname="com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriterTest" time="1.761"/>
+  <testcase name="testFitFileWriter_reExportHistoricalWorkoutPreservesGroundTruth" classname="com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriterTest" time="1.771"/>
+  <testcase name="testFitFileWriter_abortsOnNegativeTotalTimeInconsistency" classname="com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriterTest" time="1.708"/>
+  <testcase name="testFitFileWriter_synthesizesTransientLapWhenNoLapsInDatabase" classname="com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriterTest" time="1.83"/>
+  <testcase name="testFitFileWriter_failsFastOnMissingOrCorruptStartTime" classname="com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriterTest" time="1.76"/>
+  <testcase name="testFitFileWriter_withoutRunningDynamics_omitsDynamicsFieldsCleanly" classname="com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriterTest" time="1.758"/>
+  <testcase name="testFitFileWriter_stravaSelectiveUploadOptOutsOmitGatedMetrics_TST_EXP_051_2" classname="com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriterTest" time="1.83"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

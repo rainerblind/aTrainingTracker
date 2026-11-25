@@ -34,7 +34,7 @@ import kotlin.random.Random
  * Pure-JVM unit tests for [MovingSpeedHistogram] and [KinematicSportTypeDiscriminator]
  * (`ATT-8891`, `REQ-FIL-030.1`, `TST-FIL-030.1`).
  */
-// Linked test specs: TST-FIL-030
+// Linked test specs: TST-FIL-030, TST-FIL-046, TST-FIL-047
 class KinematicSportTypeDiscriminatorTest {
 
     @Test
@@ -253,6 +253,42 @@ class KinematicSportTypeDiscriminatorTest {
             ts += 1_000L
         }
         assertEquals("2.0 m/s uphill cycling must still infer BIKE", BSportType.BIKE, disc.inferredBSportType)
+    }
+
+    // REQ-FIL-047.2 / TST-FIL-047.2: Bounded SportSpeedPriors raise carriage-vote floor & highBikeSpeedMps and survive reset()
+    @Test
+    fun boundedSportSpeedPriors_gateCarriageVotesAndHighSpeedThresholdAndSurviveReset_tstFil047_2() {
+        val priors = SportSpeedPriors(maxWalkSpeedMps = 2.2, minBikeSpeedMps = 2.78, maxRunSpeedMps = 6.0)
+        val disc = KinematicSportTypeDiscriminator(sportSpeedPriors = priors)
+        var ts = 1_000L
+
+        // 2.1 m/s (< maxWalkSpeedMps 2.2) BIKE_FRONT_POCKET flicker stays UNKNOWN
+        for (sec in 0 until 15) {
+            disc.onCarriageMode(PhoneCarriageMode.BIKE_FRONT_POCKET, ts)
+            disc.onSpeedSample(2.1, ts)
+            ts += 1_000L
+        }
+        assertEquals("2.1 m/s < configured maxWalk 2.2 must stay UNKNOWN", BSportType.UNKNOWN, disc.inferredBSportType)
+
+        // 5.6 m/s (< maxRunSpeedMps 6.0) with high gyro (not coasting) and WALKING_TRANSITION must NOT add +2.0*dt bike score
+        for (sec in 0 until 10) {
+            disc.onGyroSample(1.2, ts)
+            disc.onCarriageMode(PhoneCarriageMode.WALKING_TRANSITION, ts)
+            disc.onSpeedSample(5.6, ts)
+            ts += 1_000L
+        }
+        assertEquals("5.6 m/s < configured maxRun 6.0 without coasting/bike mode must stay UNKNOWN", BSportType.UNKNOWN, disc.inferredBSportType)
+
+        // 2.3 m/s (>= 2.2) uphill cycling with BIKE_HANDLEBAR infers BIKE
+        for (sec in 0 until 10) {
+            disc.onCarriageMode(PhoneCarriageMode.BIKE_HANDLEBAR, ts)
+            disc.onSpeedSample(2.3, ts)
+            ts += 1_000L
+        }
+        assertEquals("2.3 m/s >= 2.2 uphill cycling must infer BIKE", BSportType.BIKE, disc.inferredBSportType)
+
+        disc.reset()
+        assertEquals("reset() must retain SportSpeedPriors", priors, disc.currentSportSpeedPriors)
     }
 
     private fun feedQuietImuSecond(disc: KinematicSportTypeDiscriminator, startMs: Long, gyroMag: Double) {

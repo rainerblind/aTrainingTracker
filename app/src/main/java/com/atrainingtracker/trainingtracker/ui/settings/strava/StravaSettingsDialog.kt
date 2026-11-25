@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -44,6 +45,7 @@ import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaDeaut
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSynchronizeThread
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaEquipmentSyncWorker
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
+import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaPhotoPreferences
 import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.routes.StravaRoutesSyncWorker
@@ -107,6 +109,9 @@ fun StravaSettingsDialog(
     }
     var uploadRadarSummary by remember {
         mutableStateOf(TrainingApplication.uploadStravaRadarSummary())
+    }
+    var downloadStravaPhotos by remember {
+        mutableStateOf(StravaPhotoPreferences.isDownloadEnabled(context))
     }
     var showDisconnectConfirmation by remember {
         mutableStateOf(false)
@@ -173,6 +178,7 @@ fun StravaSettingsDialog(
                         .putBoolean("uploadStravaPower", uploadPower)
                         .putBoolean("uploadStravaCadence", uploadCadence)
                         .putBoolean("uploadStravaRadarSummary", uploadRadarSummary)
+                        .putBoolean(StravaPhotoPreferences.SP_DOWNLOAD_STRAVA_PHOTOS, downloadStravaPhotos)
                         .apply()
                     StravaSegmentsSyncWorker.schedule(context)
                     StravaRoutesSyncWorker.schedule(context)
@@ -342,6 +348,28 @@ fun StravaSettingsDialog(
                         onCheckedChange = { uploadRadarSummary = it }
                     )
                 }
+
+                HorizontalDivider()
+
+                // Activity Photos Download Configuration
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.strava_activity_photos_section),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+
+                    SelectiveUploadToggleRow(
+                        title = stringResource(R.string.strava_download_photos_title),
+                        subtitle = stringResource(R.string.strava_download_photos_desc),
+                        checked = downloadStravaPhotos,
+                        onCheckedChange = { downloadStravaPhotos = it },
+                        switchTestTag = "strava_download_photos_switch"
+                    )
+                }
             }
         }
     }
@@ -352,7 +380,9 @@ private fun SelectiveUploadToggleRow(
     title: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    switchTestTag: String? = null
 ) {
     Row(
         modifier = modifier
@@ -361,18 +391,30 @@ private fun SelectiveUploadToggleRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface,
+        Column(
             modifier = Modifier
                 .weight(1f)
                 .padding(end = 16.dp)
-        )
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            if (!subtitle.isNullOrBlank()) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
-            modifier = Modifier.scale(0.8f)
+            modifier = Modifier
+                .scale(0.8f)
+                .then(if (switchTestTag != null) Modifier.testTag(switchTestTag) else Modifier)
         )
     }
 }

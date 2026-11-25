@@ -11,4 +11,7 @@
     <string name="diagnostic_share_button">Udostępnij pakiet diagnostyczny</string>
     <string name="diagnostic_bundle_packaging">Pakowanie pakietu diagnostycznego…</string>
     <string name="diagnostic_no_sidecar_warning">Brak surowego nagrania z czujnika dla tego treningu.</string>
+    <string name="strava_activity_photos_section">Zdjęcia aktywności</string>
+    <string name="strava_download_photos_title">Pobieraj zdjęcia ze Stravy</string>
+    <string name="strava_download_photos_desc">Importuj zdjęcia z zsynchronizowanych aktywności Stravy do lokalnej galerii treningu</string>
 </resources>

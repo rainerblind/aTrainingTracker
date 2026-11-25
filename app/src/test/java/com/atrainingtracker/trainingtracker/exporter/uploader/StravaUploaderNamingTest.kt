@@ -34,6 +34,7 @@ import com.atrainingtracker.trainingtracker.exporter.ExportType
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
+import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
 import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import io.mockk.every
@@ -204,6 +205,7 @@ class StravaUploaderNamingTest {
         every { SportTypeDatabaseManager.getInstance(any()) } returns mockSportTypeDb
         every { mockSportTypeDb.getStravaName(any()) } returns "Ride"
         every { mockSportTypeDb.getSportTypeIdFromStravaName(any()) } returns -1L
+        SportTypesRepository.resetForTesting(null)
 
         mockEquipmentDbHelper = mockk(relaxed = true)
         every { mockEquipmentDbHelper.getIdFromStravaId(any()) } returns -1L
@@ -247,6 +249,7 @@ class StravaUploaderNamingTest {
 
     @After
     fun tearDown() {
+        SportTypesRepository.resetForTesting(null)
         StravaUploadDbHelper.resetForTesting(null)
         EquipmentDbHelper.resetForTesting(null)
         unmockkAll()

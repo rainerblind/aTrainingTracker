@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" tests="22" skipped="0" failures="0" errors="0" timestamp="2026-11-25T11:45:11.178Z" hostname="rainer-HP-EliteBook-850-G5" time="29.974">
+  <properties/>
+  <testcase name="testStartTracking_whenStartInAutoPauseEnabled_andSpeedSourcePresent_startsInAutoPaused" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="2.593"/>
+  <testcase name="testOnTrackingAborted_resetsWasAutoPaused" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="0.983"/>
+  <testcase name="testStartTracking_whenSecurityExceptionThrown_recoversGracefully" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.056"/>
+  <testcase name="testTrackingStopped_preservesUntouchedSemantics_doesNotResetModeOrPauseLocks" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.326"/>
+  <testcase name="testSetTracking_callsNotifyTrackingStateChanged" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.03"/>
+  <testcase name="testUpdateTimeAndDistanceToNotification_whenNotTracking_suppressesNotification" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.147"/>
+  <testcase name="testStopTracking_whenTrackerServiceNotRunning_fallsBackToStopService" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.088"/>
+  <testcase name="testStopTracking_whenTrackerServiceIsRunning_dispatchesActionStopViaStartService" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.819"/>
+  <testcase name="testStartTracking_normal_delegatesToStartForegroundService" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.294"/>
+  <testcase name="testResumeFromPaused_whenManualPaused_setsWasAutoPausedFalse" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.314"/>
+  <testcase name="testStartTracking_whenIllegalStateExceptionThrown_recoversGracefully" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.36"/>
+  <testcase name="testStartTracking_whenStartInAutoPauseEnabled_butNoSpeedSource_startsInTracking" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.315"/>
+  <testcase name="testStopTracking_whenFgsStartPendingAndServiceNotYetRunning_suppressesStopService_TST_TRK_095_1" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.293"/>
+  <testcase name="testResetTrackingStateOnAbort_nullAndNonNullContextParity" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.366"/>
+  <testcase name="testStravaSyncPreferences_all18MethodsDistinctKeysNeverStringsAndNullSafety" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.59"/>
+  <testcase name="testStartTracking_afterDeferredPreStartStop_clearsPendingStopForNewStart_TST_TRK_095_1" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.348"/>
+  <testcase name="testOnTrackingAborted_resetsAllStateCancelsNotificationAndBroadcastsReset" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.375"/>
+  <testcase name="testStopTracking_resetsPauseLocksBeforeDispatchAndActiveStateAfterDispatch" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.311"/>
+  <testcase name="testResetTrackingStateOnAbort_resetsWasAutoPaused" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.347"/>
+  <testcase name="testResumeFromPaused_whenAutoPaused_setsWasAutoPausedTrue" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.289"/>
+  <testcase name="testStopTracking_resetsWasAutoPaused" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.36"/>
+  <testcase name="testStartTracking_resumeFromCrash_passesResumeByUser" classname="com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest" time="1.368"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

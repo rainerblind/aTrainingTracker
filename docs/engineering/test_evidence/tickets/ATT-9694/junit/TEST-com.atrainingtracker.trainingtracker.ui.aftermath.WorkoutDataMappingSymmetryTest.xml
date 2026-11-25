@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMappingSymmetryTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-25T07:26:03.166Z" hostname="rainer-HP-EliteBook-850-G5" time="11.912">
+  <properties/>
+  <testcase name="testRule20_wPrimeBalSummary_noPowerData_suppressesWPrimeBalSymmetrically" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMappingSymmetryTest" time="1.082"/>
+  <testcase name="fromCursor and fromSnapshot map Power Training Metrics symmetrically and prioritize END over AVG (REQ-UI-402_1)" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMappingSymmetryTest" time="1.145"/>
+  <testcase name="testFromCursor_delegatesToFromSnapshotWithReconcileAndFullBatchMetadata_TST_DAT_041_5" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMappingSymmetryTest" time="1.15"/>
+  <testcase name="testTST_DAT_028_1_expandedBatchMetadata_and_nonReconcilingMode_zeroDbWrites" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMappingSymmetryTest" time="1.074"/>
+  <testcase name="testRule20_workoutData_and_rawCursorSnapshot_sourceTypeParity" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMappingSymmetryTest" time="1.009"/>
+  <testcase name="testRule20_epicFlagSymmetryAndNullMissingFallback_tstDat050_2" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMappingSymmetryTest" time="1.159"/>
+  <testcase name="testRule20_singleAndBatchMapping_yieldIdenticalProvenanceAndFlags" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMappingSymmetryTest" time="1.045"/>
+  <testcase name="testRule20_rawCursorSnapshot_declaresSourceProperty" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMappingSymmetryTest" time="1.042"/>
+  <testcase name="fromCursor and fromSnapshot map Efficiency Factor and Aerobic Decoupling symmetrically (REQ-UI-400_3)" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMappingSymmetryTest" time="1.08"/>
+  <testcase name="testRule20_wPrimeBalSummary_symmetryAcrossSingleBatchAndSnapshot" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMappingSymmetryTest" time="1.088"/>
+  <testcase name="testRunningPaceExtrema_derivesBothSpeedAndPaceWithNumericalOrdering_TST_LOG_001_TST_LOG_002" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMappingSymmetryTest" time="1.038"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

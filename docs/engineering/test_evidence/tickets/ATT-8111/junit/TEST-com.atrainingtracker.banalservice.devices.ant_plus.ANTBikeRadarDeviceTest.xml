@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" tests="21" skipped="0" failures="0" errors="0" timestamp="2026-11-25T12:58:29.004Z" hostname="rainer-HP-EliteBook-850-G5" time="31.583">
+  <properties/>
+  <testcase name="testZeroBinTargetIngestion_decodesAtZeroDistanceAndLatchesClearance" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.353"/>
+  <testcase name="testMultiInstanceAntRadar_silentDeviceReturnsFalse" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.365"/>
+  <testcase name="testWatchdogTimeout_resetsStateToDisconnectedError" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.368"/>
+  <testcase name="testConfigureChannel_continuesWhenLibConfigThrowsAntCommandFailedException" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.667"/>
+  <testcase name="testTrackContinuity_acrossSlotShifts_retainsIdentityAndSinglePass" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.391"/>
+  <testcase name="testAllThreeEmissionSites_preserveManualIsAutoModeAndRestoreOnSetAutoMode" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.332"/>
+  <testcase name="testDecodeBroadcastData_preservesAudioSnoozeAndLightMode" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.375"/>
+  <testcase name="testDecodeBroadcastData_page0x31_unpacksTargets5to8" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.41"/>
+  <testcase name="testRadarDevice_shutDown_clearsTargets_andSetsDisconnectedState" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.439"/>
+  <testcase name="testRadarDevice_onReceiveMessage_postsToHandler_andSerializesState" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.717"/>
+  <testcase name="testIsReceivingData_isolatedToAntPlusSource" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.615"/>
+  <testcase name="testDecodeBroadcastData_commonPages_handledCleanly" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.463"/>
+  <testcase name="testServiceConnection_usesAcquireAntPlusChannelAsync_andConfiguresChannel" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="2.016"/>
+  <testcase name="testConfigureChannel_setsCorrectAntParameters" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.49"/>
+  <testcase name="testDecodeBroadcastData_systemStatusError_triggersWatchdog" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.473"/>
+  <testcase name="testPendingHandleCancellation_onShutDown_watchdog_and_disconnect" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.478"/>
+  <testcase name="testANTBikeRadarDevice_oneHzDriverGating_limitsScalarSensorUpdates" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.375"/>
+  <testcase name="testRadarDevice_postShutdown_dropsMessagesAndEvents" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.619"/>
+  <testcase name="testDecodeBroadcastData_page0x30_unpacksTargetsAccurately" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.373"/>
+  <testcase name="testRadarDevice_channelEvent_reOpensChannel_whenTracking" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.616"/>
+  <testcase name="testRadarDevice_channelEvent_reOpensChannel_whenSearching" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" time="1.648"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -22,30 +22,41 @@ import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.util.Log
+import com.atrainingtracker.BuildConfig
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
+import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrDatabaseManager
+import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrInterval
 import com.atrainingtracker.trainingtracker.exporter.ExportInfo
 import com.atrainingtracker.trainingtracker.exporter.ExportType
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.ui.aftermath.LapData
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.garmin.fit.Activity
 import com.garmin.fit.ActivityMesg
 import com.garmin.fit.ActivityMesgListener
 import com.garmin.fit.Decode
+import com.garmin.fit.DeviceIndex
+import com.garmin.fit.DeviceInfoMesg
+import com.garmin.fit.DeviceInfoMesgListener
 import com.garmin.fit.FileIdMesg
 import com.garmin.fit.FileIdMesgListener
 import com.garmin.fit.Fit
+import com.garmin.fit.HrvMesg
+import com.garmin.fit.HrvMesgListener
 import com.garmin.fit.LapMesg
 import com.garmin.fit.LapMesgListener
 import com.garmin.fit.LeftRightBalance
 import com.garmin.fit.LeftRightBalance100
+import com.garmin.fit.Manufacturer
 import com.garmin.fit.MesgBroadcaster
 import com.garmin.fit.RecordMesg
 import com.garmin.fit.RecordMesgListener
@@ -1058,6 +1069,212 @@ class FitFileWriterTest {
         assertNull(laps[0].avgStanceTime)
         assertNull(sessions[0].avgVerticalOscillation)
         assertNull(sessions[0].avgStanceTime)
+    }
+
+    @Test
+    fun testFitFileWriter_parseSoftwareVersion_handlesSemverAndBounds_TST_EXP_051_2() {
+        assertEquals(5.0f, FitFileWriter.parseSoftwareVersion("5.0.0-dev"), 0.001f)
+        assertEquals(5.12f, FitFileWriter.parseSoftwareVersion("5.12.3"), 0.001f)
+        assertEquals(4.9f, FitFileWriter.parseSoftwareVersion("4.9.41"), 0.001f)
+        assertEquals(5.0f, FitFileWriter.parseSoftwareVersion("5"), 0.001f)
+        assertEquals(FitFileWriter.MAX_FIT_SOFTWARE_VERSION, FitFileWriter.parseSoftwareVersion("999.99"), 0.001f)
+        assertEquals(0.0f, FitFileWriter.parseSoftwareVersion(""), 0.001f)
+        assertEquals(0.0f, FitFileWriter.parseSoftwareVersion(null), 0.001f)
+        assertEquals(0.0f, FitFileWriter.parseSoftwareVersion("invalid"), 0.001f)
+        assertEquals(0.0f, FitFileWriter.parseSoftwareVersion("-1.2"), 0.001f)
+    }
+
+    @Test
+    fun testFitFileWriter_encodesCreatorFileIdAndDeviceInfoMesg_TST_EXP_051_2() {
+        val summaryCursor = createMockSummaryCursor()
+        every {
+            mockSqlDb.query(WorkoutSummaries.TABLE, any(), any(), any(), any(), any(), any())
+        } returns summaryCursor
+
+        val sampleList = listOf(
+            mapOf(
+                WorkoutSamplesDbHelper.TIME to "2026-10-03 10:00:00",
+                SensorType.LATITUDE.name to 52.5200,
+                SensorType.LONGITUDE.name to 13.4050,
+                SensorType.ALTITUDE.name to 412.4,
+                SensorType.HR.name to 145,
+                SensorType.POWER.name to 230.0,
+                SensorType.TEMPERATURE.name to 19.0
+            )
+        )
+        val samplesCursor = createMockSamplesCursor(sampleList)
+        every {
+            mockSqlDb.query(match { it.startsWith("samples_") }, any(), any(), any(), any(), any(), any())
+        } returns samplesCursor
+
+        every { mockSportTypeDb.getBSportType(1L) } returns BSportType.BIKE
+        every { mockSportTypeDb.getTcxName(1L) } returns "Biking"
+        every { mockLapsDb.getLaps(101L) } returns emptyList()
+
+        // Stub all 5 Strava selective-upload getters (Gate 3 Watchpoint 4)
+        every { TrainingApplication.uploadStravaGPS() } returns true
+        every { TrainingApplication.uploadStravaAltitude() } returns true
+        every { TrainingApplication.uploadStravaHR() } returns true
+        every { TrainingApplication.uploadStravaPower() } returns true
+        every { TrainingApplication.uploadStravaCadence() } returns true
+
+        val exportInfo = ExportInfo("workout_strava_creator", FileFormat.STRAVA, ExportType.FILE)
+        val result = FitFileWriter(mockContext).doExport(exportInfo)
+        assertTrue("Strava FIT export must succeed: ${result.answer()}", result.success())
+
+        val exportedFile = File(tempDir, exportInfo.shortPath)
+        assertTrue("Strava export file must end with .fit", exportedFile.name.endsWith(".fit"))
+        assertTrue("Strava export file must exist in Strava/ dir", exportedFile.exists())
+
+        val fileIds = mutableListOf<FileIdMesg>()
+        val deviceInfos = mutableListOf<DeviceInfoMesg>()
+        val records = mutableListOf<RecordMesg>()
+
+        val decode = Decode()
+        val broadcaster = MesgBroadcaster(decode)
+        broadcaster.addListener(FileIdMesgListener { fileIds.add(it) })
+        broadcaster.addListener(DeviceInfoMesgListener { deviceInfos.add(it) })
+        broadcaster.addListener(RecordMesgListener { records.add(it) })
+        FileInputStream(exportedFile).use { assertTrue(decode.read(it, broadcaster)) }
+
+        assertEquals(1, fileIds.size)
+        assertEquals(FitFileWriter.CREATOR_PRODUCT_NAME, fileIds[0].productName)
+        assertEquals(Manufacturer.DEVELOPMENT, fileIds[0].manufacturer)
+
+        assertEquals("Exactly one creator DeviceInfoMesg must be emitted", 1, deviceInfos.size)
+        val creator = deviceInfos[0]
+        assertEquals(DeviceIndex.CREATOR, creator.deviceIndex)
+        assertEquals(Manufacturer.DEVELOPMENT, creator.manufacturer)
+        assertEquals(1, creator.product)
+        assertEquals(1L, creator.serialNumber)
+        assertEquals(FitFileWriter.CREATOR_PRODUCT_NAME, creator.productName)
+        val expectedSwVersion = FitFileWriter.parseSoftwareVersion(BuildConfig.VERSION_NAME)
+        if (expectedSwVersion > 0.0f) {
+            assertNotNull("Creator softwareVersion must be populated", creator.softwareVersion)
+            assertEquals(expectedSwVersion, creator.softwareVersion!!, 0.01f)
+        }
+
+        // Verify barometric/EKF altitude stream is preserved in RecordMesg
+        assertEquals(1, records.size)
+        assertNotNull(records[0].altitude)
+        assertEquals(412.4f, records[0].altitude!!, 0.25f)
+        assertEquals(19.toByte(), records[0].temperature)
+    }
+
+    @Test
+    fun testFitFileWriter_stravaSelectiveUploadOptOutsOmitGatedMetrics_TST_EXP_051_2() {
+        val mockRrDb = mockk<WorkoutRrDatabaseManager>(relaxed = true)
+        WorkoutRrDatabaseManager.resetForTesting(mockRrDb)
+        WorkoutRepository.resetForTesting(null)
+        try {
+            val summaryCursor = createMockSummaryCursor(ascent = 120, descent = 115)
+            every {
+                mockSqlDb.query(WorkoutSummaries.TABLE, any(), any(), any(), any(), any(), any())
+            } returns summaryCursor
+
+            val sampleList = listOf(
+                mapOf(
+                    WorkoutSamplesDbHelper.TIME to "2026-10-03 10:00:00",
+                    SensorType.LAP_NR.name to 1,
+                    SensorType.LATITUDE.name to 52.5200,
+                    SensorType.LONGITUDE.name to 13.4050,
+                    SensorType.ALTITUDE.name to 350.0,
+                    SensorType.HR.name to 155,
+                    SensorType.CADENCE.name to 90.0,
+                    SensorType.POWER.name to 250.0,
+                    SensorType.PEDAL_POWER_BALANCE.name to 52.0,
+                    SensorType.TORQUE_EFFECTIVENESS_L.name to 74.0,
+                    SensorType.TORQUE_EFFECTIVENESS_R.name to 76.0,
+                    SensorType.PEDAL_SMOOTHNESS_L.name to 22.0,
+                    SensorType.PEDAL_SMOOTHNESS_R.name to 24.0,
+                    SensorType.PEDAL_SMOOTHNESS.name to 23.0,
+                    SensorType.TEMPERATURE.name to 20.0
+                )
+            )
+            val samplesCursor = createMockSamplesCursor(sampleList)
+            every {
+                mockSqlDb.query(match { it.startsWith("samples_") }, any(), any(), any(), any(), any(), any())
+            } returns samplesCursor
+
+            every { mockSportTypeDb.getBSportType(1L) } returns BSportType.BIKE
+            every { mockSportTypeDb.getTcxName(1L) } returns "Biking"
+            every { mockLapsDb.getLaps(101L) } returns emptyList()
+            every { mockSummariesDb.getExtremaValue(101L, SensorType.HR, ExtremaType.MAX) } returns 175.0
+            every { mockSummariesDb.getExtremaValue(101L, SensorType.HR, ExtremaType.AVG) } returns 155.0
+            every { mockSummariesDb.getExtremaValue(101L, SensorType.POWER, ExtremaType.MAX) } returns 410.0
+            every { mockSummariesDb.getExtremaValue(101L, SensorType.POWER, ExtremaType.AVG) } returns 250.0
+            every { mockSummariesDb.getExtremaValue(101L, SensorType.NORMALIZED_POWER, any()) } returns 265.0
+            every { mockSummariesDb.getExtremaValue(101L, SensorType.INTENSITY_FACTOR, any()) } returns 0.88
+            every { mockSummariesDb.getExtremaValue(101L, SensorType.TSS, any()) } returns 75.0
+            every { mockSummariesDb.getExtremaValue(101L, SensorType.WORK_KJ, any()) } returns 900.0
+            every { mockSummariesDb.getExtremaValue(101L, SensorType.CADENCE, ExtremaType.MAX) } returns 105.0
+            every { mockSummariesDb.getExtremaValue(101L, SensorType.CADENCE, ExtremaType.AVG) } returns 90.0
+
+            // Seed both in-window and trailing RR intervals (Gate 3 Watchpoint 2)
+            every { mockRrDb.getIntervalsForWorkout(101L) } returns listOf(
+                WorkoutRrInterval(workoutId = 101L, beatIndex = 0, beatTimestampMs = 1791021600000L, rrMs = 780f),
+                WorkoutRrInterval(workoutId = 101L, beatIndex = 1, beatTimestampMs = 1791021699000L, rrMs = 790f)
+            )
+
+            // Stub all 5 Strava selective-upload getters: keep GPS, opt out of Altitude/HR/Power/Cadence (Watchpoint 4)
+            every { TrainingApplication.uploadStravaGPS() } returns true
+            every { TrainingApplication.uploadStravaAltitude() } returns false
+            every { TrainingApplication.uploadStravaHR() } returns false
+            every { TrainingApplication.uploadStravaPower() } returns false
+            every { TrainingApplication.uploadStravaCadence() } returns false
+
+            val exportInfo = ExportInfo("workout_strava_privacy", FileFormat.STRAVA, ExportType.FILE)
+            val result = FitFileWriter(mockContext).doExport(exportInfo)
+            assertTrue("Strava privacy FIT export must succeed: ${result.answer()}", result.success())
+
+            val records = mutableListOf<RecordMesg>()
+            val laps = mutableListOf<LapMesg>()
+            val sessions = mutableListOf<SessionMesg>()
+            val hrvs = mutableListOf<HrvMesg>()
+
+            val decode = Decode()
+            val broadcaster = MesgBroadcaster(decode)
+            broadcaster.addListener(RecordMesgListener { records.add(it) })
+            broadcaster.addListener(LapMesgListener { laps.add(it) })
+            broadcaster.addListener(SessionMesgListener { sessions.add(it) })
+            broadcaster.addListener(HrvMesgListener { hrvs.add(it) })
+            FileInputStream(File(tempDir, exportInfo.shortPath)).use { assertTrue(decode.read(it, broadcaster)) }
+
+            assertEquals("HR opt-out must omit all interleaved and trailing HrvMesg (Watchpoint 2)", 0, hrvs.size)
+            assertEquals(1, records.size)
+            assertNotNull("GPS enabled -> positionLat preserved", records[0].positionLat)
+            assertNull("Altitude opted out -> omitted", records[0].altitude)
+            assertNull("HR opted out -> omitted", records[0].heartRate)
+            assertNull("Cadence opted out -> omitted", records[0].cadence)
+            assertNull("Power opted out -> omitted", records[0].power)
+            assertNull("Power opted out -> Record leftRightBalance omitted", records[0].leftRightBalance)
+            assertNull("Power opted out -> Record torqueEffectivenessL omitted", records[0].leftTorqueEffectiveness)
+            assertNull("Power opted out -> Record pedalSmoothnessCombined omitted", records[0].combinedPedalSmoothness)
+
+            // Watchpoint 1: LapMesg & SessionMesg pedal dynamics omitted when power opted out
+            assertEquals(1, laps.size)
+            assertNull("Power opted out -> Lap leftRightBalance omitted", laps[0].leftRightBalance)
+            assertNull("Power opted out -> Lap avgLeftTorqueEffectiveness omitted", laps[0].avgLeftTorqueEffectiveness)
+            assertNull("Power opted out -> Lap avgCombinedPedalSmoothness omitted", laps[0].avgCombinedPedalSmoothness)
+
+            assertEquals(1, sessions.size)
+            assertNull("Altitude opted out -> Session totalAscent omitted", sessions[0].totalAscent)
+            assertNull("Altitude opted out -> Session totalDescent omitted", sessions[0].totalDescent)
+            assertNull("HR opted out -> Session avgHeartRate omitted", sessions[0].avgHeartRate)
+            assertNull("HR opted out -> Session maxHeartRate omitted", sessions[0].maxHeartRate)
+            assertNull("Power opted out -> Session avgPower omitted", sessions[0].avgPower)
+            assertNull("Power opted out -> Session maxPower omitted", sessions[0].maxPower)
+            assertNull("Power opted out -> Session leftRightBalance omitted", sessions[0].leftRightBalance)
+            assertNull("Power opted out -> Session normalizedPower omitted", sessions[0].normalizedPower)
+            assertNull("Power opted out -> Session intensityFactor omitted", sessions[0].intensityFactor)
+            assertNull("Power opted out -> Session trainingStressScore omitted", sessions[0].trainingStressScore)
+            assertNull("Power opted out -> Session totalWork omitted", sessions[0].totalWork)
+            assertNull("Cadence opted out -> Session avgCadence omitted", sessions[0].avgCadence)
+            assertNull("Cadence opted out -> Session maxCadence omitted", sessions[0].maxCadence)
+        } finally {
+            WorkoutRepository.resetForTesting(null)
+            WorkoutRrDatabaseManager.resetForTesting(null)
+        }
     }
 }
 

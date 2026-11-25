@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositorySyncTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:20:35.012Z" hostname="rainer-HP-EliteBook-850-G5" time="29.768">
+  <properties/>
+  <testcase name="testPeriodsViewModel_loadPeriods_triggersWorkoutLoad" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositorySyncTest" time="0.423"/>
+  <testcase name="testPeriodsRepository_hasZeroReceiverOrDatabaseManagerFields" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositorySyncTest" time="0.225"/>
+  <testcase name="testPeriodsRepository_unfinishedLiveWorkout3600Ticks_triggersZeroRebuilds_TST_STB_020_2_and_4" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositorySyncTest" time="28.599"/>
+  <testcase name="testWorkoutsInRangeCursor_includesFinishedCondition" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositorySyncTest" time="0.181"/>
+  <testcase name="testTrackingFinishedIntent_contractConstants" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositorySyncTest" time="0.168"/>
+  <testcase name="testPeriodProjectionKey_filtersNonPeriodChanges_andDetectsPeriodRelevantChanges" classname="com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepositorySyncTest" time="0.172"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[System.logW: A resource failed to call close. 
+System.logW: A resource failed to call close. 
+]]></system-err>
+</testsuite>

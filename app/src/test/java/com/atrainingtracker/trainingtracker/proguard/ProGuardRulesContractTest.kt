@@ -27,6 +27,7 @@ import com.atrainingtracker.trainingtracker.exporter.ExportStatus
 import com.atrainingtracker.trainingtracker.exporter.ExportType
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType
+import com.atrainingtracker.trainingtracker.ui.map.offline.MapBaseSource
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -87,6 +88,14 @@ class ProGuardRulesContractTest {
             content.contains("-keep class io.ticofab.androidgpxparser.**")
         )
         assertTrue(
+            "Must keep Mapsforge vector map SDK classes (REQ-MAP-071.1)",
+            content.contains("-keep class org.mapsforge.**")
+        )
+        assertTrue(
+            "Must keep AndroidSVG classes required by Mapsforge XML themes (REQ-MAP-071.1)",
+            content.contains("-keep class com.caverock.androidsvg.**")
+        )
+        assertTrue(
             "Must preserve ViewModel reflective constructors (REQ-BLD-001.5)",
             content.contains("class * extends androidx.lifecycle.ViewModel")
         )
@@ -138,5 +147,9 @@ class ProGuardRulesContractTest {
         // Verify ExtremaType reflection
         val extremaType = java.lang.Enum.valueOf(ExtremaType::class.java, "MAX")
         assertEquals(ExtremaType.MAX, extremaType)
+
+        // Verify MapBaseSource reflection (REQ-MAP-071.3)
+        val mapBaseSource = java.lang.Enum.valueOf(MapBaseSource::class.java, "OFFLINE_OSM")
+        assertEquals(MapBaseSource.OFFLINE_OSM, mapBaseSource)
     }
 }

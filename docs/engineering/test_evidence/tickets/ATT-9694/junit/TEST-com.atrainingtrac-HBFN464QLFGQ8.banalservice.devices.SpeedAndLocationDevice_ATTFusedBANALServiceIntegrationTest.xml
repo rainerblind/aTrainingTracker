@@ -1,0 +1,411 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:24:20.771Z" hostname="rainer-HP-EliteBook-850-G5" time="34.717">
+  <properties/>
+  <testcase name="tier4ResolvedWalk_activatesCadenceAndStridesAndRespectsOtherAndBikeGuards_tstFil046_3" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest" time="26.013"/>
+  <testcase name="activeBSportTypeHotPath_usesVolatileCacheWithZeroPerSampleSqliteQueries_tstFil029_3" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest" time="1.002"/>
+  <testcase name="sensorlessUnselectedRun_infersRunWithSplitAuthoritativeHintAndActivatesStrides_tstFil030_2" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest" time="2.86"/>
+  <testcase name="smartphoneOnlyRunning_resolvesBanalServiceSportType_registersStridesAndWalkingTransition_tearsDownOnBikeAndDestroy_tstFil029_3" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest" time="4.842"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[System.logW: A resource was acquired at attached stack trace but never released. See java.io.Closeable for information on avoiding resource leaks.
+java.lang.Throwable: Explicit termination method 'close' not called
+	at dalvik.system.CloseGuard.$$robo$$dalvik_system_CloseGuard$openWithCallSite(CloseGuard.java:288)
+	at dalvik.system.CloseGuard.openWithCallSite(CloseGuard.java)
+	at dalvik.system.CloseGuard.$$robo$$dalvik_system_CloseGuard$open(CloseGuard.java:257)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.robolectric.shadows.ShadowCloseGuard$CloseGuardReflector$$Reflector37.open(Unknown Source)
+	at org.robolectric.shadows.ShadowCloseGuard.open(ShadowCloseGuard.java:38)
+	at dalvik.system.CloseGuard.open(CloseGuard.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openInner(SQLiteDatabase.java:1088)
+	at android.database.sqlite.SQLiteDatabase.openInner(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$open(SQLiteDatabase.java:1067)
+	at android.database.sqlite.SQLiteDatabase.open(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openDatabase(SQLiteDatabase.java:931)
+	at android.database.sqlite.SQLiteDatabase.openDatabase(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openDatabase(SQLiteDatabase.java:920)
+	at android.database.sqlite.SQLiteDatabase.openDatabase(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteOpenHelper.$$robo$$android_database_sqlite_SQLiteOpenHelper$getDatabaseLocked(SQLiteOpenHelper.java:373)
+	at android.database.sqlite.SQLiteOpenHelper.getDatabaseLocked(SQLiteOpenHelper.java)
+	at android.database.sqlite.SQLiteOpenHelper.$$robo$$android_database_sqlite_SQLiteOpenHelper$getWritableDatabase(SQLiteOpenHelper.java:316)
+	at android.database.sqlite.SQLiteOpenHelper.getWritableDatabase(SQLiteOpenHelper.java)
+	at com.atrainingtracker.database.BaseDatabaseManager.getDatabase(BaseDatabaseManager.kt:77)
+	at com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getString(SportTypeDatabaseManager.java:319)
+	at com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getStravaName(SportTypeDatabaseManager.java:260)
+	at com.atrainingtracker.banalservice.database.SportTypeDatabaseManagerStravaTest.testUpdateSportType_persistsNullStravaMappingAsPersistentState_TST_UNT_006(SportTypeDatabaseManagerStravaTest.kt:180)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:26)
+	at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfters.java:27)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.robolectric.RobolectricTestRunner$HelperTestRunner$1.evaluate(RobolectricTestRunner.java:502)
+	at org.robolectric.internal.SandboxTestRunner$2.lambda$evaluate$2(SandboxTestRunner.java:285)
+	at org.robolectric.internal.bytecode.Sandbox.lambda$runOnMainThread$0(Sandbox.java:104)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+
+System.logW: A resource was acquired at attached stack trace but never released. See java.io.Closeable for information on avoiding resource leaks.
+java.lang.Throwable: Explicit termination method 'close' not called
+	at dalvik.system.CloseGuard.$$robo$$dalvik_system_CloseGuard$openWithCallSite(CloseGuard.java:288)
+	at dalvik.system.CloseGuard.openWithCallSite(CloseGuard.java)
+	at dalvik.system.CloseGuard.$$robo$$dalvik_system_CloseGuard$open(CloseGuard.java:257)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.robolectric.shadows.ShadowCloseGuard$CloseGuardReflector$$Reflector37.open(Unknown Source)
+	at org.robolectric.shadows.ShadowCloseGuard.open(ShadowCloseGuard.java:38)
+	at dalvik.system.CloseGuard.open(CloseGuard.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openInner(SQLiteDatabase.java:1088)
+	at android.database.sqlite.SQLiteDatabase.openInner(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$open(SQLiteDatabase.java:1067)
+	at android.database.sqlite.SQLiteDatabase.open(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openDatabase(SQLiteDatabase.java:931)
+	at android.database.sqlite.SQLiteDatabase.openDatabase(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openDatabase(SQLiteDatabase.java:920)
+	at android.database.sqlite.SQLiteDatabase.openDatabase(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteOpenHelper.$$robo$$android_database_sqlite_SQLiteOpenHelper$getDatabaseLocked(SQLiteOpenHelper.java:373)
+	at android.database.sqlite.SQLiteOpenHelper.getDatabaseLocked(SQLiteOpenHelper.java)
+	at android.database.sqlite.SQLiteOpenHelper.$$robo$$android_database_sqlite_SQLiteOpenHelper$getWritableDatabase(SQLiteOpenHelper.java:316)
+	at android.database.sqlite.SQLiteOpenHelper.getWritableDatabase(SQLiteOpenHelper.java)
+	at com.atrainingtracker.database.BaseDatabaseManager.getDatabase(BaseDatabaseManager.kt:77)
+	at com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.updateSportType(SportTypeDatabaseManager.java:386)
+	at com.atrainingtracker.banalservice.database.SportTypeDatabaseManagerStravaTest.testUpdateSportType_persistsNullStravaMappingAsPersistentState_TST_UNT_006(SportTypeDatabaseManagerStravaTest.kt:151)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:26)
+	at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfters.java:27)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.robolectric.RobolectricTestRunner$HelperTestRunner$1.evaluate(RobolectricTestRunner.java:502)
+	at org.robolectric.internal.SandboxTestRunner$2.lambda$evaluate$2(SandboxTestRunner.java:285)
+	at org.robolectric.internal.bytecode.Sandbox.lambda$runOnMainThread$0(Sandbox.java:104)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.trainingtracker.banalservice.SEARCHING_STARTED_FOR_ALL_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.trainingtracker.banalservice.SEARCHING_FINISHED_FOR_ALL_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$7@1cdd91a2], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@4f506e]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@54deafed], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@57677af]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@54deafed], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@57677af]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@54deafed], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@57677af]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.BatteryDevice$2@db40d59], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@3845718d]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@54deafed], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@57677af]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.GPS_AVAILABLE_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.BatteryDevice$2@db40d59], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@3845718d]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.BatteryDevice$2@db40d59], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@3845718d]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@54deafed], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@57677af]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@54deafed], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@57677af]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.BatteryDevice$2@db40d59], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@3845718d]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.BatteryDevice$2@db40d59], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@3845718d]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@54deafed], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@57677af]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@54deafed], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@57677af]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SPORT_TYPE_CHANGED_BY_USER_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFused$mSportChangedReceiver$1@54a41861], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@fc1ee33]], Wrapper[receiver=[com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest$tier4ResolvedWalk_activatesCadenceAndStridesAndRespectsOtherAndBikeGuards_tstFil046_3$userChangedReceiver$1@77b31078], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@142c63ed]]]
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.BANALService$1@600fcc4b], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@f5030e2]]]
+Intent = Intent { act=com.trainingtracker.banalservice.SEARCHING_STARTED_FOR_ALL_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.trainingtracker.banalservice.SEARCHING_FINISHED_FOR_ALL_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$7@1cdd91a2], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@4f506e]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.BatteryDevice$2@db40d59], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@3845718d]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.BatteryDevice$2@db40d59], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@3845718d]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.BatteryDevice$2@db40d59], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@3845718d]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.BatteryDevice$2@db40d59], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@3845718d]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.BatteryDevice$2@db40d59], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@3845718d]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.BatteryDevice$2@db40d59], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@3845718d]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.BatteryDevice$2@db40d59], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@3845718d]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.BatteryDevice$2@db40d59], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@3845718d]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.BatteryDevice$2@db40d59], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@3845718d]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.BatteryDevice$2@db40d59], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@3845718d]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.BatteryDevice$2@db40d59], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@3845718d]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@54deafed], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@57677af]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.BatteryDevice$2@db40d59], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@3845718d]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@54deafed], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@57677af]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.BatteryDevice$2@db40d59], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@3845718d]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.BatteryDevice$2@db40d59], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@3845718d]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.BatteryDevice$2@db40d59], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@3845718d]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@54deafed], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@57677af]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.BatteryDevice$2@db40d59], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@3845718d]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.BatteryDevice$2@db40d59], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@3845718d]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@54deafed], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@57677af]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@54deafed], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@57677af]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@54deafed], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@57677af]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@54deafed], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@57677af]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@54deafed], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@57677af]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@54deafed], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@57677af]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@54deafed], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@57677af]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@54deafed], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@57677af]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@54deafed], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@57677af]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@54deafed], context=[android.app.ContextImpl@68fdd485], intentFilter=[android.content.IntentFilter@57677af]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.trainingtracker.banalservice.SEARCHING_STARTED_FOR_ALL_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.trainingtracker.banalservice.SEARCHING_FINISHED_FOR_ALL_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$7@2ade2835], context=[android.app.ContextImpl@229fa27a], intentFilter=[android.content.IntentFilter@286ec35a]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@7b76f24], context=[android.app.ContextImpl@229fa27a], intentFilter=[android.content.IntentFilter@fb7c71e]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@7b76f24], context=[android.app.ContextImpl@229fa27a], intentFilter=[android.content.IntentFilter@fb7c71e]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@7b76f24], context=[android.app.ContextImpl@229fa27a], intentFilter=[android.content.IntentFilter@fb7c71e]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SPORT_TYPE_CHANGED_BY_USER_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFused$mSportChangedReceiver$1@318dce42], context=[android.app.ContextImpl@229fa27a], intentFilter=[android.content.IntentFilter@72758e4f]]]
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.BANALService$1@7a9c8794], context=[android.app.ContextImpl@229fa27a], intentFilter=[android.content.IntentFilter@253ca95b]]]
+Intent = Intent { act=com.trainingtracker.banalservice.SEARCHING_STARTED_FOR_ALL_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.trainingtracker.banalservice.SEARCHING_FINISHED_FOR_ALL_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$7@2ade2835], context=[android.app.ContextImpl@229fa27a], intentFilter=[android.content.IntentFilter@286ec35a]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SPORT_TYPE_CHANGED_BY_USER_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFused$mSportChangedReceiver$1@318dce42], context=[android.app.ContextImpl@229fa27a], intentFilter=[android.content.IntentFilter@72758e4f]]]
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.BANALService$1@7a9c8794], context=[android.app.ContextImpl@229fa27a], intentFilter=[android.content.IntentFilter@253ca95b]]]
+Intent = Intent { act=com.trainingtracker.banalservice.SEARCHING_STARTED_FOR_ALL_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.trainingtracker.banalservice.SEARCHING_FINISHED_FOR_ALL_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$7@2ade2835], context=[android.app.ContextImpl@229fa27a], intentFilter=[android.content.IntentFilter@286ec35a]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@7b76f24], context=[android.app.ContextImpl@229fa27a], intentFilter=[android.content.IntentFilter@fb7c71e]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@7b76f24], context=[android.app.ContextImpl@229fa27a], intentFilter=[android.content.IntentFilter@fb7c71e]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@7b76f24], context=[android.app.ContextImpl@229fa27a], intentFilter=[android.content.IntentFilter@fb7c71e]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@7b76f24], context=[android.app.ContextImpl@229fa27a], intentFilter=[android.content.IntentFilter@fb7c71e]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@7b76f24], context=[android.app.ContextImpl@229fa27a], intentFilter=[android.content.IntentFilter@fb7c71e]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@7b76f24], context=[android.app.ContextImpl@229fa27a], intentFilter=[android.content.IntentFilter@fb7c71e]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@7b76f24], context=[android.app.ContextImpl@229fa27a], intentFilter=[android.content.IntentFilter@fb7c71e]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@7b76f24], context=[android.app.ContextImpl@229fa27a], intentFilter=[android.content.IntentFilter@fb7c71e]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.trainingtracker.banalservice.SEARCHING_STARTED_FOR_ALL_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.trainingtracker.banalservice.SEARCHING_FINISHED_FOR_ALL_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$7@37353c6], context=[android.app.ContextImpl@5cc617e6], intentFilter=[android.content.IntentFilter@3a2fd74a]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@3b4ec853], context=[android.app.ContextImpl@5cc617e6], intentFilter=[android.content.IntentFilter@7adb9fb4]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@3b4ec853], context=[android.app.ContextImpl@5cc617e6], intentFilter=[android.content.IntentFilter@7adb9fb4]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@3b4ec853], context=[android.app.ContextImpl@5cc617e6], intentFilter=[android.content.IntentFilter@7adb9fb4]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@3b4ec853], context=[android.app.ContextImpl@5cc617e6], intentFilter=[android.content.IntentFilter@7adb9fb4]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.GPS_AVAILABLE_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@3b4ec853], context=[android.app.ContextImpl@5cc617e6], intentFilter=[android.content.IntentFilter@7adb9fb4]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.BatteryDevice$2@7aaa3cb2], context=[android.app.ContextImpl@5cc617e6], intentFilter=[android.content.IntentFilter@493b57e2]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@3b4ec853], context=[android.app.ContextImpl@5cc617e6], intentFilter=[android.content.IntentFilter@7adb9fb4]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.BatteryDevice$2@7aaa3cb2], context=[android.app.ContextImpl@5cc617e6], intentFilter=[android.content.IntentFilter@493b57e2]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+System.logW: A resource was acquired at attached stack trace but never released. See java.io.Closeable for information on avoiding resource leaks.
+java.lang.Throwable: Explicit termination method 'SQLiteConnectionPool.close' not called
+	at dalvik.system.CloseGuard.$$robo$$dalvik_system_CloseGuard$openWithCallSite(CloseGuard.java:288)
+	at dalvik.system.CloseGuard.openWithCallSite(CloseGuard.java)
+	at dalvik.system.CloseGuard.$$robo$$dalvik_system_CloseGuard$open(CloseGuard.java:257)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.robolectric.shadows.ShadowCloseGuard$CloseGuardReflector$$Reflector37.open(Unknown Source)
+	at org.robolectric.shadows.ShadowCloseGuard.open(ShadowCloseGuard.java:38)
+	at dalvik.system.CloseGuard.open(CloseGuard.java)
+	at android.database.sqlite.SQLiteConnectionPool.$$robo$$android_database_sqlite_SQLiteConnectionPool$open(SQLiteConnectionPool.java:226)
+	at android.database.sqlite.SQLiteConnectionPool.open(SQLiteConnectionPool.java)
+	at android.database.sqlite.SQLiteConnectionPool.$$robo$$android_database_sqlite_SQLiteConnectionPool$open(SQLiteConnectionPool.java:207)
+	at android.database.sqlite.SQLiteConnectionPool.open(SQLiteConnectionPool.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openInner(SQLiteDatabase.java:1087)
+	at android.database.sqlite.SQLiteDatabase.openInner(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$open(SQLiteDatabase.java:1067)
+	at android.database.sqlite.SQLiteDatabase.open(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openDatabase(SQLiteDatabase.java:931)
+	at android.database.sqlite.SQLiteDatabase.openDatabase(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openDatabase(SQLiteDatabase.java:920)
+	at android.database.sqlite.SQLiteDatabase.openDatabase(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteOpenHelper.$$robo$$android_database_sqlite_SQLiteOpenHelper$getDatabaseLocked(SQLiteOpenHelper.java:373)
+	at android.database.sqlite.SQLiteOpenHelper.getDatabaseLocked(SQLiteOpenHelper.java)
+	at android.database.sqlite.SQLiteOpenHelper.$$robo$$android_database_sqlite_SQLiteOpenHelper$getWritableDatabase(SQLiteOpenHelper.java:316)
+	at android.database.sqlite.SQLiteOpenHelper.getWritableDatabase(SQLiteOpenHelper.java)
+	at com.atrainingtracker.database.BaseDatabaseManager.getDatabase(BaseDatabaseManager.kt:77)
+	at com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getString(SportTypeDatabaseManager.java:319)
+	at com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getStravaName(SportTypeDatabaseManager.java:260)
+	at com.atrainingtracker.banalservice.database.SportTypeDatabaseManagerStravaTest.testUpdateSportType_persistsNullStravaMappingAsPersistentState_TST_UNT_006(SportTypeDatabaseManagerStravaTest.kt:180)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:26)
+	at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfters.java:27)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.robolectric.RobolectricTestRunner$HelperTestRunner$1.evaluate(RobolectricTestRunner.java:502)
+	at org.robolectric.internal.SandboxTestRunner$2.lambda$evaluate$2(SandboxTestRunner.java:285)
+	at org.robolectric.internal.bytecode.Sandbox.lambda$runOnMainThread$0(Sandbox.java:104)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+
+System.logW: A resource was acquired at attached stack trace but never released. See java.io.Closeable for information on avoiding resource leaks.
+java.lang.Throwable: Explicit termination method 'SQLiteConnection.close' not called
+	at dalvik.system.CloseGuard.$$robo$$dalvik_system_CloseGuard$openWithCallSite(CloseGuard.java:288)
+	at dalvik.system.CloseGuard.openWithCallSite(CloseGuard.java)
+	at dalvik.system.CloseGuard.$$robo$$dalvik_system_CloseGuard$open(CloseGuard.java:257)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.robolectric.shadows.ShadowCloseGuard$CloseGuardReflector$$Reflector37.open(Unknown Source)
+	at org.robolectric.shadows.ShadowCloseGuard.open(ShadowCloseGuard.java:38)
+	at dalvik.system.CloseGuard.open(CloseGuard.java)
+	at android.database.sqlite.SQLiteConnection.$$robo$$android_database_sqlite_SQLiteConnection$__constructor__(SQLiteConnection.java:182)
+	at android.database.sqlite.SQLiteConnection.<init>(SQLiteConnection.java:173)
+	at android.database.sqlite.SQLiteConnection.$$robo$$android_database_sqlite_SQLiteConnection$open(SQLiteConnection.java:202)
+	at android.database.sqlite.SQLiteConnection.open(SQLiteConnection.java)
+	at android.database.sqlite.SQLiteConnectionPool.$$robo$$android_database_sqlite_SQLiteConnectionPool$openConnectionLocked(SQLiteConnectionPool.java:528)
+	at android.database.sqlite.SQLiteConnectionPool.openConnectionLocked(SQLiteConnectionPool.java)
+	at android.database.sqlite.SQLiteConnectionPool.$$robo$$android_database_sqlite_SQLiteConnectionPool$open(SQLiteConnectionPool.java:215)
+	at android.database.sqlite.SQLiteConnectionPool.open(SQLiteConnectionPool.java)
+	at android.database.sqlite.SQLiteConnectionPool.$$robo$$android_database_sqlite_SQLiteConnectionPool$open(SQLiteConnectionPool.java:207)
+	at android.database.sqlite.SQLiteConnectionPool.open(SQLiteConnectionPool.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openInner(SQLiteDatabase.java:1087)
+	at android.database.sqlite.SQLiteDatabase.openInner(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$open(SQLiteDatabase.java:1067)
+	at android.database.sqlite.SQLiteDatabase.open(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openDatabase(SQLiteDatabase.java:931)
+	at android.database.sqlite.SQLiteDatabase.openDatabase(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openDatabase(SQLiteDatabase.java:920)
+	at android.database.sqlite.SQLiteDatabase.openDatabase(SQLiteDatabase.java)
+	at android.database.sqlite.SQLiteOpenHelper.$$robo$$android_database_sqlite_SQLiteOpenHelper$getDatabaseLocked(SQLiteOpenHelper.java:373)
+	at android.database.sqlite.SQLiteOpenHelper.getDatabaseLocked(SQLiteOpenHelper.java)
+	at android.database.sqlite.SQLiteOpenHelper.$$robo$$android_database_sqlite_SQLiteOpenHelper$getWritableDatabase(SQLiteOpenHelper.java:316)
+	at android.database.sqlite.SQLiteOpenHelper.getWritableDatabase(SQLiteOpenHelper.java)
+	at com.atrainingtracker.database.BaseDatabaseManager.getDatabase(BaseDatabaseManager.kt:77)
+	at com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getString(SportTypeDatabaseManager.java:319)
+	at com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getStravaName(SportTypeDatabaseManager.java:260)
+	at com.atrainingtracker.banalservice.database.SportTypeDatabaseManagerStravaTest.testUpdateSportType_persistsNullStravaMappingAsPersistentState_TST_UNT_006(SportTypeDatabaseManagerStravaTest.kt:180)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:26)
+	at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfters.java:27)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.robolectric.RobolectricTestRunner$HelperTestRunner$1.evaluate(RobolectricTestRunner.java:502)
+	at org.robolectric.internal.SandboxTestRunner$2.lambda$evaluate$2(SandboxTestRunner.java:285)
+	at org.robolectric.internal.bytecode.Sandbox.lambda$runOnMainThread$0(Sandbox.java:104)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_LOCATION_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@3b4ec853], context=[android.app.ContextImpl@5cc617e6], intentFilter=[android.content.IntentFilter@7adb9fb4]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@3b4ec853], context=[android.app.ContextImpl@5cc617e6], intentFilter=[android.content.IntentFilter@7adb9fb4]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@3b4ec853], context=[android.app.ContextImpl@5cc617e6], intentFilter=[android.content.IntentFilter@7adb9fb4]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@3b4ec853], context=[android.app.ContextImpl@5cc617e6], intentFilter=[android.content.IntentFilter@7adb9fb4]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@3b4ec853], context=[android.app.ContextImpl@5cc617e6], intentFilter=[android.content.IntentFilter@7adb9fb4]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@3b4ec853], context=[android.app.ContextImpl@5cc617e6], intentFilter=[android.content.IntentFilter@7adb9fb4]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@3b4ec853], context=[android.app.ContextImpl@5cc617e6], intentFilter=[android.content.IntentFilter@7adb9fb4]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@3b4ec853], context=[android.app.ContextImpl@5cc617e6], intentFilter=[android.content.IntentFilter@7adb9fb4]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@3b4ec853], context=[android.app.ContextImpl@5cc617e6], intentFilter=[android.content.IntentFilter@7adb9fb4]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@3b4ec853], context=[android.app.ContextImpl@5cc617e6], intentFilter=[android.content.IntentFilter@7adb9fb4]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@3b4ec853], context=[android.app.ContextImpl@5cc617e6], intentFilter=[android.content.IntentFilter@7adb9fb4]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.BatteryDevice$2@19f6b93f], context=[android.app.ContextImpl@12a705d8], intentFilter=[android.content.IntentFilter@1dc92ed9]]]
+Intent = Intent { act=com.trainingtracker.banalservice.SEARCHING_STARTED_FOR_ALL_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.trainingtracker.banalservice.SEARCHING_FINISHED_FOR_ALL_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$7@ea92d02], context=[android.app.ContextImpl@12a705d8], intentFilter=[android.content.IntentFilter@41889c58]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@1a4f35b2], context=[android.app.ContextImpl@12a705d8], intentFilter=[android.content.IntentFilter@51821f9f]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@1a4f35b2], context=[android.app.ContextImpl@12a705d8], intentFilter=[android.content.IntentFilter@51821f9f]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@1a4f35b2], context=[android.app.ContextImpl@12a705d8], intentFilter=[android.content.IntentFilter@51821f9f]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SPORT_TYPE_CHANGED_BY_USER_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.BANALService$1@2e40fc67], context=[android.app.ContextImpl@12a705d8], intentFilter=[android.content.IntentFilter@7b05ee87]]]
+Intent = Intent { act=com.trainingtracker.banalservice.SEARCHING_STARTED_FOR_ALL_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.trainingtracker.banalservice.SEARCHING_FINISHED_FOR_ALL_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$7@ea92d02], context=[android.app.ContextImpl@12a705d8], intentFilter=[android.content.IntentFilter@41889c58]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.BatteryDevice$2@19f6b93f], context=[android.app.ContextImpl@12a705d8], intentFilter=[android.content.IntentFilter@1dc92ed9]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@1a4f35b2], context=[android.app.ContextImpl@12a705d8], intentFilter=[android.content.IntentFilter@51821f9f]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@1a4f35b2], context=[android.app.ContextImpl@12a705d8], intentFilter=[android.content.IntentFilter@51821f9f]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@1a4f35b2], context=[android.app.ContextImpl@12a705d8], intentFilter=[android.content.IntentFilter@51821f9f]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@1a4f35b2], context=[android.app.ContextImpl@12a705d8], intentFilter=[android.content.IntentFilter@51821f9f]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.BatteryDevice$2@19f6b93f], context=[android.app.ContextImpl@12a705d8], intentFilter=[android.content.IntentFilter@1dc92ed9]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.BatteryDevice$2@19f6b93f], context=[android.app.ContextImpl@12a705d8], intentFilter=[android.content.IntentFilter@1dc92ed9]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.BatteryDevice$2@19f6b93f], context=[android.app.ContextImpl@12a705d8], intentFilter=[android.content.IntentFilter@1dc92ed9]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SPORT_TYPE_CHANGED_BY_USER_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFused$mSportChangedReceiver$1@743262d3], context=[android.app.ContextImpl@12a705d8], intentFilter=[android.content.IntentFilter@c0e4ec7]], Wrapper[receiver=[com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFused$mSportChangedReceiver$1@c1ecfc5], context=[android.app.ContextImpl@12a705d8], intentFilter=[android.content.IntentFilter@3e568542]]]
+Intent = Intent { act=com.atrainingtracker.trainingapplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.BANALService$1@2e40fc67], context=[android.app.ContextImpl@12a705d8], intentFilter=[android.content.IntentFilter@7b05ee87]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@1a4f35b2], context=[android.app.ContextImpl@12a705d8], intentFilter=[android.content.IntentFilter@51821f9f]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@1a4f35b2], context=[android.app.ContextImpl@12a705d8], intentFilter=[android.content.IntentFilter@51821f9f]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@1a4f35b2], context=[android.app.ContextImpl@12a705d8], intentFilter=[android.content.IntentFilter@51821f9f]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@1a4f35b2], context=[android.app.ContextImpl@12a705d8], intentFilter=[android.content.IntentFilter@51821f9f]]]
+Intent = Intent { act=com.trainingtracker.banalservice.SEARCHING_STARTED_FOR_ALL_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.trainingtracker.banalservice.SEARCHING_FINISHED_FOR_ALL_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$7@ea92d02], context=[android.app.ContextImpl@12a705d8], intentFilter=[android.content.IntentFilter@41889c58]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@1a4f35b2], context=[android.app.ContextImpl@12a705d8], intentFilter=[android.content.IntentFilter@51821f9f]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@1a4f35b2], context=[android.app.ContextImpl@12a705d8], intentFilter=[android.content.IntentFilter@51821f9f]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@1a4f35b2], context=[android.app.ContextImpl@12a705d8], intentFilter=[android.content.IntentFilter@51821f9f]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@1a4f35b2], context=[android.app.ContextImpl@12a705d8], intentFilter=[android.content.IntentFilter@51821f9f]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@1a4f35b2], context=[android.app.ContextImpl@12a705d8], intentFilter=[android.content.IntentFilter@51821f9f]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@1a4f35b2], context=[android.app.ContextImpl@12a705d8], intentFilter=[android.content.IntentFilter@51821f9f]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@1a4f35b2], context=[android.app.ContextImpl@12a705d8], intentFilter=[android.content.IntentFilter@51821f9f]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@1a4f35b2], context=[android.app.ContextImpl@12a705d8], intentFilter=[android.content.IntentFilter@51821f9f]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@1a4f35b2], context=[android.app.ContextImpl@12a705d8], intentFilter=[android.content.IntentFilter@51821f9f]]]
+Intent = Intent { act=com.atrainingtracker.banalservice.SENSORS_CHANGED pkg=com.atrainingtracker.debug }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.banalservice.filters.FilterManager$mSensorsChangedReceiver$1@1a4f35b2], context=[android.app.ContextImpl@12a705d8], intentFilter=[android.content.IntentFilter@51821f9f]]]
+]]></system-err>
+</testsuite>

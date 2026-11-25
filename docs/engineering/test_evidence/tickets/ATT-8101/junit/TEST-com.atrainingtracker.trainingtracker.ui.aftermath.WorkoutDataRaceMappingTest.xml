@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataRaceMappingTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-25T05:56:48.321Z" hostname="rainer-HP-EliteBook-850-G5" time="3.221">
+  <properties/>
+  <testcase name="testWorkoutData_defaultRaceIsFalse" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataRaceMappingTest" time="0.642"/>
+  <testcase name="testWorkoutData_headerDataReflectsRaceTrue" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataRaceMappingTest" time="0.639"/>
+  <testcase name="testWorkoutDataMapper_fromCursor_mapsRaceFalse" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataRaceMappingTest" time="0.672"/>
+  <testcase name="testWorkoutDataMapper_fromCursor_mapsRaceTrue" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataRaceMappingTest" time="0.626"/>
+  <testcase name="testWorkoutHeaderData_defaultRaceIsFalse" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataRaceMappingTest" time="0.642"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

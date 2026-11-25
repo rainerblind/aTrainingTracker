@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileThresholdsSeparationTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-25T11:43:55.974Z" hostname="rainer-HP-EliteBook-850-G5" time="8.888">
+  <properties/>
+  <testcase name="athleteProfileContent_keepsWeightEditable_andRoutesEditInZonesToMatchingTab_TST_SET_136_4" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileThresholdsSeparationTest" time="8.666"/>
+  <testcase name="resolveZonesTabForPlotMetric_mapsEveryMetricToAuthoritativeZonesTab_TST_SET_136_4" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileThresholdsSeparationTest" time="0.109"/>
+  <testcase name="plotMath_filtersSportSpecificHrMaxAndLthrSeriesChronologically_TST_SET_136_4" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileThresholdsSeparationTest" time="0.113"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

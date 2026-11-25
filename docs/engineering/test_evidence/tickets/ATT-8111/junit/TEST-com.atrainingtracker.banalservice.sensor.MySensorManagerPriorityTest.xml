@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.sensor.MySensorManagerPriorityTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-25T13:00:30.230Z" hostname="rainer-HP-EliteBook-850-G5" time="4.829">
+  <properties/>
+  <testcase name="hrPriority_prefersHealthyEcgOverOpticalRegardlessOfRegistrationAndSwitchesDynamicallyOutsideLock" classname="com.atrainingtracker.banalservice.sensor.MySensorManagerPriorityTest" time="0.847"/>
+  <testcase name="registerGoogleFusedSensors_retainsSpeedAndDistanceProxySensorsAndUpdatesGcData" classname="com.atrainingtracker.banalservice.sensor.MySensorManagerPriorityTest" time="0.625"/>
+  <testcase name="getPriorityRank_returnsCanonicalIndicesAcrossAllSensorTypes" classname="com.atrainingtracker.banalservice.sensor.MySensorManagerPriorityTest" time="0.558"/>
+  <testcase name="lineDistancePriority_prioritizesGoogleFusedOverGps" classname="com.atrainingtracker.banalservice.sensor.MySensorManagerPriorityTest" time="0.539"/>
+  <testcase name="attFusedPriority_highestPrecedenceAndCleanFallback" classname="com.atrainingtracker.banalservice.sensor.MySensorManagerPriorityTest" time="0.561"/>
+  <testcase name="altitudePriority_upgradesAndFallsBackAcrossPressurePositionAndGps" classname="com.atrainingtracker.banalservice.sensor.MySensorManagerPriorityTest" time="0.566"/>
+  <testcase name="speedPriority_prioritizesGoogleFusedOverGps" classname="com.atrainingtracker.banalservice.sensor.MySensorManagerPriorityTest" time="0.573"/>
+  <testcase name="speedAndDistancePriority_upgradesToGoogleFusedAndBikeSpeedAndFallsBackToGps" classname="com.atrainingtracker.banalservice.sensor.MySensorManagerPriorityTest" time="0.558"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.monetization.GarageLeagueDetectorTest" tests="16" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:16:18.795Z" hostname="rainer-HP-EliteBook-850-G5" time="1.11">
+  <properties/>
+  <testcase name="evaluateLeague_diamondPrecedence" classname="com.atrainingtracker.trainingtracker.monetization.GarageLeagueDetectorTest" time="0.002"/>
+  <testcase name="evaluateNudge_detectsGoldQualification" classname="com.atrainingtracker.trainingtracker.monetization.GarageLeagueDetectorTest" time="0.295"/>
+  <testcase name="evaluateLeague_goldCriteria" classname="com.atrainingtracker.trainingtracker.monetization.GarageLeagueDetectorTest" time="0.0"/>
+  <testcase name="shouldTriggerNudge_nonSpamPersistence" classname="com.atrainingtracker.trainingtracker.monetization.GarageLeagueDetectorTest" time="0.0"/>
+  <testcase name="evaluateNudge_migratesLegacyHasShownFlagSafely" classname="com.atrainingtracker.trainingtracker.monetization.GarageLeagueDetectorTest" time="0.088"/>
+  <testcase name="settingsDataStore_recordSeedAndResetGarageNudgeFlags_roundTrip" classname="com.atrainingtracker.trainingtracker.monetization.GarageLeagueDetectorTest" time="0.333"/>
+  <testcase name="queryGarageStats_aggregatesCounts" classname="com.atrainingtracker.trainingtracker.monetization.GarageLeagueDetectorTest" time="0.076"/>
+  <testcase name="evaluateLeague_belowThreshold_returnsNone" classname="com.atrainingtracker.trainingtracker.monetization.GarageLeagueDetectorTest" time="0.0"/>
+  <testcase name="shouldTriggerNudge_requiresMinimumEightWorkouts_andNeverConsumesQuota" classname="com.atrainingtracker.trainingtracker.monetization.GarageLeagueDetectorTest" time="0.022"/>
+  <testcase name="shouldTriggerNudge_goldMonotonicity" classname="com.atrainingtracker.trainingtracker.monetization.GarageLeagueDetectorTest" time="0.001"/>
+  <testcase name="evaluatePostWorkoutGarageNudgeIfUnpreempted_yieldsToJubileeAndQuota" classname="com.atrainingtracker.trainingtracker.monetization.GarageLeagueDetectorTest" time="0.259"/>
+  <testcase name="shouldTriggerNudge_boundedSeasonalCooldown_capsAtMaxNudges" classname="com.atrainingtracker.trainingtracker.monetization.GarageLeagueDetectorTest" time="0.001"/>
+  <testcase name="shouldTriggerNudge_diamondMonotonicity" classname="com.atrainingtracker.trainingtracker.monetization.GarageLeagueDetectorTest" time="0.0"/>
+  <testcase name="evaluateLeague_stravaSubscriber_qualifiesGoldAndBoostsToDiamond" classname="com.atrainingtracker.trainingtracker.monetization.GarageLeagueDetectorTest" time="0.0"/>
+  <testcase name="shouldTriggerNudge_boundedSeasonalCooldown_requiresTimeAndWorkoutDelta" classname="com.atrainingtracker.trainingtracker.monetization.GarageLeagueDetectorTest" time="0.0"/>
+  <testcase name="markNudgeShown_persistsFlags" classname="com.atrainingtracker.trainingtracker.monetization.GarageLeagueDetectorTest" time="0.032"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.ant_plus.ANTHeartRateDeviceHrvIntegrationTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-25T12:59:04.554Z" hostname="rainer-HP-EliteBook-850-G5" time="0.817">
+  <properties/>
+  <testcase name="testAntHeartRateDevice_e2e_hrvMetricsDeviceReceivesValidEpochAndComputesMetrics" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTHeartRateDeviceHrvIntegrationTest" time="0.817"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

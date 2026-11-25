@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreBaselinesTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-25T09:22:31.967Z" hostname="rainer-HP-EliteBook-850-G5" time="5.035">
+  <properties/>
+  <testcase name="sportSpecificThresholdKeys_syncHrMaxFallbackAndSnapshotGetters_TST_SET_135_2" classname="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreBaselinesTest" time="4.904"/>
+  <testcase name="getDefaultValueAndResetToDefaults_matchCanonicalBaselines" classname="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreBaselinesTest" time="0.042"/>
+  <testcase name="saveCalculatedHeartRateZones_atomicBatchCommit_updatesAllFields" classname="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreBaselinesTest" time="0.019"/>
+  <testcase name="saveCalculatedPowerZones_atomicBatchCommit_updatesAllFields" classname="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreBaselinesTest" time="0.022"/>
+  <testcase name="saveCalculatedPowerZones_invalidFtpOrCutoffs_abortsWithoutMutation" classname="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreBaselinesTest" time="0.016"/>
+  <testcase name="resetToDefaults_resetsCustomizedFlagToFalse" classname="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreBaselinesTest" time="0.008"/>
+  <testcase name="defaultConstantsAndSnapshot_matchCanonicalBaselines" classname="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreBaselinesTest" time="0.001"/>
+  <testcase name="unconfiguredState_returnsNullBaselines" classname="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreBaselinesTest" time="0.006"/>
+  <testcase name="manualCutoffEdit_flipsCustomizedFlagToTrue" classname="com.atrainingtracker.trainingtracker.zones.SettingsDataStoreBaselinesTest" time="0.01"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

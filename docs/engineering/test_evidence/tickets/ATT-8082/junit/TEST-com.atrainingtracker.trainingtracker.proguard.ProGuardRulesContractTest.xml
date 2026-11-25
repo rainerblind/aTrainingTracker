@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.proguard.ProGuardRulesContractTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-25T09:15:59.497Z" hostname="rainer-HP-EliteBook-850-G5" time="0.002">
+  <properties/>
+  <testcase name="testProGuardRules_requiredRulesPresent" classname="com.atrainingtracker.trainingtracker.proguard.ProGuardRulesContractTest" time="0.0"/>
+  <testcase name="testDomainEnums_reflectionAndSerializationSafety" classname="com.atrainingtracker.trainingtracker.proguard.ProGuardRulesContractTest" time="0.002"/>
+  <testcase name="testProGuardRules_composeBlanketKeepRemoved" classname="com.atrainingtracker.trainingtracker.proguard.ProGuardRulesContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

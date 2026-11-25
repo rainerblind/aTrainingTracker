@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManagerTTLTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-25T07:25:47.709Z" hostname="rainer-HP-EliteBook-850-G5" time="3.968">
+  <properties/>
+  <testcase name="testAddOrUpdateSegment_persistsSyncedAtTimestamp" classname="com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManagerTTLTest" time="1.095"/>
+  <testcase name="testPruneExpiredSegments_deletesExpiredSegmentsAndCascadeStreams" classname="com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManagerTTLTest" time="0.978"/>
+  <testcase name="testPruneOrphanSegments_deletesSegmentsNotPresentInRemoteSet" classname="com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManagerTTLTest" time="0.94"/>
+  <testcase name="testSchemaV9_dbVersionIsNine_andOnUpgradeExecutesAlterTableAndBackfill" classname="com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManagerTTLTest" time="0.954"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

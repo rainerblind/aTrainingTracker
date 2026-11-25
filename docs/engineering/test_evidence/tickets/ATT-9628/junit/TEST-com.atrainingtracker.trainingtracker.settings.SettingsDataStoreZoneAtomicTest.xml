@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.settings.SettingsDataStoreZoneAtomicTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:15:49.767Z" hostname="rainer-HP-EliteBook-850-G5" time="0.202">
+  <properties/>
+  <testcase name="loadAllZoneProfiles_returnsCanonicalProfilesInStandardOrder" classname="com.atrainingtracker.trainingtracker.settings.SettingsDataStoreZoneAtomicTest" time="0.022"/>
+  <testcase name="dataStore_hrvZoneDisplayOptions_persistsIndependently" classname="com.atrainingtracker.trainingtracker.settings.SettingsDataStoreZoneAtomicTest" time="0.021"/>
+  <testcase name="viewModel_reloadProfileFromDataStore_discardsDraft" classname="com.atrainingtracker.trainingtracker.settings.SettingsDataStoreZoneAtomicTest" time="0.044"/>
+  <testcase name="viewModel_monotonicUpdatePersistsToDataStore" classname="com.atrainingtracker.trainingtracker.settings.SettingsDataStoreZoneAtomicTest" time="0.024"/>
+  <testcase name="zoneProfileState_isMonotonicPredicate" classname="com.atrainingtracker.trainingtracker.settings.SettingsDataStoreZoneAtomicTest" time="0.005"/>
+  <testcase name="saveZoneProfile_commitsAllCutoffsAndDisplayOptionsAtomically_pwrBike" classname="com.atrainingtracker.trainingtracker.settings.SettingsDataStoreZoneAtomicTest" time="0.011"/>
+  <testcase name="dataStore_preservesExplicitFalseRightBar" classname="com.atrainingtracker.trainingtracker.settings.SettingsDataStoreZoneAtomicTest" time="0.014"/>
+  <testcase name="saveZoneProfile_commitsAllCutoffsAndDisplayOptionsAtomically_hrRun" classname="com.atrainingtracker.trainingtracker.settings.SettingsDataStoreZoneAtomicTest" time="0.012"/>
+  <testcase name="dataStore_defaultsRightBarToTrue_whenUnconfigured" classname="com.atrainingtracker.trainingtracker.settings.SettingsDataStoreZoneAtomicTest" time="0.007"/>
+  <testcase name="dataStore_centralizedZoneDefaults_matchAllReadAndResetPaths_TST_SET_123_2" classname="com.atrainingtracker.trainingtracker.settings.SettingsDataStoreZoneAtomicTest" time="0.021"/>
+  <testcase name="viewModel_retainsNonMonotonicDraftInSavedStateHandleWithoutDataStoreWrite" classname="com.atrainingtracker.trainingtracker.settings.SettingsDataStoreZoneAtomicTest" time="0.02"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

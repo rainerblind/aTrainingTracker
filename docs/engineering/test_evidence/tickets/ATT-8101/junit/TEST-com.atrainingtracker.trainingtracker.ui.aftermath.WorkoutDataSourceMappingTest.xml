@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataSourceMappingTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-25T05:57:18.749Z" hostname="rainer-HP-EliteBook-850-G5" time="7.626">
+  <properties/>
+  <testcase name="testWorkoutDataMapper_fromSnapshot_and_fromCursorBatch_mapsValidSources" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataSourceMappingTest" time="1.017"/>
+  <testcase name="testWorkoutData_defaultSourceIsTracked" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataSourceMappingTest" time="0.886"/>
+  <testcase name="testWorkoutDataMapper_fromSnapshot_and_fromCursorBatch_fallsBackToTrackedForNullOrInvalid" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataSourceMappingTest" time="0.866"/>
+  <testcase name="testWorkoutData_headerDataReflectsSource" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataSourceMappingTest" time="0.777"/>
+  <testcase name="testWorkoutDataMapper_fromCursor_mapsValidSources" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataSourceMappingTest" time="0.883"/>
+  <testcase name="testWorkoutDataMapper_fromCursor_fallsBackToTrackedForNullOrInvalid" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataSourceMappingTest" time="0.819"/>
+  <testcase name="testWorkoutDataMapper_readCursorSnapshot_fallsBackToTrackedForNullOrInvalid" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataSourceMappingTest" time="0.76"/>
+  <testcase name="testWorkoutHeaderData_defaultSourceIsTracked" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataSourceMappingTest" time="0.763"/>
+  <testcase name="testWorkoutDataMapper_readCursorSnapshot_mapsValidSources" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataSourceMappingTest" time="0.855"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

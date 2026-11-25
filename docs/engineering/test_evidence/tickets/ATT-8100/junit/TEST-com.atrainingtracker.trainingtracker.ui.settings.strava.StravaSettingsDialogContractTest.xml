@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.settings.strava.StravaSettingsDialogContractTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-25T07:43:04.426Z" hostname="rainer-HP-EliteBook-850-G5" time="0.029">
+  <properties/>
+  <testcase name="testManualSyncCards_layoutAndInteractiveFeedbackContract" classname="com.atrainingtracker.trainingtracker.ui.settings.strava.StravaSettingsDialogContractTest" time="0.028"/>
+  <testcase name="testCloseButtonSuppressionContract" classname="com.atrainingtracker.trainingtracker.ui.settings.strava.StravaSettingsDialogContractTest" time="0.0"/>
+  <testcase name="testStravaSettingsDialog_functionExistsAndIsPublic" classname="com.atrainingtracker.trainingtracker.ui.settings.strava.StravaSettingsDialogContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

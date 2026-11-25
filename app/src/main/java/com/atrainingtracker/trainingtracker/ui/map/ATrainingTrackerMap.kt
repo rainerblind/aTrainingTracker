@@ -18,13 +18,19 @@
 
 package com.atrainingtracker.trainingtracker.ui.map
 
+import android.content.Context
 import android.graphics.Bitmap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.unit.dp
+import com.atrainingtracker.trainingtracker.ui.map.offline.MapBaseSource
+import com.atrainingtracker.trainingtracker.ui.map.offline.OfflineMapPreferences
+import com.atrainingtracker.trainingtracker.ui.map.offline.OfflineMapTileProviderManager
+import com.atrainingtracker.trainingtracker.ui.map.offline.OfflineOsmAttributionBadge
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -56,7 +62,10 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.MapsComposeExperimentalApi
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
+import com.google.maps.android.compose.TileOverlay
 import com.google.maps.android.compose.rememberCameraPositionState
+import com.google.maps.android.compose.rememberTileOverlayState
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -94,6 +103,60 @@ fun resolveMapProperties(
 )
 
 /**
+ * Z-index for the Mapsforge offline base-map `TileOverlay`, strictly beneath all heatmaps (`0f`),
+ * tracks (`>= 5f`), climbs (`28f`), segments (`30f`), markers (`50f`), and user location (`100f`)
+ * (`REQ-MAP-071.4`).
+ */
+const val OFFLINE_BASE_TILE_Z_INDEX: Float = -100f
+
+/**
+ * Returns `true` iff offline OpenStreetMap vector tile rendering is actively engaged
+ * (`REQ-MAP-071.4`): [MapBaseSource.OFFLINE_OSM] is selected AND at least one valid `.map` file is
+ * installed.
+ */
+fun isOfflineOsmActive(baseSource: MapBaseSource, installedMapCount: Int): Boolean =
+    baseSource == MapBaseSource.OFFLINE_OSM && installedMapCount > 0
+
+/**
+ * Resolves [MapProperties] taking [MapBaseSource] and installed offline `.map` availability into
+ * account (`REQ-MAP-071.4`).
+ *
+ * - When [isOfflineOsmActive] is `true`: returns `MapProperties(mapType = MapType.NONE)` with null
+ *   custom style so the Mapsforge `TileOverlay` renders cleanly underneath all map layers.
+ * - Otherwise (either [MapBaseSource.GOOGLE] or zero `.map` files installed): falls back cleanly
+ *   to existing Google Maps resolution (`mapTypeOverride`, `useMutedStyle`, or `DarkMapStyle`),
+ *   preserving `WorkoutBaseMapType` orthogonally.
+ */
+fun resolveOfflineAwareMapProperties(
+    baseSource: MapBaseSource,
+    installedMapCount: Int,
+    isDark: Boolean,
+    context: Context,
+    useMutedStyle: Boolean = false,
+    mapTypeOverride: MapType? = null
+): MapProperties {
+    if (isOfflineOsmActive(baseSource, installedMapCount)) {
+        return MapProperties(
+            mapType = MapType.NONE,
+            mapStyleOptions = null,
+            isMyLocationEnabled = false
+        )
+    }
+    return if (mapTypeOverride != null) {
+        DarkMapStyle.resolveExplicitMapProperties(
+            mapType = mapTypeOverride,
+            isDark = isDark,
+            context = context
+        )
+    } else if (useMutedStyle) {
+        DarkMapStyle.resolveHeatmapMapProperties(isDark, context)
+    } else {
+        val darkOptions = if (isDark) DarkMapStyle.getMapStyleOptions(context) else null
+        resolveMapProperties(isDark, darkOptions)
+    }
+}
+
+/**
  * Plain non-snapshot holder for hysteresis-buffered viewport bounds (Rule 66 / Sec 1.10:
  * avoids Compose MutableState writes during composition).
  */
@@ -120,6 +183,7 @@ fun ATrainingTrackerMap(
     style: MapStyle = MapStyle(),
     darkTheme: Boolean? = null,
     mapTypeOverride: MapType? = null,
+    baseSourceOverride: MapBaseSource? = null,
 
     // UI & Callbacks
     modifier: Modifier = Modifier,
@@ -207,19 +271,43 @@ fun ATrainingTrackerMap(
 
     // 4. THE MAP
     val isDark = darkTheme ?: (MaterialTheme.colorScheme.surface.luminance() < 0.5f)
-    val mapProperties = remember(isDark, context, style.useMutedStyle, mapTypeOverride) {
-        if (mapTypeOverride != null) {
-            DarkMapStyle.resolveExplicitMapProperties(
-                mapType = mapTypeOverride,
-                isDark = isDark,
-                context = context
-            )
-        } else if (style.useMutedStyle) {
-            DarkMapStyle.resolveHeatmapMapProperties(isDark, context)
+    val baseSourceFlow = remember(context) { OfflineMapPreferences.observeBaseSource(context) }
+    val persistedBaseSource by baseSourceFlow.collectAsStateWithLifecycle()
+    val effectiveBaseSource = baseSourceOverride ?: persistedBaseSource
+
+    // Referentially stable process-wide provider (REQ-MAP-051 / Gate 3 Watchpoint 6):
+    // untouched when GOOGLE is active; shared singleton when OFFLINE_OSM is selected.
+    val offlineProvider = remember(context, effectiveBaseSource) {
+        if (effectiveBaseSource == MapBaseSource.OFFLINE_OSM) {
+            OfflineMapTileProviderManager.getOrCreateProvider(context)
         } else {
-            val darkOptions = if (isDark) DarkMapStyle.getMapStyleOptions(context) else null
-            resolveMapProperties(isDark, darkOptions)
+            null
         }
+    }
+    val emptyCountFlow = remember { MutableStateFlow(0) }
+    val emptyRevisionFlow = remember { MutableStateFlow(0L) }
+    val installedMapCount by (offlineProvider?.installedMapCountFlow ?: emptyCountFlow)
+        .collectAsStateWithLifecycle()
+    val providerRevision by (offlineProvider?.revisionFlow ?: emptyRevisionFlow)
+        .collectAsStateWithLifecycle()
+    val offlineOsmActive = isOfflineOsmActive(effectiveBaseSource, installedMapCount)
+
+    val mapProperties = remember(
+        effectiveBaseSource,
+        installedMapCount,
+        isDark,
+        context,
+        style.useMutedStyle,
+        mapTypeOverride
+    ) {
+        resolveOfflineAwareMapProperties(
+            baseSource = effectiveBaseSource,
+            installedMapCount = installedMapCount,
+            isDark = isDark,
+            context = context,
+            useMutedStyle = style.useMutedStyle,
+            mapTypeOverride = mapTypeOverride
+        )
     }
 
     androidx.compose.runtime.CompositionLocalProvider(LocalMapStyle provides style.copy(isDark = isDark)) {
@@ -241,6 +329,21 @@ fun ATrainingTrackerMap(
                 uiSettings = MapUiSettings(zoomControlsEnabled = false, tiltGesturesEnabled = true),
                 onMapLoaded = { isMapLoaded = true }
             ) {
+                // REQ-MAP-071.4: On-device Mapsforge vector base tiles strictly beneath all overlays.
+                if (offlineOsmActive && offlineProvider != null) {
+                    val tileOverlayState = rememberTileOverlayState()
+                    LaunchedEffect(providerRevision) {
+                        if (providerRevision > 0L) {
+                            tileOverlayState.clearTileCache()
+                        }
+                    }
+                    TileOverlay(
+                        tileProvider = offlineProvider,
+                        state = tileOverlayState,
+                        zIndex = OFFLINE_BASE_TILE_Z_INDEX
+                    )
+                }
+
                 // ATT-440: Instant Zoom Fit. 
                 // We use MapEffect to fit bounds as soon as the map object is available, 
                 // without waiting for all tiles to render (onMapLoaded).
@@ -313,6 +416,17 @@ fun ATrainingTrackerMap(
                         zIndex = style.userLocationZIndex
                     )
                 }
+            }
+
+            // REQ-MAP-071.4 / Gate 3 Watchpoint 5: Compact ODbL attribution badge positioned at
+            // BottomEnd respecting contentPadding so it clears both the Google watermark and bottom sheets.
+            if (offlineOsmActive) {
+                OfflineOsmAttributionBadge(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(contentPadding)
+                        .padding(end = 8.dp, bottom = 8.dp)
+                )
             }
         }
     }

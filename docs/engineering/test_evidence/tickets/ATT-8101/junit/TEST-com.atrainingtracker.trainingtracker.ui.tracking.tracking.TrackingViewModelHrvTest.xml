@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelHrvTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-25T05:59:21.598Z" hostname="rainer-HP-EliteBook-850-G5" time="2.557">
+  <properties/>
+  <testcase name="testResolveDisplayOptions_hrvDfaA1_resolvesDedicatedOptionsAcrossAllSports" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelHrvTest" time="0.806"/>
+  <testcase name="testGetZoneType_hrvDfaA1_returnsNullForIndependentResolution" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelHrvTest" time="0.208"/>
+  <testcase name="applySensorData_dynamicArtifactThreshold_gatesHrvDfaA1" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelHrvTest" time="0.216"/>
+  <testcase name="testSideBySidePinnedHrvTiles_isolateSignalQualityZoneColorAndArtifactGatingWithoutCoLocatedArtifactTile_TST_HRV_050_4" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingViewModelHrvTest" time="1.326"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

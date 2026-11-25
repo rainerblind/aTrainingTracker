@@ -41,6 +41,15 @@ object ZoneCalculationMath {
     const val MIN_HR_REST = 30
     const val MAX_HR_REST = 120
 
+    const val MIN_LTHR = 80
+    const val MAX_LTHR = 230
+
+    const val MIN_LT1_HR = 60
+    const val MAX_LT1_HR = 220
+
+    const val MIN_LT1_PWR = 30
+    const val MAX_LT1_PWR = 500
+
     const val MIN_KARVONEN_RESERVE = 20
     const val ZONE_7_POWER_CEILING = 2500
 
@@ -198,14 +207,14 @@ object ZoneCalculationMath {
         hrMax: Int? = null,
         hrRest: Int? = null
     ): HeartRateZoneThresholds {
-        require(hrvt1 in MIN_HR_MAX..MAX_HR_MAX) {
-            "HRVT1 ($hrvt1 bpm) must be in [$MIN_HR_MAX, $MAX_HR_MAX]"
+        require(hrvt1 in MIN_LT1_HR..MAX_LT1_HR) {
+            "HRVT1 ($hrvt1 bpm) must be in [$MIN_LT1_HR, $MAX_LT1_HR]"
         }
-        require(hrvt2 in MIN_HR_MAX..MAX_HR_MAX) {
-            "HRVT2 ($hrvt2 bpm) must be in [$MIN_HR_MAX, $MAX_HR_MAX]"
+        require(hrvt2 in MIN_LTHR..MAX_LTHR) {
+            "HRVT2 ($hrvt2 bpm) must be in [$MIN_LTHR, $MAX_LTHR]"
         }
-        require(hrvt2 > hrvt1) {
-            "HRVT2 ($hrvt2 bpm) must be strictly greater than HRVT1 ($hrvt1 bpm)"
+        require(hrvt2 - hrvt1 >= 2) {
+            "HRVT2 ($hrvt2 bpm) must be strictly greater than HRVT1 ($hrvt1 bpm) by at least 2 bpm"
         }
         if (hrMax != null) {
             require(hrMax in MIN_HR_MAX..MAX_HR_MAX) {
@@ -232,8 +241,71 @@ object ZoneCalculationMath {
         if (z3 >= z4) z3 = z4 - 1
         if (z4 <= z3) z4 = z3 + 1
 
+        require(z1 > 0 && z1 < z2 && z2 < z3 && z3 < z4) {
+            "Unable to form strictly ascending threshold-anchored zones for HRVT1=$hrvt1, HRVT2=$hrvt2"
+        }
         if (hrMax != null) {
             require(z4 < hrMax) { "Zone 4 cutoff ($z4 bpm) must be strictly less than HRmax ($hrMax bpm)" }
+        }
+
+        return HeartRateZoneThresholds(
+            z1Max = z1,
+            z2Max = z2,
+            z3Max = z3,
+            z4Max = z4
+        )
+    }
+
+    /**
+     * Calculates 5 heart rate zone cutoffs anchored to Lactate Threshold Heart Rate (LTHR / LT2)
+     * using standard Friel/Coggan percentages (`REQ-SET-136.3`):
+     * - Zone 1 (Recovery): <= 81% LTHR
+     * - Zone 2 (Aerobic): <= 89% LTHR
+     * - Zone 3 (Tempo): <= 93% LTHR
+     * - Zone 4 (Sub-Threshold / Threshold): <= 100% LTHR
+     * - Zone 5 (VO2max / Supra-Threshold): > LTHR (up to optional [hrMax]).
+     */
+    fun calculateLthrAnchoredHeartRateZones(
+        lthr: Int,
+        hrMax: Int? = null,
+        hrRest: Int? = null
+    ): HeartRateZoneThresholds {
+        require(lthr in MIN_LTHR..MAX_LTHR) {
+            "LTHR ($lthr bpm) must be in [$MIN_LTHR, $MAX_LTHR]"
+        }
+        if (hrMax != null) {
+            require(hrMax in MIN_HR_MAX..MAX_HR_MAX) {
+                "HRmax ($hrMax bpm) must be in [$MIN_HR_MAX, $MAX_HR_MAX]"
+            }
+            require(hrMax > lthr) {
+                "HRmax ($hrMax bpm) must be strictly greater than LTHR ($lthr bpm)"
+            }
+        }
+        if (hrRest != null) {
+            require(hrRest in MIN_HR_REST..MAX_HR_REST) {
+                "HRrest ($hrRest bpm) must be in [$MIN_HR_REST, $MAX_HR_REST]"
+            }
+            require(hrRest < lthr) {
+                "HRrest ($hrRest bpm) must be strictly less than LTHR ($lthr bpm)"
+            }
+        }
+
+        var z1 = Math.round(0.81 * lthr).toInt()
+        if (hrRest != null && z1 <= hrRest) {
+            z1 = hrRest + 1
+        }
+        var z2 = Math.round(0.89 * lthr).toInt()
+        var z3 = Math.round(0.93 * lthr).toInt()
+        val z4 = lthr
+
+        if (z2 <= z1) z2 = z1 + 1
+        if (z3 <= z2) z3 = z2 + 1
+        if (z3 >= z4) z3 = z4 - 1
+        if (z2 >= z3) z2 = z3 - 1
+        if (z1 >= z2) z1 = z2 - 1
+
+        require(z1 > 0 && z1 < z2 && z2 < z3 && z3 < z4) {
+            "Unable to form monotonic LTHR zones for LTHR=$lthr"
         }
 
         return HeartRateZoneThresholds(

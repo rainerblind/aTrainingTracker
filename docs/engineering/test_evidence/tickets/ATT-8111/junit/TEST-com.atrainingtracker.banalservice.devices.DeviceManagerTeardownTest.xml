@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.DeviceManagerTeardownTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-25T12:55:20.245Z" hostname="rainer-HP-EliteBook-850-G5" time="13.71">
+  <properties/>
+  <testcase name="testPairingChangedUnpair_whenAbsentFromRemoteDevices_forceDisconnectsPolarSession_TST_CON_054_1" classname="com.atrainingtracker.banalservice.devices.DeviceManagerTeardownTest" time="2.778"/>
+  <testcase name="testPolarLiveImuChanged_belowApi33KeepsBtleHeartRateFallback" classname="com.atrainingtracker.banalservice.devices.DeviceManagerTeardownTest" time="2.133"/>
+  <testcase name="testCreatePairedRemoteDevices_delegatesToRepository" classname="com.atrainingtracker.banalservice.devices.DeviceManagerTeardownTest" time="2.023"/>
+  <testcase name="testRemoveAndStopRemoteDevice_safeWhenDeviceNotRegistered" classname="com.atrainingtracker.banalservice.devices.DeviceManagerTeardownTest" time="2.039"/>
+  <testcase name="testPolarLiveImuChanged_rapidToggleWaitsForActiveTeardownAndUsesLatestState" classname="com.atrainingtracker.banalservice.devices.DeviceManagerTeardownTest" time="2.246"/>
+  <testcase name="testPolarLiveImuChanged_waitsForGattTeardownCompletionBeforeCreatingReplacement" classname="com.atrainingtracker.banalservice.devices.DeviceManagerTeardownTest" time="2.49"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

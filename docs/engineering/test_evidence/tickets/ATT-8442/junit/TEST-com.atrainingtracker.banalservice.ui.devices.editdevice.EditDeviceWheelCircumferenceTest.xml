@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceWheelCircumferenceTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-25T03:52:32.470Z" hostname="rainer-HP-EliteBook-850-G5" time="3.098">
+  <properties/>
+  <testcase name="testRunCalibrationFactorContent_preservesKnownDistanceCalculator_tstSen033_1" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceWheelCircumferenceTest" time="0.541"/>
+  <testcase name="testLightDarkWheelCircumferenceSection_renderAndCapturePng_rule85_tstSen033_3" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceWheelCircumferenceTest" time="0.924"/>
+  <testcase name="testWheelCircumferenceHistoryChart_unspecifiedLegendAndSensorEmptyState_tstSen033_3" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceWheelCircumferenceTest" time="0.19"/>
+  <testcase name="testWheelCircumferenceSection_removesBikeCalculatorPreservesPresetsAndAutoHint_tstSen033_1" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceWheelCircumferenceTest" time="0.734"/>
+  <testcase name="testNarrow280dpThreeLegendFlowRow_wrapsWithoutClippingOrZeroWidth_tstSen033_3" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceWheelCircumferenceTest" time="0.161"/>
+  <testcase name="testBaselineCircumferenceRounding_avoidsIeee754TruncationAt2010mm_tstSen033_1" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceWheelCircumferenceTest" time="0.18"/>
+  <testcase name="testEquipmentRepository_getCircumferenceHistoryForDeviceAndManualReset_tstSen033_2" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceWheelCircumferenceTest" time="0.155"/>
+  <testcase name="testEditDeviceViewModel_asyncHistoryLoadStaleClearAndDraftBaselineSync_tstSen033_2" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceWheelCircumferenceTest" time="0.213"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

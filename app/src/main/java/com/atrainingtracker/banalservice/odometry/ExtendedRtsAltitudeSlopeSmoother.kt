@@ -73,6 +73,8 @@ object ExtendedRtsAltitudeSlopeSmoother {
     const val ASCENT_DESCENT_HYSTERESIS_METERS = 2.0
     const val MAX_PHYSICAL_SLOPE = 0.35 // +/-35% grade clamp (REQ-FIL-023.3, REQ-FIL-033.1)
     const val LOW_SPEED_SLOPE_THRESHOLD_MPS = 1.2 // Low-speed slope damping ceiling (REQ-FIL-033.1)
+    const val WALKING_SLOPE_REG_CEILING_MPS = 2.8 // Walking-speed slope curvature regularization ceiling (REQ-FIL-048.2)
+    const val WALKING_SLOPE_QG_FLOOR = 0.04 // Minimum q_g scale at low walking speeds (REQ-FIL-048.2)
     const val DEFAULT_INITIAL_SLOPE_VAR = 0.0025 // (5% grade)^2 realistic flat-start prior (REQ-FIL-033.1)
     const val MAX_SLOPE_VARIANCE = 0.015 // Prevents unbounded p11 growth over long rides (REQ-FIL-033.1)
     const val STANDSTILL_SLOPE_GRACE_SEC = 2.0
@@ -93,7 +95,9 @@ object ExtendedRtsAltitudeSlopeSmoother {
     internal const val BARO_RESET_STEP_MIN_M = 6.0
     private const val BARO_RESET_LOOKAHEAD_SAMPLES = 4
     private const val BARO_RESET_MIN_SUSTAINED_SAMPLES = 3
-    private const val DEFAULT_VAR_DEM = 4.0    // DEM anchor variance m^2
+    private const val DEFAULT_VAR_DEM = 4.0    // Barometer-free DEM anchor variance m^2
+    private const val BARO_EQUIPPED_VAR_DEM = 16.0 // Barometer-armed DEM anchor variance m^2 (REQ-FIL-048.2)
+    private const val DEM_STEP_GATE_THRESHOLD_M = 3.0 // |deltaRef - deltaBaro| DEM step-discrepancy gate (REQ-FIL-048.2)
     private const val HUBER_K = 2.5
     private const val STANDSTILL_SPEED_THRESHOLD_MPS = 0.3
 
@@ -107,6 +111,20 @@ object ExtendedRtsAltitudeSlopeSmoother {
         val ratio = (speedMps - STANDSTILL_SPEED_THRESHOLD_MPS) /
             (LOW_SPEED_SLOPE_THRESHOLD_MPS - STANDSTILL_SPEED_THRESHOLD_MPS)
         return ratio * ratio
+    }
+
+    /**
+     * Smoothly scales spatial slope curvature process noise (`q_g`) across the walking speed regime
+     * `[0.3, 2.8] m/s` (`REQ-FIL-048.2`) so short-lived walking baro/DEM fluctuations average out over
+     * `~20 m` while genuine sustained hiking climbs (`12%` at `1.2 m/s`) and cycling/running speeds
+     * (`>= 2.8 m/s`) remain crisp on both barometer-equipped and barometer-free phones.
+     */
+    internal fun walkingSpeedSlopeProcessScale(speedMps: Double): Double {
+        if (!speedMps.isFinite() || speedMps < STANDSTILL_SPEED_THRESHOLD_MPS) return 0.0
+        if (speedMps >= WALKING_SLOPE_REG_CEILING_MPS) return 1.0
+        val ratio = (speedMps - STANDSTILL_SPEED_THRESHOLD_MPS) /
+            (WALKING_SLOPE_REG_CEILING_MPS - STANDSTILL_SPEED_THRESHOLD_MPS)
+        return WALKING_SLOPE_QG_FLOOR + (1.0 - WALKING_SLOPE_QG_FLOOR) * ratio * ratio
     }
 
     /**
@@ -252,9 +270,20 @@ object ExtendedRtsAltitudeSlopeSmoother {
             }
             x[0] = initialAlt
             x[1] = 0.0
-            x[2] = 0.0
+            // Seed initial QNH weather-pressure offset whenever tick 0 carries both finite baro & ref
+            // so > 50 m ISA-to-MSL offsets never saturate Huber gating into a -35% slope pin (REQ-FIL-048.2).
+            x[2] = if (hasInitialRef && firstSample.rawAltitudeM.isFinite()) {
+                firstSample.rawAltitudeM - initialAlt
+            } else {
+                0.0
+            }
         }
-        p[0][0] = if (hasInitialRef) DEFAULT_VAR_DEM else 400.0
+        // Gate 3 Watchpoint 1: match tick-0 baro-armed DEM variance to BARO_EQUIPPED_VAR_DEM (16.0 m^2)
+        p[0][0] = if (hasInitialRef) {
+            if (hasBaroData) BARO_EQUIPPED_VAR_DEM else DEFAULT_VAR_DEM
+        } else {
+            400.0
+        }
         p[1][1] = DEFAULT_INITIAL_SLOPE_VAR
         p[2][2] = if (hasReference) 400.0 else 1e-4
 
@@ -268,6 +297,10 @@ object ExtendedRtsAltitudeSlopeSmoother {
         var standstillDurationSec = 0.0
         var prevSpeedMps = 0.0
         var brakingHoldSec = 0.0
+        var hasSeenReference = hasInitialRef
+        var hasSeenBarometer = false
+        var lastRefAltM = Double.NaN
+        var lastRefBaroAltM = Double.NaN
 
         for (k in 0 until n) {
             val sample = samples[k]
@@ -337,7 +370,8 @@ object ExtendedRtsAltitudeSlopeSmoother {
                 } else {
                     standstillDurationSec = 0.0
                     x[0] += x[1] * deltaDist
-                    val qgVal = DEFAULT_QG * deltaDist * effectiveSlopeGainScale
+                    val qgVal = DEFAULT_QG * deltaDist * effectiveSlopeGainScale *
+                        walkingSpeedSlopeProcessScale(speedMps)
                     val qhVal = DEFAULT_QH * dtSec
 
                     val prevP11 = p[1][1]
@@ -379,6 +413,8 @@ object ExtendedRtsAltitudeSlopeSmoother {
 
             // 2. Ingest Barometer (with carriage-mode-scaled variance & Joseph SPD covariance update)
             if (sample.rawAltitudeM.isFinite()) {
+                val isInitialBaroLock = !hasSeenBarometer
+                hasSeenBarometer = true
                 val zBaro = sample.rawAltitudeM
                 val y = zBaro - (x[0] + x[2])
                 val varBaro = sample.carriageMode.profile.ertsBaroVarianceM2
@@ -386,7 +422,9 @@ object ExtendedRtsAltitudeSlopeSmoother {
                 if (isStandstill) {
                     val sBias = p[2][2] + varBaro
                     val kBias = p[2][2] / sBias
-                    val yStep = if (isBaroResetStep) y else applyHuber(y, sBias)
+                    // Bypass Huber truncation on the first finite barometer sample (Ref-before-Baro /
+                    // missing-tick-0 QNH lock) so > 50 m weather offsets absorb cleanly (REQ-FIL-048.2).
+                    val yStep = if (isBaroResetStep || isInitialBaroLock) y else applyHuber(y, sBias)
                     x[2] += kBias * yStep
                     josephCovarianceUpdate3x3(
                         p = p,
@@ -403,9 +441,9 @@ object ExtendedRtsAltitudeSlopeSmoother {
                     }
                     val effectiveVarBaro = varBaro * brakingVarScale
                     val s = p[0][0] + 2.0 * p[0][2] + p[2][2] + effectiveVarBaro
-                    val yH = if (isBaroResetStep) y else applyHuber(y, s)
+                    val yH = if (isBaroResetStep || isInitialBaroLock) y else applyHuber(y, s)
                     val k0 = (p[0][0] + p[0][2]) / s
-                    val k1 = ((p[1][0] + p[1][2]) / s) * effectiveSlopeGainScale
+                    val k1 = if (isInitialBaroLock) 0.0 else ((p[1][0] + p[1][2]) / s) * effectiveSlopeGainScale
                     val k2 = (p[2][0] + p[2][2]) / s
 
                     x[0] += k0 * yH
@@ -421,16 +459,46 @@ object ExtendedRtsAltitudeSlopeSmoother {
                 }
             }
 
-            // 3. Ingest DEM/GPS reference anchor (decouple slope when barometer is present; REQ-FIL-033.1/.3)
+            // 3. Ingest DEM/GPS reference anchor (decouple slope, enforce datum invariance k2 = -k0,
+            // and step-gate genuine urban DEM jumps without vetoing flat DEM on baro spikes; REQ-FIL-033.1/.3, REQ-FIL-048.2)
             val refAlt = sample.referenceAltitudeM
             if (refAlt != null && refAlt.isFinite()) {
+                val baseVarDem = if (hasBaroData) BARO_EQUIPPED_VAR_DEM else DEFAULT_VAR_DEM
+                var varRef = baseVarDem
+                // Gate 3 Watchpoint 2: guard step-discrepancy gating on !isBaroResetStep, finite baro,
+                // and genuine reference jump (|deltaRef| > threshold && |deltaBaro| < |deltaRef|) so
+                // pocket-barometer compression spikes never inflate reference variance on flat terrain.
+                if (hasBaroData &&
+                    hasSeenReference &&
+                    !isBaroResetStep &&
+                    sample.rawAltitudeM.isFinite() &&
+                    lastRefAltM.isFinite() &&
+                    lastRefBaroAltM.isFinite()
+                ) {
+                    val deltaRef = refAlt - lastRefAltM
+                    val deltaBaro = sample.rawAltitudeM - lastRefBaroAltM
+                    val stepDiscrepancy = abs(deltaRef - deltaBaro)
+                    if (abs(deltaRef) > DEM_STEP_GATE_THRESHOLD_M &&
+                        stepDiscrepancy > DEM_STEP_GATE_THRESHOLD_M &&
+                        abs(deltaBaro) < abs(deltaRef)
+                    ) {
+                        varRef = baseVarDem * (1.0 + stepDiscrepancy * stepDiscrepancy)
+                    }
+                }
+                lastRefAltM = refAlt
+                // Keep lastRefBaroAltM strictly epoch-paired with lastRefAltM (matching KinematicAltitudeSlopeEkf; REQ-FIL-048.2)
+                lastRefBaroAltM = if (sample.rawAltitudeM.isFinite()) sample.rawAltitudeM else Double.NaN
+
                 val yRef = refAlt - x[0]
-                val sRef = p[0][0] + DEFAULT_VAR_DEM
-                val yRefH = applyHuber(yRef, sRef)
+                val sRef = p[0][0] + varRef
+                // On the very first delayed reference lock (Baro-before-Ref), absorb arbitrary QNH offset
+                // without Huber truncation so > 50 m ISA-to-MSL offsets never leave a multi-second ramp (REQ-FIL-048.2).
+                val yRefH = if (!hasSeenReference) yRef else applyHuber(yRef, sRef)
+                hasSeenReference = true
 
                 val k0 = p[0][0] / sRef
                 val k1 = if (hasBaroData || isStandstill) 0.0 else (p[1][0] / sRef) * gainScale
-                val k2 = p[2][0] / sRef
+                val k2 = if (hasBaroData) -k0 else p[2][0] / sRef
 
                 x[0] += k0 * yRefH
                 x[1] = clampPhysicalSlope(x[1] + k1 * yRefH)
@@ -440,7 +508,7 @@ object ExtendedRtsAltitudeSlopeSmoother {
                     p = p,
                     kVec = doubleArrayOf(k0, k1, k2),
                     hVec = doubleArrayOf(1.0, 0.0, 0.0),
-                    rVar = DEFAULT_VAR_DEM
+                    rVar = varRef
                 )
             }
 

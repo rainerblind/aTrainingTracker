@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogPriorityTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-25T13:06:27.570Z" hostname="rainer-HP-EliteBook-850-G5" time="0.12">
+  <properties/>
+  <testcase name="notConnected_hr_persistedCapabilityMetadataResolvesRenamedOpticalViaRawDeviceDataProvider" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogPriorityTest" time="0.083"/>
+  <testcase name="testNotConnectedDevices_gatesPolarLiveImuOptInPairedAndCadencePriority_TST_CON_064_2" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogPriorityTest" time="0.002"/>
+  <testcase name="activeBackups_hr_ordersByHealthTierThenModalityThenNameThenId" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogPriorityTest" time="0.001"/>
+  <testcase name="testNotConnectedDevices_capabilityGatesPolarLiveImuAndNormalizesUnknownManufacturer_TST_CON_057_3" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogPriorityTest" time="0.03"/>
+  <testcase name="notConnected_hr_ordersByModalityThenNameThenId_includingAntiAlphabeticalNames" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogPriorityTest" time="0.001"/>
+  <testcase name="activeBackups_sortedByPriority_googleFusedBeforeGps" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogPriorityTest" time="0.001"/>
+  <testcase name="activeBackups_speedPriority_ordersWheelSpeedBeforeFusedAndFusedBeforeGps" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogPriorityTest" time="0.0"/>
+  <testcase name="notConnected_sortedByPriority_googleFusedBeforeGps" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogPriorityTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

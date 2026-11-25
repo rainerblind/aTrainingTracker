@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.exporter
 import android.content.Context
 import android.content.SharedPreferences
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploader
 import com.atrainingtracker.trainingtracker.exporter.writer.FitFileWriter
 import io.mockk.every
 import io.mockk.mockk
@@ -143,5 +144,35 @@ class ExportManagerFitTest {
 
         every { mockPrefs.getBoolean(TrainingApplication.SP_SYNC_TO_HEALTH_CONNECT, false) } returns false
         org.junit.Assert.assertFalse(TrainingApplication.uploadToCommunity(FileFormat.HEALTH_CONNECT))
+    }
+
+    @Test
+    fun testStravaFormat_usesFitExtensionMimeAndRoutesToFitFileWriter_TST_EXP_051_1() {
+        assertEquals("Strava", FileFormat.STRAVA.dirName)
+        assertEquals(".fit", FileFormat.STRAVA.fileEnding)
+        assertEquals("application/vnd.ant.fit", FileFormat.STRAVA.mimeType)
+        assertTrue(FileFormat.STRAVA.isDerivedExportFile)
+
+        // Standalone TCX format MUST remain unchanged
+        assertEquals(".tcx", FileFormat.TCX.fileEnding)
+        assertEquals("application/vnd.garmin.tcx+xml", FileFormat.TCX.mimeType)
+
+        val stravaFileExporter = ExportManager.getExporter(
+            mockContext,
+            ExportInfo("workout_strava", FileFormat.STRAVA, ExportType.FILE)
+        )
+        assertTrue(
+            "ExportManager.getExporter(FILE, STRAVA) must return FitFileWriter",
+            stravaFileExporter is FitFileWriter
+        )
+
+        val stravaCommunityUploader = ExportManager.getExporter(
+            mockContext,
+            ExportInfo("workout_strava", FileFormat.STRAVA, ExportType.COMMUNITY)
+        )
+        assertTrue(
+            "ExportManager.getExporter(COMMUNITY, STRAVA) must return StravaUploader",
+            stravaCommunityUploader is StravaUploader
+        )
     }
 }

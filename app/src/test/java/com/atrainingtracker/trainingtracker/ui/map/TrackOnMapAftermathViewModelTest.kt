@@ -258,15 +258,30 @@ class TrackOnMapAftermathViewModelTest {
     @Test
     fun updateHrZones_persistsHeartRateZonesAndUpdatesUiState() = runTest(testDispatcher) {
         val mockSettingsDataStore = mockk<com.atrainingtracker.trainingtracker.settings.SettingsDataStore>(relaxed = true)
+        val mockAthleteMetricsRepo = mockk<com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepository>(relaxed = true)
 
         mockkObject(com.atrainingtracker.trainingtracker.settings.SettingsDataStore.Companion)
         every { com.atrainingtracker.trainingtracker.settings.SettingsDataStore.getInstance(any()) } returns mockSettingsDataStore
+        mockkObject(com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepository.Companion)
+        every { com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepository.getInstance(any()) } returns mockAthleteMetricsRepo
 
         val viewModel = TrackOnMapAftermathViewModel(mockApplication, ioDispatcher = testDispatcher)
 
         viewModel.updateHrZones(newHrvt1 = 145, newHrvt2 = 172)
         advanceUntilIdle()
 
+        coVerify(exactly = 1) {
+            mockAthleteMetricsRepo.addEntry(
+                metricType = com.atrainingtracker.trainingtracker.database.AthleteMetricType.LT1_HR_BIKE_BPM,
+                value = 145.0,
+                timestampMs = any()
+            )
+            mockAthleteMetricsRepo.addEntry(
+                metricType = com.atrainingtracker.trainingtracker.database.AthleteMetricType.LTHR_BIKE_BPM,
+                value = 172.0,
+                timestampMs = any()
+            )
+        }
         coVerify(exactly = 1) {
             mockSettingsDataStore.saveCalculatedHeartRateZones(
                 zoneType = any(),
@@ -280,6 +295,116 @@ class TrackOnMapAftermathViewModelTest {
         assertNotNull(viewModel.uiState.value.hrThresholds)
         assertEquals(145, viewModel.uiState.value.hrThresholds?.z2Max)
         assertEquals(172, viewModel.uiState.value.hrThresholds?.z4Max)
+    }
+
+    @Test
+    fun updateHrZonesAndFtp_persistSportSpecificHrvThresholdsAndOptionalZoneRecalc_TST_SET_135_4() = runTest(testDispatcher) {
+        val mockSettingsDataStore = mockk<com.atrainingtracker.trainingtracker.settings.SettingsDataStore>(relaxed = true)
+        val mockAthleteMetricsRepo = mockk<com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepository>(relaxed = true)
+
+        mockkObject(com.atrainingtracker.trainingtracker.settings.SettingsDataStore.Companion)
+        every { com.atrainingtracker.trainingtracker.settings.SettingsDataStore.getInstance(any()) } returns mockSettingsDataStore
+        mockkObject(com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepository.Companion)
+        every { com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepository.getInstance(any()) } returns mockAthleteMetricsRepo
+
+        val viewModel = TrackOnMapAftermathViewModel(mockApplication, ioDispatcher = testDispatcher)
+
+        // Cycling workout: HRVT1=142, HRVT2=168 with recalculateZones=false persists thresholds without overwriting zones
+        viewModel.loadAftermathData(createWorkout(401L).copy(bSportType = BSportType.BIKE))
+        advanceUntilIdle()
+        viewModel.updateHrZones(newHrvt1 = 142, newHrvt2 = 168, recalculateZones = false)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) {
+            mockAthleteMetricsRepo.addEntry(
+                metricType = com.atrainingtracker.trainingtracker.database.AthleteMetricType.LT1_HR_BIKE_BPM,
+                value = 142.0,
+                timestampMs = any()
+            )
+            mockAthleteMetricsRepo.addEntry(
+                metricType = com.atrainingtracker.trainingtracker.database.AthleteMetricType.LTHR_BIKE_BPM,
+                value = 168.0,
+                timestampMs = any()
+            )
+        }
+        coVerify(exactly = 0) {
+            mockSettingsDataStore.saveCalculatedHeartRateZones(any(), any(), any(), any(), any())
+        }
+
+        // Running workout: persists RUN threshold types
+        viewModel.loadAftermathData(createWorkout(402L).copy(bSportType = BSportType.RUN))
+        advanceUntilIdle()
+        viewModel.updateHrZones(newHrvt1 = 148, newHrvt2 = 174, recalculateZones = false)
+        advanceUntilIdle()
+        coVerify(exactly = 1) {
+            mockAthleteMetricsRepo.addEntry(
+                metricType = com.atrainingtracker.trainingtracker.database.AthleteMetricType.LT1_HR_RUN_BPM,
+                value = 148.0,
+                timestampMs = any()
+            )
+            mockAthleteMetricsRepo.addEntry(
+                metricType = com.atrainingtracker.trainingtracker.database.AthleteMetricType.LTHR_RUN_BPM,
+                value = 174.0,
+                timestampMs = any()
+            )
+        }
+
+        // Power acceptance with optional LT1 power watts
+        viewModel.updateFtp(newFtp = 280, lt1PowerWatts = 210, recalculateZones = false)
+        advanceUntilIdle()
+        coVerify(exactly = 1) {
+            mockAthleteMetricsRepo.addEntry(
+                metricType = com.atrainingtracker.trainingtracker.database.AthleteMetricType.FTP_WATTS,
+                value = 280.0,
+                timestampMs = any()
+            )
+            mockAthleteMetricsRepo.addEntry(
+                metricType = com.atrainingtracker.trainingtracker.database.AthleteMetricType.LT1_PWR_BIKE_WATTS,
+                value = 210.0,
+                timestampMs = any()
+            )
+        }
+        coVerify(exactly = 0) { mockSettingsDataStore.saveCalculatedPowerZones(any(), any()) }
+    }
+
+    @Test
+    fun updateHrZones_whenHrvt2ExceedsConfiguredHrMax_persistsAutoBumpedHrMaxToRepository() = runTest(testDispatcher) {
+        val mockSettingsDataStore = mockk<com.atrainingtracker.trainingtracker.settings.SettingsDataStore>(relaxed = true)
+        val mockAthleteMetricsRepo = mockk<com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepository>(relaxed = true)
+
+        every { mockSettingsDataStore.hrMaxBikeFlow } returns kotlinx.coroutines.flow.flowOf(170)
+        every { mockSettingsDataStore.hrMaxFlow } returns kotlinx.coroutines.flow.flowOf(170)
+        every { mockSettingsDataStore.hrRestFlow } returns kotlinx.coroutines.flow.flowOf(50)
+
+        mockkObject(com.atrainingtracker.trainingtracker.settings.SettingsDataStore.Companion)
+        every { com.atrainingtracker.trainingtracker.settings.SettingsDataStore.getInstance(any()) } returns mockSettingsDataStore
+        mockkObject(com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepository.Companion)
+        every { com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepository.getInstance(any()) } returns mockAthleteMetricsRepo
+
+        val viewModel = TrackOnMapAftermathViewModel(mockApplication, ioDispatcher = testDispatcher)
+        viewModel.loadAftermathData(createWorkout(403L).copy(bSportType = BSportType.BIKE))
+        advanceUntilIdle()
+
+        // HRVT2 = 175 >= configured Bike HRmax = 170 -> auto-bumps HRmax to 185 and persists via repository
+        viewModel.updateHrZones(newHrvt1 = 150, newHrvt2 = 175, recalculateZones = true)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) {
+            mockAthleteMetricsRepo.addEntry(
+                metricType = com.atrainingtracker.trainingtracker.database.AthleteMetricType.HR_MAX_BIKE_BPM,
+                value = 185.0,
+                timestampMs = any()
+            )
+        }
+        coVerify(exactly = 1) {
+            mockSettingsDataStore.saveCalculatedHeartRateZones(
+                zoneType = com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType.HR_BIKE,
+                hrMax = 185,
+                hrRest = 50,
+                method = "HRVT_ANCHORS",
+                cutoffs = match { it[1] == 150 && it[3] == 175 }
+            )
+        }
     }
 
     @Test

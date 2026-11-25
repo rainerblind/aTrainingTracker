@@ -23,6 +23,7 @@ import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.util.safeEnumValueOfOrNull
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.database.WorkoutPhotoManager
 import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
 import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.RadarTrafficSummaryFormatter
@@ -30,7 +31,9 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusRepository
 import com.atrainingtracker.trainingtracker.exporter.BaseExporter
 import com.atrainingtracker.trainingtracker.exporter.ExportInfo
+import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
+import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaPhotoPreferences
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.StravaActivityParser
 import com.atrainingtracker.trainingtracker.util.AppHttpClient
@@ -76,7 +79,9 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
         private const val ERROR = "error"
         private const val STATUS = "status"
         private const val DATA_TYPE = "data_type"
+        private const val FIT = "fit"
         private const val TCX = "tcx"
+        private const val LEGACY_TCX_EXTENSION = ".tcx"
         private const val FILE = "file"
 
         // Update fields
@@ -179,10 +184,37 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
         }
     }
 
+    /**
+     * Resolves the upload payload file for [exportInfo]. Prefers the primary `.fit` file
+     * (`exportInfo.shortPath`) when present and non-empty, falling back to an existing non-empty
+     * legacy `Strava/<fileBaseName>.tcx` file for pre-upgrade offline queues (REQ-EXP-051.4).
+     */
+    internal fun resolveUploadFile(exportInfo: ExportInfo, baseDir: File = getBaseDirFile(mContext)): File {
+        val primaryFile = File(baseDir, exportInfo.shortPath)
+        if (primaryFile.exists() && primaryFile.length() > 0L) {
+            return primaryFile
+        }
+        if (exportInfo.fileFormat == FileFormat.STRAVA) {
+            val legacyTcx = File(
+                baseDir,
+                "${exportInfo.fileFormat.dirName}${File.separator}${exportInfo.fileBaseName}$LEGACY_TCX_EXTENSION"
+            )
+            if (legacyTcx.exists() && legacyTcx.length() > 0L) {
+                Log.i(TAG, "Using legacy queued TCX file for Strava upload: ${legacyTcx.name}")
+                return legacyTcx
+            }
+        }
+        return primaryFile
+    }
+
+    internal fun resolveDataType(file: File): String {
+        return if (file.name.endsWith(LEGACY_TCX_EXTENSION, ignoreCase = true)) TCX else FIT
+    }
+
     override fun doExport(exportInfo: ExportInfo): ExportResult {
         Log.i(TAG, "doExport: fileBaseName=${exportInfo.fileBaseName}, shortPath=${exportInfo.shortPath}")
 
-        val file = File(getBaseDirFile(mContext), exportInfo.shortPath)
+        val file = resolveUploadFile(exportInfo)
         val accessToken = StravaHelper.getRefreshedAccessToken()
 
         if (accessToken.isNullOrEmpty()) {
@@ -213,7 +245,7 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
         if (existingStravaActivity != null) {
             val activityId = existingStravaActivity.optString(ID).ifBlank { existingStravaActivity.optString("id") }
             if (activityId.isNotBlank()) {
-                Log.i(TAG, "Found pre-existing Strava activity $activityId ('${existingStravaActivity.optString(NAME)}') for ${exportInfo.fileBaseName}. Bypassing TCX upload.")
+                Log.i(TAG, "Found pre-existing Strava activity $activityId ('${existingStravaActivity.optString(NAME)}') for ${exportInfo.fileBaseName}. Bypassing file upload.")
                 exportStatusRepo.updateStravaAll(
                     exportInfo.fileBaseName,
                     activityId,
@@ -234,12 +266,13 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
             return ExportResult(false, false, "File to upload does not exist or is empty: ${file.name}")
         }
 
-        Log.i(TAG, "Starting to upload to Strava: ${file.name} (${file.length()} bytes)")
+        val dataType = resolveDataType(file)
+        Log.i(TAG, "Starting to upload to Strava: ${file.name} (${file.length()} bytes, data_type=$dataType)")
 
         // 1. Build Multipart Request
         val requestBody = MultipartBody.Builder()
             .setType(MultipartBody.Companion.FORM)
-            .addFormDataPart(DATA_TYPE, TCX)
+            .addFormDataPart(DATA_TYPE, dataType)
             .addFormDataPart(
                 FILE,
                 file.name,
@@ -479,6 +512,9 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
         // ATT-912 / REQ-EXP-010: Ingest Strava segment feedback to update local PRs:
         processSegmentEffortsForPrs(activityJSON)
 
+        // ATT-8100 / REQ-EXP-050: Opt-in Strava API v3 activity photo download & deduplication
+        downloadAndImportStravaPhotos(exportInfo.fileBaseName, activityId, activityJSON)
+
         // ATT-902 / ATT-1105 / ATT-1114: If duplicate, reconcile with Strava metadata:
         if (isDuplicate && activityJSON != null) {
             var updateName: String? = null
@@ -638,6 +674,53 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
 
     internal open fun getStravaActivity(stravaActivityId: String): JSONObject? {
         return getStravaJson(URL_STRAVA_ACTIVITY + stravaActivityId)
+    }
+
+    internal open fun getStravaActivityPhotos(stravaActivityId: String): JSONArray? {
+        return getStravaJsonArray("${URL_STRAVA_ACTIVITY}${stravaActivityId}/photos?size=2048&photo_sources=true")
+    }
+
+    /**
+     * Fetches and imports Strava activity photos into [WorkoutPhotoManager] when
+     * [StravaPhotoPreferences.isDownloadEnabled] is enabled (REQ-EXP-050).
+     * Non-fatal: errors are logged without failing activity upload/sync.
+     */
+    internal open fun downloadAndImportStravaPhotos(
+        fileBaseName: String,
+        activityId: String,
+        activityJson: JSONObject?
+    ) {
+        if (!StravaPhotoPreferences.isDownloadEnabled(mContext)) {
+            return
+        }
+        try {
+            val workoutId = WorkoutRepository.getInstance(mContext).getWorkoutIdByBaseFileName(fileBaseName)
+            if (workoutId <= 0L) {
+                Log.w(TAG, "downloadAndImportStravaPhotos skipped: no local workoutId for $fileBaseName")
+                return
+            }
+
+            if (StravaActivityParser.hasZeroPhotosHint(activityJson)) {
+                if (DEBUG) Log.d(TAG, "downloadAndImportStravaPhotos: activity $activityId reports zero photos, skipping API fetch")
+                return
+            }
+
+            val photosArray = getStravaActivityPhotos(activityId)
+            val photos = if (photosArray != null) {
+                StravaActivityParser.parseActivityPhotos(photosArray)
+            } else {
+                StravaActivityParser.parsePhotosSummary(activityJson)
+            }
+
+            if (photos.isEmpty()) {
+                return
+            }
+
+            val imported = WorkoutPhotoManager.importStravaPhotos(mContext, workoutId, photos, client)
+            if (DEBUG) Log.i(TAG, "downloadAndImportStravaPhotos: imported $imported/${photos.size} photo(s) for workoutId=$workoutId (Strava activity $activityId)")
+        } catch (e: Exception) {
+            Log.w(TAG, "Non-fatal error downloading Strava photos for activity $activityId ($fileBaseName)", e)
+        }
     }
 
     internal open fun getStravaGear(gearId: String): JSONObject? {

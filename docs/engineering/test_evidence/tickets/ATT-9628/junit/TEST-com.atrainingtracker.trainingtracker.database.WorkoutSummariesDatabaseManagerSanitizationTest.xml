@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerSanitizationTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:11:25.299Z" hostname="rainer-HP-EliteBook-850-G5" time="1.749">
+  <properties/>
+  <testcase name="testSanitizeCorruptedAltitudeWorkouts_whenNoCorruptedWorkouts_returnsZero" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerSanitizationTest" time="0.428"/>
+  <testcase name="testOnOpen_doesNotSpawnUnmanagedExecutorOrLeakThreads" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerSanitizationTest" time="0.424"/>
+  <testcase name="testDatabaseOpen_preservesLegitimateHighAltitudeClimbsWithoutModification" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerSanitizationTest" time="0.434"/>
+  <testcase name="testSanitizeCorruptedAltitudeWorkouts_repairsStaircaseProfileAndExtrema" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManagerSanitizationTest" time="0.463"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

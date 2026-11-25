@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.odometry.MultisportTransitionDetectorTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:24:55.720Z" hostname="rainer-HP-EliteBook-850-G5" time="0.059">
+  <properties/>
+  <testcase name="tier1UserLockAndNotTracking_blockAllTransitions" classname="com.atrainingtracker.banalservice.odometry.MultisportTransitionDetectorTest" time="0.007"/>
+  <testcase name="bikeToRunBrick_with50sT2_confirmsAt1865sWithExactRetroactiveAnchors" classname="com.atrainingtracker.banalservice.odometry.MultisportTransitionDetectorTest" time="0.013"/>
+  <testcase name="shortOppositeSportBlip_under15s_rejectedAndDoesNotTrigger" classname="com.atrainingtracker.banalservice.odometry.MultisportTransitionDetectorTest" time="0.0"/>
+  <testcase name="parkedSilentBikeSensorWith50HzAccelFootstrikes_confirmsRunDespiteCyclingPrior" classname="com.atrainingtracker.banalservice.odometry.MultisportTransitionDetectorTest" time="0.0"/>
+  <testcase name="testRunEstablishmentAndBikeToRunGuardrails_blockLowSpeedAndZeroStrideRollsWhilePreservingSlowT2_TST_FIL_044_3" classname="com.atrainingtracker.banalservice.odometry.MultisportTransitionDetectorTest" time="0.033"/>
+  <testcase name="testBikeEstablishmentAndRunToBikeGuardrails_blockWalkingSpeedsAndRespectPriorsAndHardware_tstFil047_3" classname="com.atrainingtracker.banalservice.odometry.MultisportTransitionDetectorTest" time="0.001"/>
+  <testcase name="directSwitchUnder10s_emitsEventWithShortTransitionWallDuration" classname="com.atrainingtracker.banalservice.odometry.MultisportTransitionDetectorTest" time="0.001"/>
+  <testcase name="sameSportBakeryStop_160sStationaryAndWalking_emitsZeroTransitions" classname="com.atrainingtracker.banalservice.odometry.MultisportTransitionDetectorTest" time="0.0"/>
+  <testcase name="reset_clearsEstablishedSportPendingAnchorsAndHistory" classname="com.atrainingtracker.banalservice.odometry.MultisportTransitionDetectorTest" time="0.001"/>
+  <testcase name="pausedAndAutoPaused_freezeConfirmationWindowAndNeverConfirmWhilePaused" classname="com.atrainingtracker.banalservice.odometry.MultisportTransitionDetectorTest" time="0.0"/>
+  <testcase name="duathlon_runToT1ToBikeToT2ToRun_detectsBothTransitions" classname="com.atrainingtracker.banalservice.odometry.MultisportTransitionDetectorTest" time="0.001"/>
+  <testcase name="phoneOnlyDuathlon_runToT1ToBikeWithKinematicRunCarryover_preservesT1AndBikeMountAnchor" classname="com.atrainingtracker.banalservice.odometry.MultisportTransitionDetectorTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

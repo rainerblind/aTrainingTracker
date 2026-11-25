@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.BackupStagingReuseTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-25T05:55:00.973Z" hostname="rainer-HP-EliteBook-850-G5" time="3.491">
+  <properties/>
+  <testcase name="analyzeImportThenClearStateOrOnCleared_purgesStagedDirectory_TST_MIG_061_5" classname="com.atrainingtracker.trainingtracker.migration.BackupStagingReuseTest" time="0.934"/>
+  <testcase name="performIncrementalImport_whenArchiveContentChanged_fallsBackToFreshExtract_TST_MIG_061_5" classname="com.atrainingtracker.trainingtracker.migration.BackupStagingReuseTest" time="0.949"/>
+  <testcase name="analyzeImportThenPerformIncrementalImport_unzipsExactlyOnceAndCleansUp_TST_MIG_061_5" classname="com.atrainingtracker.trainingtracker.migration.BackupStagingReuseTest" time="1.007"/>
+  <testcase name="importEngine_performIncrementalImportFromStaging_rejectsOutOfCacheDirectory_TST_MIG_061_5" classname="com.atrainingtracker.trainingtracker.migration.BackupStagingReuseTest" time="0.599"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.batterysaver.BatterySaverModelPureTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:10:20.544Z" hostname="rainer-HP-EliteBook-850-G5" time="0.019">
+  <properties/>
+  <testcase name="testBackwardCompatibleOverload_delegatesSynchronously" classname="com.atrainingtracker.trainingtracker.batterysaver.BatterySaverModelPureTest" time="0.007"/>
+  <testcase name="testCalculateZoneIndex_fourCutoffs" classname="com.atrainingtracker.trainingtracker.batterysaver.BatterySaverModelPureTest" time="0.003"/>
+  <testcase name="testCalculateZoneIndex_negativeAndZeroValues" classname="com.atrainingtracker.trainingtracker.batterysaver.BatterySaverModelPureTest" time="0.003"/>
+  <testcase name="testCalculateZoneIndex_sixCutoffs" classname="com.atrainingtracker.trainingtracker.batterysaver.BatterySaverModelPureTest" time="0.002"/>
+  <testcase name="testCalculateZoneIndex_emptyCutoffs_returnsZoneOne" classname="com.atrainingtracker.trainingtracker.batterysaver.BatterySaverModelPureTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

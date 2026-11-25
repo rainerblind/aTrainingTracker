@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.MilestoneAutoNamingManagerTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-25T07:22:55.809Z" hostname="rainer-HP-EliteBook-850-G5" time="8.892">
+  <properties/>
+  <testcase name="testEvaluateAndApplyMilestone_nonMilestoneDoesNotUpdateNameOrPrompt" classname="com.atrainingtracker.trainingtracker.database.MilestoneAutoNamingManagerTest" time="2.009"/>
+  <testcase name="testEvaluateAndApplyMilestone_subsequentJubileeUpdatesNameWithoutPrompting" classname="com.atrainingtracker.trainingtracker.database.MilestoneAutoNamingManagerTest" time="1.606"/>
+  <testcase name="testFormatMilestoneTitle_formatsCorrectly" classname="com.atrainingtracker.trainingtracker.database.MilestoneAutoNamingManagerTest" time="1.357"/>
+  <testcase name="testEvaluateAndApplyMilestone_firstJubileeUpdatesNameAndReturnsCelebrationData" classname="com.atrainingtracker.trainingtracker.database.MilestoneAutoNamingManagerTest" time="1.323"/>
+  <testcase name="testFormatMilestoneTitle_preventsDoublePrefixing" classname="com.atrainingtracker.trainingtracker.database.MilestoneAutoNamingManagerTest" time="1.265"/>
+  <testcase name="testIsMilestone_exactThresholdEvaluation" classname="com.atrainingtracker.trainingtracker.database.MilestoneAutoNamingManagerTest" time="1.329"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

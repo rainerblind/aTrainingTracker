@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.TrackingViewsRealSqliteMigrationTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:10:43.676Z" hostname="rainer-HP-EliteBook-850-G5" time="1.095">
+  <properties/>
+  <testcase name="testOnCreateAndOnUpgradeV9ToV10_showElevationProfileIntegrity_TST_STR_003" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsRealSqliteMigrationTest" time="0.201"/>
+  <testcase name="testInsertSensorFieldAt_normalizesGappedGridAndDividers" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsRealSqliteMigrationTest" time="0.06"/>
+  <testcase name="testTrackingViewsDbHelper_v15ToV16Migration_addsShowValueAndShowBar" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsRealSqliteMigrationTest" time="0.061"/>
+  <testcase name="testInsertSensorFieldAt_rollsBackEntirelyOnError" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsRealSqliteMigrationTest" time="0.057"/>
+  <testcase name="testTrackingViewsDbHelper_v14ToV15Migration_addsShowBikeBellColumnAndSetsCyclingDefaults" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsRealSqliteMigrationTest" time="0.056"/>
+  <testcase name="testInsertSensorFieldAt_strictlyIsolatesTabView" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsRealSqliteMigrationTest" time="0.064"/>
+  <testcase name="testTrackingViewsDbHelper_v16ToV17Migration_addsColWeightAndBackfillsDefaults" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsRealSqliteMigrationTest" time="0.058"/>
+  <testcase name="testTrackingViewsDbHelper_v17ToV18Migration_sportDependentBarsAndLegacyGaugeParity" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsRealSqliteMigrationTest" time="0.479"/>
+  <testcase name="testUpgradeV13ToV14CreatesSectionDividersTableAndPreservesCockpitViews" classname="com.atrainingtracker.trainingtracker.database.TrackingViewsRealSqliteMigrationTest" time="0.057"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

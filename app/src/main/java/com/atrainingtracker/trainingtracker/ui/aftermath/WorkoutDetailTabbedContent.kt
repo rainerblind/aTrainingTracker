@@ -129,6 +129,7 @@ fun WorkoutDetailTabbedContent(
     recentSessions: List<HrvSessionThreshold> = emptyList(),
     isSmoothedStream: Boolean = false,
     onUpdateFtp: ((Int) -> Unit)? = null,
+    onUpdatePowerThresholds: ((Int, Int?) -> Unit)? = null,
     onUpdateHrZones: ((Int, Int) -> Unit)? = null,
     onCalibrateMader: ((Int?, Int?) -> Unit)? = null,
     useStatusBarsPadding: Boolean,
@@ -228,7 +229,8 @@ fun WorkoutDetailTabbedContent(
     val workoutPhotos by produceState<List<WorkoutPhotoEntry>>(
         initialValue = emptyList(),
         key1 = workoutData.id,
-        key2 = photosRefreshKey
+        key2 = photosRefreshKey,
+        key3 = workoutData.exportStatuses
     ) {
         value = withContext(Dispatchers.IO) {
             repository.getWorkoutPhotos(workoutData.id)
@@ -470,6 +472,7 @@ fun WorkoutDetailTabbedContent(
                         isSmoothedStream = isSmoothedStream,
                         activityCarriageTimeline = activityCarriageTimeline,
                         onUpdateFtp = onUpdateFtp,
+                        onUpdatePowerThresholds = onUpdatePowerThresholds,
                         onUpdateHrZones = onUpdateHrZones,
                         onCalibrateMader = onCalibrateMader,
                         onAddPhotos = { uris ->
@@ -900,6 +903,7 @@ private fun RenderWorkoutDetailCardSections(
     recentSessions: List<HrvSessionThreshold> = emptyList(),
     isSmoothedStream: Boolean = false,
     onUpdateFtp: ((Int) -> Unit)? = null,
+    onUpdatePowerThresholds: ((Int, Int?) -> Unit)? = null,
     onUpdateHrZones: ((Int, Int) -> Unit)? = null,
     onCalibrateMader: ((Int?, Int?) -> Unit)? = null,
     activeScrubPath: List<com.atrainingtracker.trainingtracker.ui.map.PathPoint>? = null,
@@ -1119,6 +1123,7 @@ private fun RenderWorkoutDetailCardSections(
                             hrZoneThresholds = hrZoneThresholds,
                             recentSessions = recentSessions,
                             onUpdateFtp = onUpdateFtp,
+                            onUpdatePowerThresholds = onUpdatePowerThresholds,
                             onUpdateHrZones = onUpdateHrZones,
                             onCalibrateMader = onCalibrateMader,
                             modifier = Modifier

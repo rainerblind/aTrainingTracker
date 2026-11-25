@@ -37,6 +37,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.physiology.PmcDailyPoint
 import com.atrainingtracker.trainingtracker.physiology.PmcSummaryResult
 import com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator
+import com.atrainingtracker.trainingtracker.physiology.WorkoutThresholds
 import com.atrainingtracker.trainingtracker.physiology.WorkoutTrainingLoadSample
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
@@ -86,9 +87,21 @@ fun resolveFitnessHubTabs(
  */
 fun resolveVisiblePlotMetrics(enableCriticalPowerModel: Boolean): List<PlotMetricType> =
     if (enableCriticalPowerModel) {
-        PlotMetricType.entries
+        listOf(
+            PlotMetricType.WEIGHT,
+            PlotMetricType.HR_REST,
+            PlotMetricType.FTP,
+            PlotMetricType.CP,
+            PlotMetricType.W_PRIME,
+            PlotMetricType.POWER_TO_WEIGHT
+        )
     } else {
-        PlotMetricType.entries.filter { it != PlotMetricType.CP && it != PlotMetricType.W_PRIME }
+        listOf(
+            PlotMetricType.WEIGHT,
+            PlotMetricType.HR_REST,
+            PlotMetricType.FTP,
+            PlotMetricType.POWER_TO_WEIGHT
+        )
     }
 
 /**
@@ -104,6 +117,66 @@ fun resolveEffectivePlotMetric(
     } else {
         selected
     }
+
+private val PMC_THRESHOLD_METRIC_TYPES = setOf(
+    AthleteMetricType.FTP_WATTS,
+    AthleteMetricType.HR_REST_BPM,
+    AthleteMetricType.HR_MAX_RUN_BPM,
+    AthleteMetricType.HR_MAX_BIKE_BPM,
+    AthleteMetricType.LTHR_RUN_BPM,
+    AthleteMetricType.LTHR_BIKE_BPM
+)
+
+/**
+ * Resolves the effective metric value at [timestampMs] from an already-sorted (`timestampMs DESC, id DESC`)
+ * in-memory [entries] list, matching [com.atrainingtracker.trainingtracker.database.AthleteMetricsDatabaseManager.getEntryEffectiveAt]
+ * fallback semantics (`timestampMs <= ts`, else latest available) (`REQ-SET-135.3`).
+ */
+internal fun resolveEffectiveMetricAtInMemory(
+    entries: List<AthleteMetricEntry>,
+    metricType: AthleteMetricType,
+    timestampMs: Long
+): Double? {
+    if (timestampMs > 0L) {
+        val historical = entries.firstOrNull { it.metricType == metricType && it.timestampMs <= timestampMs }
+        if (historical != null) return historical.value
+    }
+    return entries.firstOrNull { it.metricType == metricType }?.value
+}
+
+internal fun resolveWorkoutThresholdsInMemory(
+    entries: List<AthleteMetricEntry>,
+    sportType: BSportType,
+    timestampMs: Long,
+    fallbackHrMaxBpm: Double?
+): WorkoutThresholds {
+    val includeCyclingPower = sportType != BSportType.RUN
+    val ftp = if (includeCyclingPower) {
+        resolveEffectiveMetricAtInMemory(entries, AthleteMetricType.FTP_WATTS, timestampMs)
+    } else {
+        null
+    }
+    val hrRest = resolveEffectiveMetricAtInMemory(entries, AthleteMetricType.HR_REST_BPM, timestampMs)
+    val hrMax = when (sportType) {
+        BSportType.RUN -> resolveEffectiveMetricAtInMemory(entries, AthleteMetricType.HR_MAX_RUN_BPM, timestampMs) ?: fallbackHrMaxBpm
+        BSportType.BIKE -> resolveEffectiveMetricAtInMemory(entries, AthleteMetricType.HR_MAX_BIKE_BPM, timestampMs) ?: fallbackHrMaxBpm
+        else -> listOfNotNull(
+            resolveEffectiveMetricAtInMemory(entries, AthleteMetricType.HR_MAX_RUN_BPM, timestampMs),
+            resolveEffectiveMetricAtInMemory(entries, AthleteMetricType.HR_MAX_BIKE_BPM, timestampMs)
+        ).maxOrNull() ?: fallbackHrMaxBpm
+    }
+    val lthr = when (sportType) {
+        BSportType.RUN -> resolveEffectiveMetricAtInMemory(entries, AthleteMetricType.LTHR_RUN_BPM, timestampMs)
+        BSportType.BIKE -> resolveEffectiveMetricAtInMemory(entries, AthleteMetricType.LTHR_BIKE_BPM, timestampMs)
+        else -> null
+    }
+    return WorkoutThresholds(
+        ftpWatts = ftp,
+        hrRestBpm = hrRest,
+        hrMaxBpm = hrMax,
+        lthrBpm = lthr
+    )
+}
 
 /**
  * Pure helper resolving which [AthleteMetricType] history filter chips are visible (`REQ-UI-403`).
@@ -145,6 +218,10 @@ data class AthleteProfileUiState(
     val latestFtpEntry: AthleteMetricEntry? = null,
     val latestCpEntry: AthleteMetricEntry? = null,
     val latestWPrimeEntry: AthleteMetricEntry? = null,
+    val latestHrMaxRunEntry: AthleteMetricEntry? = null,
+    val latestHrMaxBikeEntry: AthleteMetricEntry? = null,
+    val latestLthrRunEntry: AthleteMetricEntry? = null,
+    val latestLthrBikeEntry: AthleteMetricEntry? = null,
     val currentPowerToWeight: Double? = null,
     val latestPowerToWeightTimestampMs: Long? = null,
     val selectedPlotMetric: PlotMetricType = PlotMetricType.WEIGHT,
@@ -181,6 +258,10 @@ data class AthleteBodyTabUiState(
     val latestFtpEntry: AthleteMetricEntry? = null,
     val latestCpEntry: AthleteMetricEntry? = null,
     val latestWPrimeEntry: AthleteMetricEntry? = null,
+    val latestHrMaxRunEntry: AthleteMetricEntry? = null,
+    val latestHrMaxBikeEntry: AthleteMetricEntry? = null,
+    val latestLthrRunEntry: AthleteMetricEntry? = null,
+    val latestLthrBikeEntry: AthleteMetricEntry? = null,
     val currentPowerToWeight: Double? = null,
     val latestPowerToWeightTimestampMs: Long? = null,
     val selectedPlotMetric: PlotMetricType = PlotMetricType.WEIGHT,
@@ -276,12 +357,8 @@ class AthleteProfileViewModel @JvmOverloads constructor(
         .map { it.enableCardioPowerDynamics }
         .distinctUntilChanged()
 
-    private val latestFtpAndHrRestFlow = repository.entriesFlow
-        .map { entries ->
-            val ftp = entries.firstOrNull { it.metricType == AthleteMetricType.FTP_WATTS }?.value
-            val hrRest = entries.firstOrNull { it.metricType == AthleteMetricType.HR_REST_BPM }?.value
-            ftp to hrRest
-        }
+    private val pmcThresholdEntriesFlow = repository.entriesFlow
+        .map { entries -> entries.filter { it.metricType in PMC_THRESHOLD_METRIC_TYPES } }
         .distinctUntilChanged()
 
     private val dailyTrainingLoadsFlow = _workoutLoadSamples.map { workoutSamples ->
@@ -309,6 +386,10 @@ class AthleteProfileViewModel @JvmOverloads constructor(
         val latestFtp = entries.firstOrNull { it.metricType == AthleteMetricType.FTP_WATTS }
         val latestCp = entries.firstOrNull { it.metricType == AthleteMetricType.CP_WATTS }
         val latestWPrime = entries.firstOrNull { it.metricType == AthleteMetricType.W_PRIME_KJ }
+        val latestHrMaxRun = entries.firstOrNull { it.metricType == AthleteMetricType.HR_MAX_RUN_BPM }
+        val latestHrMaxBike = entries.firstOrNull { it.metricType == AthleteMetricType.HR_MAX_BIKE_BPM }
+        val latestLthrRun = entries.firstOrNull { it.metricType == AthleteMetricType.LTHR_RUN_BPM }
+        val latestLthrBike = entries.firstOrNull { it.metricType == AthleteMetricType.LTHR_BIKE_BPM }
 
         val currentWPerKg = AthleteMetricsPlotMath.computeCurrentPowerToWeight(
             latestFtpWatts = latestFtp?.value,
@@ -348,6 +429,10 @@ class AthleteProfileViewModel @JvmOverloads constructor(
             latestFtpEntry = latestFtp,
             latestCpEntry = latestCp,
             latestWPrimeEntry = latestWPrime,
+            latestHrMaxRunEntry = latestHrMaxRun,
+            latestHrMaxBikeEntry = latestHrMaxBike,
+            latestLthrRunEntry = latestLthrRun,
+            latestLthrBikeEntry = latestLthrBike,
             currentPowerToWeight = currentWPerKg,
             latestPowerToWeightTimestampMs = latestWPerKgTs,
             selectedPlotMetric = plotMetric,
@@ -364,19 +449,25 @@ class AthleteProfileViewModel @JvmOverloads constructor(
         initialValue = AthleteBodyTabUiState()
     )
 
-    // Banister PMC summary strictly observes physiological load & threshold inputs (incl. reactive _hrMaxBpm per Rule 39).
+    // Banister PMC summary strictly observes physiological load & threshold inputs (incl. reactive _hrMaxBpm per Rule 39, REQ-SET-135.3).
     private val pmcSummaryFlow = combine(
         _workoutLoadSamples,
-        latestFtpAndHrRestFlow,
+        pmcThresholdEntriesFlow,
         _hrMaxBpm
-    ) { workoutSamples, (ftpWatts, hrRestBpm), hrMaxBpm ->
+    ) { workoutSamples, thresholdEntries, hrMaxBpm ->
+        val latestFtp = thresholdEntries.firstOrNull { it.metricType == AthleteMetricType.FTP_WATTS }?.value
+        val latestHrRest = thresholdEntries.firstOrNull { it.metricType == AthleteMetricType.HR_REST_BPM }?.value
+        val fallbackHrMax = hrMaxBpm?.toDouble()
         PowerPhysiologyCalculator.computePerformanceManagementChart(
             workoutSamples = workoutSamples,
             nowMs = System.currentTimeMillis(),
-            ftpWatts = ftpWatts,
-            hrRestBpm = hrRestBpm,
-            hrMaxBpm = hrMaxBpm?.toDouble(),
-            zoneId = java.time.ZoneId.systemDefault()
+            ftpWatts = latestFtp,
+            hrRestBpm = latestHrRest,
+            hrMaxBpm = fallbackHrMax,
+            zoneId = java.time.ZoneId.systemDefault(),
+            thresholdResolver = { sportType, tsMs ->
+                resolveWorkoutThresholdsInMemory(thresholdEntries, sportType, tsMs, fallbackHrMax)
+            }
         )
     }
 
@@ -489,6 +580,10 @@ class AthleteProfileViewModel @JvmOverloads constructor(
             latestFtpEntry = body.latestFtpEntry,
             latestCpEntry = body.latestCpEntry,
             latestWPrimeEntry = body.latestWPrimeEntry,
+            latestHrMaxRunEntry = body.latestHrMaxRunEntry,
+            latestHrMaxBikeEntry = body.latestHrMaxBikeEntry,
+            latestLthrRunEntry = body.latestLthrRunEntry,
+            latestLthrBikeEntry = body.latestLthrBikeEntry,
             currentPowerToWeight = body.currentPowerToWeight,
             latestPowerToWeightTimestampMs = body.latestPowerToWeightTimestampMs,
             selectedPlotMetric = body.selectedPlotMetric,

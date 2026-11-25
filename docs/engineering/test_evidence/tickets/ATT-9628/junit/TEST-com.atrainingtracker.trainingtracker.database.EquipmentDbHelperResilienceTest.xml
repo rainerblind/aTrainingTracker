@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.EquipmentDbHelperResilienceTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:11:11.337Z" hostname="rainer-HP-EliteBook-850-G5" time="2.186">
+  <properties/>
+  <testcase name="testStravaId_zeroAndNegativeId_returnsNullWithoutQueryOrErrorLog" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbHelperResilienceTest" time="0.167"/>
+  <testcase name="testEquipmentName_zeroAndNegativeId_returnsNullWithoutQueryOrErrorLog" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbHelperResilienceTest" time="0.159"/>
+  <testcase name="testEquipmentName_positiveIdNotFound_logsDiagnosticError" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbHelperResilienceTest" time="0.187"/>
+  <testcase name="testEquipmentDataProvider_assignedEquipment_queriesHelperAndResolvesName" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbHelperResilienceTest" time="0.477"/>
+  <testcase name="testEquipmentDataProvider_unassignedEquipment_shortCircuitsWithoutQueryingHelper" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbHelperResilienceTest" time="0.189"/>
+  <testcase name="testUpdateAndDeleteEquipment_nonPositiveId_earlyReturnWithoutWriteTransaction" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbHelperResilienceTest" time="0.172"/>
+  <testcase name="testStravaId_positiveIdNotFound_logsDiagnosticError" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbHelperResilienceTest" time="0.161"/>
+  <testcase name="testDeviceIdsForEquipment_positiveId_queriesLinksTable" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbHelperResilienceTest" time="0.175"/>
+  <testcase name="testEquipmentName_positiveId_queriesDatabaseAndReturnsName" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbHelperResilienceTest" time="0.173"/>
+  <testcase name="testStravaId_positiveId_queriesDatabaseAndReturnsStravaId" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbHelperResilienceTest" time="0.167"/>
+  <testcase name="testDeviceIdsForEquipment_zeroAndNegativeId_returnsEmptyListWithoutQuery" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbHelperResilienceTest" time="0.159"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

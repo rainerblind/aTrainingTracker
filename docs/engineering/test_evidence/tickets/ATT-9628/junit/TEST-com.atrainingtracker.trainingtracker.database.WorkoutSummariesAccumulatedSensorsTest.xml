@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutSummariesAccumulatedSensorsTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:12:18.946Z" hostname="rainer-HP-EliteBook-850-G5" time="0.155">
+  <properties/>
+  <testcase name="testSaveAndAddAccumulatedSensorTypes_deduplicatesExistingRowsInSqlite" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesAccumulatedSensorsTest" time="0.153"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

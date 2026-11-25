@@ -130,4 +130,13 @@
             android:layout="@layout/preference_slim"/>
     </PreferenceCategory>
 
+    <PreferenceCategory android:key="strava_activity_photos_category" android:title="@string/strava_activity_photos_section">
+        <CheckBoxPreference
+            android:defaultValue="false"
+            android:key="downloadStravaPhotos"
+            android:title="@string/strava_download_photos_title"
+            android:summary="@string/strava_download_photos_desc"
+            android:layout="@layout/preference_slim"/>
+    </PreferenceCategory>
+
 </PreferenceScreen>

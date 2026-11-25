@@ -1,0 +1,28 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "6bed33a4cea4e2122f0489cd6d0733b7a71dfbac",
+  "files": {
+    "evidence_summary.json": "ac1ba4d617cda396580c9a78b9c5d01985008a3c2aa43fcf60217649b85c4c31",
+    "junit/TEST-com.atrainingtracker.trainingtracker.TrainingApplicationLapTest.xml": "8b3bf881cb35821a865a0c4bb8e264ba2b6a3bb7f0e086769c6651ad0511dcb1",
+    "junit/TEST-com.atrainingtracker.trainingtracker.TrainingApplicationStravaSyncTest.xml": "5f73ec11a46d7e2e0ecfc0af968ade27c5da0011e8b8cab74e4c30ab2bb5323e",
+    "junit/TEST-com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest.xml": "9d54e9d04dd990ade0e0eaf2cb8ad4012ec9c510f8ce0112a91c849f66606070",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml": "ffbcd7d0885630962d384cdd1ce5dc394360e5d5a4bfbfc627f5b3f52082129d",
+    "junit/TEST-com.atrainingtracker.trainingtracker.exporter.TrainingApplicationDropboxPreferencesTest.xml": "d127c4d4a2f20cf3d0ee6b4c958a458146ca487af2aeb1abd661206f1752ae1e",
+    "junit/TEST-com.atrainingtracker.trainingtracker.localization.TranslationParityTest.xml": "d779a65856754f49c3e23e49e737006e6f1292df99f6f3e8a1f53ddc7e64c88d",
+    "junit/TEST-com.atrainingtracker.trainingtracker.proguard.ProGuardRulesContractTest.xml": "d7dc67ee774694dd5f970d85afd36011dfb0ab28b1d202bd46859478a6d4be0d",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.TrainingApplicationTrackedTest.xml": "fbfeddef73414a7be8c9625ecc3c4ed84f3784b391dd0e0f344cf24d04b23c86",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMapOfflineModeTest.xml": "4193b2d92cfe1b9ff0e51a729ec776600f6e3160e846197184fab23933e7747c",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.DarkMapStyleResolutionTest.xml": "99a91c8f39483772e269d44cbe8038c005b0d687d56ad1ac11e7d14899264eb1",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.MapPolylineMemoryStabilityTest.xml": "97851c91b250a0c78c9cf92fd024a58537febc19f6b5398c197dcca8b29fb111",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.PathPreviewMapBoundsTest.xml": "aa4d01897af5a9ad064e47f4859735efa96aa7da605e337c44fbcef347665f0e",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.PathPreviewMapOfflineInvariantTest.xml": "e815a29ad48710a48029c73f6128e47b884d4e07df81b5dec605e738ea82baf4",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.WorkoutMapLayerPreferencesTest.xml": "57b180618f1e7c3517d8e3a94e1b8849c14b3917a9543e6529a4a4eda19f2db0",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.offline.MapsforgeOfflineTileProviderTest.xml": "853d41a3d3f8bf3c7d3d59cb1084f38713d9be0959f152464b2dd29d608c1668",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.offline.OfflineMapPreferencesAndStorageTest.xml": "ea23e9ae58c2e6f05798503823bd1c45223a0dc812b939aa558d4cce82441e23",
+    "screenshots/ATT-8175_offline_map_dark.png": "598fb11c2062e60fba09da625284ba71289c86d41a77265f7958e80730ee9bc0",
+    "screenshots/ATT-8175_offline_map_light.png": "96e95b43636472c324e8ed7192e0f389b1a6ea2bf23b030b4e309fb6b7e55c90"
+  },
+  "run_started_utc": "2026-11-25T11:46:27.703080+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-8175"
+}

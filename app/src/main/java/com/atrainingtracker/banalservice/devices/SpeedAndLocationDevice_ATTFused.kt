@@ -155,7 +155,7 @@ open class SpeedAndLocationDevice_ATTFused(
     protected var mSensorsRegistered = false
     protected var mWheelListenerRegistered = false
     private var mSportChangedReceiverRegistered = false
-    private var mIsShuttingDown = false
+    @Volatile private var mIsShuttingDown = false
     private var mLastEstimatorTotalStrides = 0
     private var mPreservedStridesTotal = 0
     private var mHasPreservedStridesTotal = false
@@ -220,7 +220,12 @@ open class SpeedAndLocationDevice_ATTFused(
         mHardwareSensorManager = mContext.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
         registerUpdates()
         registerSportChangedReceiver()
+        refreshSportSpeedPriorsAsync()
     }
+
+    private fun refreshSportSpeedPriorsAsync() = SportSpeedPriorsLoader.loadAsyncInto(
+        mContext, carriageClassifier, sportDiscriminator, multisportDetector
+    ) { mIsShuttingDown }
 
     protected open fun currentTimeMillis(): Long = System.currentTimeMillis()
 
@@ -1372,6 +1377,7 @@ open class SpeedAndLocationDevice_ATTFused(
     override fun onAccumulatorsReset() {
         super.onAccumulatorsReset()
         resetOriginAndEkf()
+        refreshSportSpeedPriorsAsync()
     }
 
     @Synchronized

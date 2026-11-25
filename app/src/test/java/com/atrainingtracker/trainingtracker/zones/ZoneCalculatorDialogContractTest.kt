@@ -156,4 +156,54 @@ class ZoneCalculatorDialogContractTest {
         assertTrue(holder.state.isSaving)
         assertFalse(holder.state.canApply)
     }
+
+    @Test
+    fun hrLthrAndThresholdAnchoredModels_prefillValidateAndCalculateZones_TST_SET_136_3() {
+        val holder = ZoneCalculatorStateHolder(
+            zoneType = ZoneType.HR_RUN,
+            initialCustomized = true,
+            initialHrMax = 192,
+            initialHrRest = 50,
+            initialLthr = 172,
+            initialLt1Hr = 148,
+            initialHrMethod = HrMethod.LTHR
+        )
+        assertEquals("172", holder.state.lthrInput)
+        assertEquals("148", holder.state.lt1HrInput)
+        assertTrue(holder.state.canApply)
+        assertEquals(listOf(139, 153, 160, 172), holder.state.calculatedZones)
+
+        // Invalid LTHR >= HRmax disables apply
+        holder.onLthrChanged("195")
+        assertEquals(R.string.zone_calc_error_lthr_lt_hrmax, holder.state.hrGeneralErrorResId)
+        assertFalse(holder.state.canApply)
+
+        // Switch to LT1 + LTHR Threshold-Anchored
+        holder.onLthrChanged("172")
+        holder.onHrMethodChanged(HrMethod.THRESHOLD_ANCHORED)
+        assertTrue(holder.state.canApply)
+        assertEquals(148, holder.state.calculatedZones!![1])
+        assertEquals(172, holder.state.calculatedZones!![3])
+
+        // Adjacent LT1=171, LTHR=172 (delta == 1) must disable apply to preserve strict z2 < z3 < z4
+        holder.onLt1HrChanged("171")
+        assertEquals(R.string.zone_calc_error_lt1_lt_lthr, holder.state.hrGeneralErrorResId)
+        assertFalse(holder.state.canApply)
+        assertNull(holder.state.calculatedZones)
+
+        // Invalid LT1 >= LTHR disables apply
+        holder.onLt1HrChanged("175")
+        assertEquals(R.string.zone_calc_error_lt1_lt_lthr, holder.state.hrGeneralErrorResId)
+        assertFalse(holder.state.canApply)
+
+        // Restore valid LT1 and verify overwrite warning modal is still preserved
+        holder.onLt1HrChanged("148")
+        assertTrue(holder.state.canApply)
+        var saved = false
+        holder.onApplyClicked { saved = true }
+        assertTrue(holder.state.showOverwriteWarning)
+        assertFalse(saved)
+        holder.onConfirmOverwrite { saved = true }
+        assertTrue(saved)
+    }
 }

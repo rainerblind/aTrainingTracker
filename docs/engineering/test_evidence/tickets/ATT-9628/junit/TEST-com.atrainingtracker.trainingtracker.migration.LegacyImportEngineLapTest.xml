@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineLapTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:15:09.245Z" hostname="rainer-HP-EliteBook-850-G5" time="18.322">
+  <properties/>
+  <testcase name="testImportTcxWithBracketNameOnly" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineLapTest" time="2.824"/>
+  <testcase name="testImportTcxWithEscapedXmlCharacters" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineLapTest" time="2.764"/>
+  <testcase name="testImportTcxWithBracketLapNotes" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineLapTest" time="2.613"/>
+  <testcase name="testImportTcxWithStructuredAttExtensions" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineLapTest" time="2.547"/>
+  <testcase name="testImportTcxActivityNotesDoesNotPolluteLaps" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineLapTest" time="2.546"/>
+  <testcase name="testImportLegacyTcxWithoutNotes" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineLapTest" time="2.53"/>
+  <testcase name="testImportTcxWithMultilineLapNotes" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineLapTest" time="2.498"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

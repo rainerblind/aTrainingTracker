@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-25T09:14:43.761Z" hostname="rainer-HP-EliteBook-850-G5" time="3.428">
+  <properties/>
+  <testcase name="testPollingExhaustsMaxRequestsReturnsTimeoutRetryTrue" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderTest" time="0.446"/>
+  <testcase name="testUploadToStravaClientError400ReturnsRetryFalse" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderTest" time="0.298"/>
+  <testcase name="testUploaderMethodsAbortImmediatelyWhenTokenIsNull" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderTest" time="0.299"/>
+  <testcase name="testResolveUploadFile_prefersPrimaryFitAndFallsBackToLegacyTcxWithZeroByteGuards_TST_EXP_051_3" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderTest" time="0.296"/>
+  <testcase name="testUploadToStravaRateLimit429ReturnsRetryTrueAndLogsHeaders" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderTest" time="0.296"/>
+  <testcase name="testUploadToStravaServerError503ReturnsRetryTrue" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderTest" time="0.294"/>
+  <testcase name="testUploadToStrava_sendsFitDataTypeForFitFile_TST_EXP_051_3" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderTest" time="0.308"/>
+  <testcase name="testUploaderMethodsAbortImmediatelyWhenTokenIsBlank" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderTest" time="0.294"/>
+  <testcase name="testUploaderSetsValidAuthorizationHeaderWhenTokenPresent" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderTest" time="0.294"/>
+  <testcase name="testUploadToStrava_sendsTcxDataTypeForLegacyTcxFile_TST_EXP_051_3" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderTest" time="0.303"/>
+  <testcase name="testPollingRecoversFromTransientNullGlitch" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderTest" time="0.299"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

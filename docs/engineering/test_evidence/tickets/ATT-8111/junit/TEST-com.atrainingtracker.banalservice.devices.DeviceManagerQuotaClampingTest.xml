@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.DeviceManagerQuotaClampingTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-25T12:55:46.297Z" hostname="rainer-HP-EliteBook-850-G5" time="7.894">
+  <properties/>
+  <testcase name="testStartSearchForPairedDevices_clampsSearchQueue_whenFreeTier" classname="com.atrainingtracker.banalservice.devices.DeviceManagerQuotaClampingTest" time="6.087"/>
+  <testcase name="testStartSearchForPairedDevices_doesNotClampSearchQueue_whenProTier" classname="com.atrainingtracker.banalservice.devices.DeviceManagerQuotaClampingTest" time="1.807"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Exception in thread "ClockDeviceTimer" java.lang.RuntimeException: Method e in android.util.Log not mocked. See https://developer.android.com/r/studio-ui/build/not-mocked for details.
+	at android.util.Log.e(Log.java)
+	at com.atrainingtracker.banalservice.devices.ClockDevice$ClockTimeTask.run(ClockDevice.java:241)
+	at java.base/java.util.TimerThread.mainLoop(Timer.java:566)
+	at java.base/java.util.TimerThread.run(Timer.java:516)
+Exception in thread "ClockDeviceTimer" java.lang.RuntimeException: Method e in android.util.Log not mocked. See https://developer.android.com/r/studio-ui/build/not-mocked for details.
+	at android.util.Log.e(Log.java)
+	at com.atrainingtracker.banalservice.devices.ClockDevice$ClockTimeTask.run(ClockDevice.java:241)
+	at java.base/java.util.TimerThread.mainLoop(Timer.java:566)
+	at java.base/java.util.TimerThread.run(Timer.java:516)
+]]></system-err>
+</testsuite>

@@ -1,0 +1,57 @@
+{
+  "android_test_summary": {
+    "details": "Android: 127 Android unit tests passed across 9 JUnit XML suites (all 5 non-ATT-9639 dependent suites 96/96 PASS + 4 targeted replay/contract suites 31/31 PASS re-executed post-Bounce 1/5; MeasuredNfrBenchmarkTest excluded per Coordinator Rule 1.3 confirmation \u2014 pre-existing Bug ATT-9639 on sprint/2026-11-25_01_Fr\u00fch, while its EKF benchmark testNfr001 passed). | Python: No Python tests selected.",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 127
+  },
+  "checks": [
+    {
+      "details": "Android: 127 Android unit tests passed across 9 JUnit XML suites (all 5 non-ATT-9639 dependent suites 96/96 PASS + 4 targeted replay/contract suites 31/31 PASS re-executed post-Bounce 1/5; MeasuredNfrBenchmarkTest excluded per Coordinator Rule 1.3 confirmation \u2014 pre-existing Bug ATT-9639 on sprint/2026-11-25_01_Fr\u00fch, while its EKF benchmark testNfr001 passed). | Python: No Python tests selected.",
+      "failing_tests": [],
+      "name": "dependent_unit_tests",
+      "passed": true
+    },
+    {
+      "details": "All safety linters passed.",
+      "name": "static_safety_linters",
+      "passed": true
+    },
+    {
+      "details": "Deliverable lint passed (2 file(s)).",
+      "name": "deliverable_lint",
+      "passed": true
+    },
+    {
+      "details": "PASS: Zero Git conflict markers detected (13005 tracked file(s) scanned).",
+      "name": "conflict_markers",
+      "passed": true
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "53b513d0e3bcbf520fcc8c449c2ecd8aca6520ea",
+  "junit_xml_files": [
+    "junit/TEST-com.atrainingtracker.banalservice.devices.AltitudeAndSlopeDevice_ATTFusedTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.ExtendedRtsAltitudeSlopeSmootherTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.ExtendedRtsOdometrySmootherTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.KinematicAltitudeSlopeEkfTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.replay.OfflineReplayCliTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.replay.OfflineTelemetryReplayHarnessTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.InterfaceSignatureDriftContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputerTest.xml"
+  ],
+  "python_test_summary": {
+    "details": "Skipped (--skip-tests).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "risk_tier": "tier-a",
+  "run_started_utc": "2026-11-25T11:02:32.425082+00:00",
+  "schema_version": "1.0.0",
+  "screenshots": [],
+  "ticket_key": "ATT-9693",
+  "ui_touching": false,
+  "verdict": "PASS"
+}

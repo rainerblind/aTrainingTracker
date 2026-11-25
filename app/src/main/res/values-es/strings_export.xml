@@ -11,4 +11,7 @@
     <string name="diagnostic_share_button">Compartir paquete de diagnóstico</string>
     <string name="diagnostic_bundle_packaging">Empaquetando diagnóstico…</string>
     <string name="diagnostic_no_sidecar_warning">No hay registro de sensor sin procesar disponible para este entrenamiento.</string>
+    <string name="strava_activity_photos_section">Fotos de la actividad</string>
+    <string name="strava_download_photos_title">Descargar fotos de Strava</string>
+    <string name="strava_download_photos_desc">Importar fotos de actividades sincronizadas de Strava a la galería local del entrenamiento</string>
 </resources>

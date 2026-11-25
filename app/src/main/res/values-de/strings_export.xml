@@ -11,4 +11,7 @@
     <string name="diagnostic_share_button">Diagnosepaket teilen</string>
     <string name="diagnostic_bundle_packaging">Diagnosepaket wird geschnürt…</string>
     <string name="diagnostic_no_sidecar_warning">Keine Rohsensor-Aufzeichnung für dieses Training vorhanden.</string>
+    <string name="strava_activity_photos_section">Aktivitätsfotos</string>
+    <string name="strava_download_photos_title">Strava-Fotos herunterladen</string>
+    <string name="strava_download_photos_desc">Fotos synchronisierter Strava-Aktivitäten in die lokale Trainingsgalerie importieren</string>
 </resources>

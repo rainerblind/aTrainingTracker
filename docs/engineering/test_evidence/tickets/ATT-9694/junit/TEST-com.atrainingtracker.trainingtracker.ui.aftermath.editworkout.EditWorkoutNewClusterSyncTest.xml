@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutNewClusterSyncTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-25T07:31:29.258Z" hostname="rainer-HP-EliteBook-850-G5" time="16.907">
+  <properties/>
+  <testcase name="editWorkoutClusterDialog_prefillsStrippedHitCountOnCreateNew_TST_SET_061" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutNewClusterSyncTest" time="15.354"/>
+  <testcase name="createNewClusterFromWorkout_updatesSqliteNameAndDecrementsOldCluster_TST_SET_061" classname="com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutNewClusterSyncTest" time="1.553"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

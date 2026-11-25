@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeLightDeviceTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-25T12:58:26.895Z" hostname="rainer-HP-EliteBook-850-G5" time="2.074">
+  <properties/>
+  <testcase name="testChannelConstantsAndConfiguration_tstCon033_1" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeLightDeviceTest" time="0.394"/>
+  <testcase name="testWildcardSearch_rejectsUnrelatedDeviceNumberOrManufacturer_tstCon033_7" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeLightDeviceTest" time="0.13"/>
+  <testcase name="testDecodeBroadcastData_page0x01_associatedLight_registersController_tstCon033_2" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeLightDeviceTest" time="0.136"/>
+  <testcase name="testDisconnectCommand_tstCon033_3" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeLightDeviceTest" time="0.135"/>
+  <testcase name="testUnifiedControllerIntegration_tstCon033_4" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeLightDeviceTest" time="0.149"/>
+  <testcase name="testStop_releasesResourcesCleanly_tstCon033_5" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeLightDeviceTest" time="0.141"/>
+  <testcase name="testModeByteMappingAndAckConfirmation_tstCon033_7" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeLightDeviceTest" time="0.142"/>
+  <testcase name="testWildcardFallback_closesChannelBeforeSetChannelId_tstCon033_6" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeLightDeviceTest" time="0.157"/>
+  <testcase name="testThreeStepHandshake_connectThenSettings_tstCon033_3" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeLightDeviceTest" time="0.126"/>
+  <testcase name="testChannelEventFiltering_nonTimeoutEventsDoNotTriggerFallback_tstCon033_6" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeLightDeviceTest" time="0.449"/>
+  <testcase name="testDecodeBroadcastData_page0x01_unassociatedLight_tstCon033_2" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeLightDeviceTest" time="0.114"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

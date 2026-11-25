@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.DeviceManagerIndoorModeTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-25T12:55:44.026Z" hostname="rainer-HP-EliteBook-850-G5" time="1.736">
+  <properties/>
+  <testcase name="testSportTypesRepository_indoorKeywordsClassification" classname="com.atrainingtracker.banalservice.devices.DeviceManagerIndoorModeTest" time="0.751"/>
+  <testcase name="testNewlyInitializedDevice_inheritsCachedIndoorMode" classname="com.atrainingtracker.banalservice.devices.DeviceManagerIndoorModeTest" time="0.241"/>
+  <testcase name="testSetIndoorMode_propagatesToActiveSpeedAndLocationDeviceAndSuppressesGpsUpdates" classname="com.atrainingtracker.banalservice.devices.DeviceManagerIndoorModeTest" time="0.433"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

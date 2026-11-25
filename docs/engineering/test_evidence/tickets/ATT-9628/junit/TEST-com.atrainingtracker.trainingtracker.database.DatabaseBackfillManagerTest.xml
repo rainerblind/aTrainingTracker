@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.DatabaseBackfillManagerTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:10:46Z" hostname="rainer-HP-EliteBook-850-G5" time="0.42">
+  <properties/>
+  <testcase name="testExecutePendingBackfillsConvergesAndIsIdempotent" classname="com.atrainingtracker.trainingtracker.database.DatabaseBackfillManagerTest" time="0.165"/>
+  <testcase name="testDalGracefulFallbackOnUnmigratedRows" classname="com.atrainingtracker.trainingtracker.database.DatabaseBackfillManagerTest" time="0.098"/>
+  <testcase name="testHasPendingBackfillsDetectsUnpopulatedData" classname="com.atrainingtracker.trainingtracker.database.DatabaseBackfillManagerTest" time="0.156"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

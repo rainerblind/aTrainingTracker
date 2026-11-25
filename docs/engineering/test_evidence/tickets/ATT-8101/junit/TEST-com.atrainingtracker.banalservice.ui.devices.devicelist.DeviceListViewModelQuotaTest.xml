@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelQuotaTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-25T05:54:36.175Z" hostname="rainer-HP-EliteBook-850-G5" time="5.023">
+  <properties/>
+  <testcase name="testQuotaInterception_emitsSwapOrUpgradeDialogEvent_whenFreeQuotaReached" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelQuotaTest" time="0.756"/>
+  <testcase name="testExecuteSwapAndPair_invokesRepositorySwap_andClearsDialogEvent" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelQuotaTest" time="0.428"/>
+  <testcase name="testDowngradeDetection_doesNotTrigger_whenActiveTracking" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelQuotaTest" time="0.424"/>
+  <testcase name="testMultiSensorSwap_hardensExcessSensorsToStrictlyTwo" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelQuotaTest" time="0.444"/>
+  <testcase name="testDetermineRecommendedUnpairDeviceId_delegatesCorrectly" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelQuotaTest" time="0.421"/>
+  <testcase name="testDismissSwapOrUpgradeDialog_clearsEvent" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelQuotaTest" time="0.411"/>
+  <testcase name="testDetermineDefaultKeepDeviceIds_preselectsFusedAndActiveRemote" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelQuotaTest" time="0.432"/>
+  <testcase name="testProUser_bypassesQuotaInterception" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelQuotaTest" time="0.436"/>
+  <testcase name="testDismissKeepTwoSensors_appliesDefaults_andClearsEvent" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelQuotaTest" time="0.426"/>
+  <testcase name="testDowngradeDetection_triggersReconciliationWithDefaults" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelQuotaTest" time="0.419"/>
+  <testcase name="testConfirmKeepTwoSensors_invokesRepositoryReconcile_andClearsEvent" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceListViewModelQuotaTest" time="0.424"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

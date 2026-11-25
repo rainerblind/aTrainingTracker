@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderRadarSummaryTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-25T07:42:23.197Z" hostname="rainer-HP-EliteBook-850-G5" time="7.571">
+  <properties/>
+  <testcase name="doUpdate_withRadarSummaryEnabled_appendsFormattedSummaryToExistingNotesWithDoubleNewline" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderRadarSummaryTest" time="4.417"/>
+  <testcase name="doUpdate_withRadarSummaryDisabled_preservesExistingDescriptionWithoutSummary" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderRadarSummaryTest" time="0.815"/>
+  <testcase name="doUpdate_withRadarSummaryEnabled_appendsFormattedSummaryToEmptyDescription" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderRadarSummaryTest" time="0.765"/>
+  <testcase name="doUpdate_withRadarSummaryEnabled_doesNotDuplicateIfAlreadyPresent" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderRadarSummaryTest" time="0.757"/>
+  <testcase name="doUpdate_withZeroVehicles_doesNotAppendSummary" classname="com.atrainingtracker.trainingtracker.exporter.uploader.StravaUploaderRadarSummaryTest" time="0.817"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceQueueTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-25T12:58:54.818Z" hostname="rainer-HP-EliteBook-850-G5" time="15.565">
+  <properties/>
+  <testcase name="testQueue_executesOperationsSequentiallyWithoutDropping" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceQueueTest" time="1.92"/>
+  <testcase name="testOnCharacteristicWrite_propagatesFailureStatusToSubclassHook" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceQueueTest" time="1.734"/>
+  <testcase name="testOnCharacteristicRead_manufacturerNameBackfillsAndAdvancesQueue_TST_CON_062_2" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceQueueTest" time="1.677"/>
+  <testcase name="testBatteryReadRunnable_enqueuesViaGattQueue" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceQueueTest" time="1.754"/>
+  <testcase name="testReadNextCharacteristic_drainsLegacyReadQueueIntoGattQueue" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceQueueTest" time="1.643"/>
+  <testcase name="testWriteCharacteristicOp_enforcesNoResponseWhenPropertyMatches" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceQueueTest" time="1.747"/>
+  <testcase name="testWriteCharacteristicOp_prefersWriteTypeDefaultWhenPropertyWritePresent" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceQueueTest" time="1.646"/>
+  <testcase name="testQueue_clearsOnDisconnect" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceQueueTest" time="1.664"/>
+  <testcase name="testQueue_characteristicReadSerializesWithDescriptorWrite" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceQueueTest" time="1.78"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

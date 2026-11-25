@@ -11,4 +11,7 @@
     <string name="diagnostic_share_button">Share Diagnostic Bundle</string>
     <string name="diagnostic_bundle_packaging">Packaging diagnostic bundle…</string>
     <string name="diagnostic_no_sidecar_warning">No raw sensor sidecar recording available for this workout.</string>
+    <string name="strava_activity_photos_section">Activity Photos</string>
+    <string name="strava_download_photos_title">Download Strava photos</string>
+    <string name="strava_download_photos_desc">Import photos from synced Strava activities into your local workout gallery</string>
 </resources>

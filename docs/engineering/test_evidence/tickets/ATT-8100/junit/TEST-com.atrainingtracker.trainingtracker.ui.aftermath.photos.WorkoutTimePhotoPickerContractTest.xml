@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.photos.WorkoutTimePhotoPickerContractTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-25T07:42:00.254Z" hostname="rainer-HP-EliteBook-850-G5" time="0.586">
+  <properties/>
+  <testcase name="testWorkoutTimePhotoPickerSheetComposableExistsAndIsPublic" classname="com.atrainingtracker.trainingtracker.ui.aftermath.photos.WorkoutTimePhotoPickerContractTest" time="0.204"/>
+  <testcase name="testTimeFilteredPhotoDto" classname="com.atrainingtracker.trainingtracker.ui.aftermath.photos.WorkoutTimePhotoPickerContractTest" time="0.155"/>
+  <testcase name="testRequiredMediaPermissionsConstants" classname="com.atrainingtracker.trainingtracker.ui.aftermath.photos.WorkoutTimePhotoPickerContractTest" time="0.102"/>
+  <testcase name="testWorkoutPhotoStripComposableExistsAndAcceptsTimestamps" classname="com.atrainingtracker.trainingtracker.ui.aftermath.photos.WorkoutTimePhotoPickerContractTest" time="0.124"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

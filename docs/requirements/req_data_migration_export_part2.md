@@ -1,14 +1,14 @@
 # Living Requirements: Persistence, Migration & Cloud Export (Part 2 of 2)
 
 **Document ID**: `DOC-REQ-MIG-P2`  
-**Version**: 1.0.57  
+**Version**: 1.0.61  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `data_migration_export_part2`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Requirements**: 41
+**Total Requirements**: 43
 
 ---
 
@@ -1362,10 +1362,75 @@
 
 ---
 
+### REQ-EXP-050: Strava API v3 Activity Photo Download, Settings Toggle & Local Deduplication (`ATT-8100`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-EXP-050`
+- **System Requirement(s)**: `SYSREQ-DEX-003`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, On-Device Manual
+- **Implementation**: `StravaPhotoPreferences.kt`, `StravaSettingsDialog.kt`, `prefs_strava.xml`, `StravaActivityData.kt`, `WorkoutPhotoManager.kt`, `StravaUploader.kt`, `WorkoutDetailTabbedContent.kt`, `WorkoutSummary.kt`, `strings_export.xml`
+- **Localization Parity**: `9 locales (values, de, es, fr, it, ja, nl, pl, pt)`
+- **Rationale**: Complementing offline Strava archive import (`StravaBulkExportImporter.importActivityPhotos`), athletes who attach photos to activities on Strava need an opt-in setting to download activity photos via Strava API v3 (`GET /api/v3/activities/{id}/photos` / `photos_summary`) during `StravaUploader` synchronization while preserving strict privacy-by-default discarding (`REQ-EXP-013`) when disabled (`ATT-8100`, refining `REQ-EXP-013` and `REQ-DAT-038`).
+- **Description**:
+  1. *Opt-In Strava Settings Toggle & 9-Language Parity (`REQ-EXP-050.1`)*: `StravaPhotoPreferences` SHALL expose `SP_DOWNLOAD_STRAVA_PHOTOS = "downloadStravaPhotos"` (default `false`), null-safe `isDownloadEnabled(context)`, and `setDownloadEnabled(context, enabled)` (backed by `prefs_strava.xml`). `StravaSettingsDialog` SHALL render a localized switch (`R.string.strava_download_photos_title` / `R.string.strava_download_photos_desc` across all 9 `values*/strings_export.xml` locales) staged transactionally via `AppDialogActions.SaveCancel`.
+  2. *API Photo Metadata Fetch & Resolution (`REQ-EXP-050.2`)*: When `StravaPhotoPreferences.isDownloadEnabled(context)` is `true`, `StravaUploader.doUpdate` SHALL query `GET /api/v3/activities/{id}/photos?size=2048&photo_sources=true` (skipping the request if `activityJSON` explicitly indicates zero photos; falling back to `photos_summary` if the `/photos` endpoint fails) and parse photo descriptors in-memory via `StravaActivityParser` (`unique_id`, highest-resolution `https://` URL rejecting cleartext `http://`, `caption`, `created_at`, `[lat, lng]` validated via `GeoUtils.isValidGpsCoordinate`). Photo download failures SHALL log a warning without failing `StravaUploader.doUpdate`, and image CDN downloads SHALL enforce HTTPS-only URLs, bounded `30 s` `callTimeout`, safe `uniqueId`/canonical-path bounds, `image/*` `Content-Type`, and SHALL NOT attach the Strava OAuth `Authorization` header.
+  3. *Storage, EXIF/Timestamp/Coordinate Parity & Deduplication (`REQ-EXP-050.3`)*: Downloaded photos SHALL be stored in `WorkoutPhotoManager.getWorkoutPhotosDir(context, workoutId)` and registered in `workout_photos` via `WorkoutPhotoManager.registerPhotoFile` with EXIF extraction, `created_at`/workout-start timestamp fallback, Strava `[lat, lng]` or `WorkoutSamples.db` trackpoint coordinate interpolation, and `(0.0, 0.0)` Null-Island rejection. Pre-download deduplication (`strava_<uniqueId>.*` / `<uniqueId>.*` filename match or pre-existing local photo `takenAtMs` within `2,000 ms`) and post-download deduplication (SHA-256 content digest or EXIF `takenAtMs` within `2,000 ms`) SHALL prevent duplicate downloads/rows across repeated syncs, bulk imports, and local camera/gallery photos.
+  4. *Privacy Guard When Disabled (`REQ-EXP-050.4`)*: When `StravaPhotoPreferences.isDownloadEnabled(context)` is `false`, `StravaUploader` SHALL NOT issue `/activities/{id}/photos` or image CDN requests, and `StravaActivityParser.minimize()` SHALL continue discarding all third-party `photos` and `photo_count` fields from `StravaUpload.db` (`REQ-EXP-013`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-EXP-013` (*Strava Activity Feedback Data Minimization*) and `REQ-DAT-038` (*Workout Photo Storage & EXIF Interpolation*). Targets `StravaPhotoPreferences.kt`, `StravaSettingsDialog.kt`, `StravaActivityData.kt`, `WorkoutPhotoManager.kt`, `StravaUploader.kt`, and `WorkoutDetailTabbedContent.kt` / `WorkoutSummary.kt`.
+2. *Historical Origin & Commit Trace*: `REQ-EXP-013` (`ATT-1190`) stripped `photos` from `StravaUpload.db` v2 JSON; `REQ-DAT-038` (`ATT-43`) added `workout_photos`; `StravaBulkExportImporter.importActivityPhotos` imported offline ZIP media.
+3. *Root Reason for Existing Formulation*: Prevented unbounded third-party social/photo JSON blobs from bloating `StravaUpload.db` and protected athlete privacy.
+4. *Preservation of Core Invariants*: `StravaActivityParser.minimize()` v2 schema (`REQ-EXP-013`), `Bearer` token safety (`REQ-EXT-011.5`), and `(0.0, 0.0)` Null-Island rejection (`REQ-UI-448.4`) remain 100% invariant.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `downloadStravaPhotos` is toggled on and saved in `StravaSettingsDialog`, *When* `StravaUploader.doUpdate` runs for a synced/uploaded Strava activity with photos, *Then* photos are downloaded into `WorkoutPhotoManager.getWorkoutPhotosDir(context, workoutId)`, registered in `workout_photos` with EXIF/timestamp/coordinate handling, and deduplicated against existing local/bulk-imported/Strava photos.
+• *Given* `downloadStravaPhotos` is disabled (default `false`), *When* `StravaUploader.doUpdate` or `StravaActivityParser.minimize` runs, *Then* zero `/photos` or CDN HTTP requests are sent and third-party photo fields remain discarded.
+
+**Invariants**: `0` SQLite schema changes; `REQ-EXP-013` minimized `StravaUpload.db` schema unchanged; `0` `Bearer null` or CDN `Authorization` leaks; `9/9` locale parity (`TranslationParityTest` passes 100%).
+
+---
+
+### REQ-EXP-051: Native Binary FIT Pipeline for Strava Uploads, Creator Metadata & Legacy TCX Queue Fallback (`ATT-8082`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-EXP-051`
+- **System Requirement(s)**: `SYSREQ-DEX-001`, `SYSREQ-DEX-003`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration, On-Device Manual
+- **Implementation**: `FileFormat.java`, `ExportManager.java`, `FitFileWriter.kt`, `StravaUploader.kt`
+- **Localization Parity**: `N/A - 0 string changes`
+- **Rationale**: Migrating the Strava upload pipeline from legacy XML `.tcx` to native binary FIT 2.0 via `FitFileWriter.kt` preserves ambient temperature, L/R cycling pedal dynamics, `HrvMesg` RR intervals, Bike Radar developer fields, and exact `Sport`/`SubSport` enums; reduces payload sizes ~5–10× on mobile networks; replaces raw phone-model TCX creator strings with `"aTrainingTracker"` FIT creator metadata; and preserves pre-upgrade offline `.tcx` queues seamlessly (`ATT-8082`, refining `REQ-EXP-003`, `REQ-EXP-008`, `REQ-EXP-021`, `REQ-EXP-022`).
+- **Description**:
+  1. *`FileFormat.STRAVA` Binary FIT Extension & MIME Type (`REQ-EXP-051.1`)*: `FileFormat.STRAVA` SHALL define directory `"Strava"`, file ending `".fit"`, `isDerivedExportFile() == true`, and `getMimeType() == "application/vnd.ant.fit"`. `FileFormat.TCX` (`".tcx"`, `"application/vnd.garmin.tcx+xml"`) SHALL remain unchanged.
+  2. *`ExportManager` FIT Routing & Residual Legacy `.tcx` Invalidation (`REQ-EXP-051.2`)*: `ExportManager.getExporter()` SHALL route `(ExportType.FILE, FileFormat.STRAVA)` to `FitFileWriter(context)` while keeping `(ExportType.COMMUNITY, FileFormat.STRAVA)` routed to `StravaUploader(context)`. `ExportManager.invalidateWorkoutExport(fileBaseName)` SHALL delete both `Strava/<fileBaseName>.fit` and any residual pre-upgrade `Strava/<fileBaseName>.tcx` while strictly preserving irreplaceable `files/raw_sensor/*` sidecars (`REQ-EXP-048.2`).
+  3. *`FitFileWriter` Creator Metadata & Strava Selective-Upload Privacy (`REQ-EXP-051.3`)*: `FitFileWriter.kt` SHALL set `FileIdMesg.setProductName("aTrainingTracker")` and emit a creator `DeviceInfoMesg` (`timestamp = startDate`, `deviceIndex = DeviceIndex.CREATOR`, `manufacturer = Manufacturer.DEVELOPMENT`, `product = 1`, `serialNumber = 1L`, `productName = "aTrainingTracker"`, `softwareVersion` parsed from `BuildConfig.VERSION_NAME` clamped to `[0.0f, 655.34f]` for FIT `UINT16` `scale = 100`). When `exportInfo.fileFormat == FileFormat.STRAVA`, selective-upload opt-outs (`haveHR`/`havePower`/`haveCadence`/`haveAltitude`) SHALL also gate `HrvMesg`, cycling pedal dynamics, and corresponding `SessionMesg` summary fields without altering standard `FileFormat.FIT` exports.
+  4. *`StravaUploader` FIT Multipart Upload & Pre-Upgrade Legacy `.tcx` Fallback (`REQ-EXP-051.4`)*: `StravaUploader.doExport()` SHALL prefer non-empty `Strava/<fileBaseName>.fit` and fall back to existing non-empty `Strava/<fileBaseName>.tcx` when `.fit` is absent so offline uploads queued before upgrading never fail. `StravaUploader.uploadToStrava()` SHALL submit multipart `data_type = "fit"` for `.fit` files and `data_type = "tcx"` when `file.name.endsWith(".tcx", ignoreCase = true)`, keeping all post-upload `doUpdate` metadata, radar summary, segment PR, and `ATT-8100` photo sync intact.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-EXP-022` (`FileFormat.STRAVA` MIME type), `REQ-EXP-008` / `REQ-EXP-021` (Strava upload format), and `REQ-EXP-003` (Strava selective upload) across `FileFormat.java`, `ExportManager.java`, `FitFileWriter.kt`, and `StravaUploader.kt`.
+2. *Historical Origin & Commit Trace*: `REQ-EXP-022` (`ATT-4013`, `06990c88`), `REQ-EXP-008` (`ATT-902`/`ATT-1105`), `REQ-EXP-021` (`ATT-4012`), `FitFileWriter.kt` (`ATT-1827`/`ATT-7906`, `e40d6a85`).
+3. *Root Reason for Existing Formulation*: `FileFormat.STRAVA` predated `FitFileWriter` and shared `TCXFileWriter` (`".tcx"`, `"application/vnd.garmin.tcx+xml"`, `data_type = "tcx"`).
+4. *Preservation of Core Invariants*: `FileFormat.TCX` stays `.tcx` / `application/vnd.garmin.tcx+xml`; `BaseFileWriter.onFinished()` continues excluding `STRAVA` from public `Downloads/`; pre-upload duplicate discovery, retry/backoff, `doUpdate` metadata/radar/PR/`ATT-8100` photo sync, and `FitWorkoutParser` round-trip stay 100% invariant.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a finished workout scheduled for Strava upload, *When* `ExportManager` generates the export and `StravaUploader` uploads to `/api/v3/uploads`, *Then* `FitFileWriter` writes `Strava/<fileBaseName>.fit` and the multipart POST sends `data_type = "fit"`.
+• *Given* a pre-upgrade queued `ExportInfo(base, STRAVA, COMMUNITY)` with only `Strava/<fileBaseName>.tcx` on disk, *When* `StravaUploader.doExport()` runs after upgrade, *Then* it resolves `Strava/<fileBaseName>.tcx` and sends `data_type = "tcx"` without failing.
+• *Given* a `.fit` file exported by `FitFileWriter`, *When* decoded via Garmin FIT SDK `Decode`, *Then* `FileIdMesg.productName == "aTrainingTracker"`, creator `DeviceInfoMesg` carries `DeviceIndex.CREATOR`, `Manufacturer.DEVELOPMENT`, `productName == "aTrainingTracker"`, and bounded `softwareVersion`, `RecordMesg.altitude` is preserved, and Strava selective-upload opt-outs omit corresponding metrics.
+
+**Invariants**: `FileFormat.TCX` unchanged; `BaseFileWriter.onFinished()` skips public `Downloads/` for `STRAVA`; `files/raw_sensor/*` preserved on invalidation (`REQ-EXP-048.2`); `0` SQLite/UI/`strings*.xml` edits; `FitFileWriter.kt` & `StravaUploader.kt` stay `< 1,500` LoC.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| `1.0.61` | 2026-11-25 | Lane 3 Author (`ATT-8082`, `--as agent1`) | `ATT-8082` | Promoted `REQ-EXP-051` to `[Verified]` after Gate 3 (`ATT-9703`) PASS implementation (`FileFormat.STRAVA` `.fit`/`application/vnd.ant.fit`, `ExportManager` `FitFileWriter` routing & residual `.tcx` invalidation cleanup, `FitFileWriter.kt` `FileIdMesg.productName` + creator `DeviceInfoMesg` + Strava selective-upload opt-out gating for `HrvMesg`/pedal dynamics/summaries, `StravaUploader.kt` `data_type="fit"` + non-empty `.tcx` queue fallback) and `251/251` targeted Tier-1 tests PASS across `39` suites (`0` fail/err/skip, `0` new compiler warnings). |
+| `1.0.60` | 2026-11-25 | Lane 3 Author (`ATT-8082`, `--as agent1`) | `ATT-8082` | Added `[Planned]` `REQ-EXP-051` (`SYSREQ-DEX-001`, `SYSREQ-DEX-003`, `.1`–`.4`) migrating the Strava workout upload pipeline from TCX to native binary FIT 2.0 (`FileFormat.STRAVA`, `ExportManager`, `FitFileWriter.kt` creator `FileIdMesg`/`DeviceInfoMesg` & selective-upload privacy, `StravaUploader.kt` `data_type="fit"` + legacy `.tcx` queue fallback; `N/A - 0 string changes`). |
+| `1.0.59` | 2026-11-25 | Lane 3 Author (`ATT-8100`, `--as agent1`) | `ATT-8100` | Promoted `REQ-EXP-050` to `[Verified]` after implementing `StravaPhotoPreferences`, `prefs_strava.xml`, 9-locale `strings_export.xml`, `StravaSettingsDialog` toggle, `StravaActivityParser` HTTPS-only photo parsing, `WorkoutPhotoManager.registerPhotoFile`/`importStravaPhotos` (HTTPS-only, 30s `callTimeout`, path-traversal & `image/*` `Content-Type` guards), `StravaUploader.downloadAndImportStravaPhotos`, and `WorkoutDetailTabbedContent`/`WorkoutSummary` refresh keys; `112/112` targeted tests PASS across 10 suites (`StravaPhotoDownloadTest` `12/12`, `StravaSettingsDialogComposeTest` `2/2`, `StravaSettingsDialogContractTest` `3/3`, `WorkoutPhotoManagerTest` `11/11`, `StravaUploader*` `48/48`, `StravaActivitySectionTest` `25/25`, `TranslationParityTest` `11/11`; `0` fail/err/skip, `0` new warnings), and live `emulator-5554` verification (`CRASH_LOGCAT_CLEAN`, `Rule 8.5`-inspected screenshot). |
+| `1.0.58` | 2026-11-25 | Lane 3 Author (`ATT-8100`, `--as agent1`) | `ATT-8100` | Added `[Planned]` `REQ-EXP-050` (`SYSREQ-DEX-003`, `.1`–`.4`) for opt-in Strava API v3 activity photo download (`StravaSettingsDialog`, `StravaPhotoPreferences`), `StravaUploader` photo fetch, `WorkoutPhotoManager` storage/EXIF/coordinate handling & pre-/post-download deduplication, and 9-locale parity (`strings_export.xml`). |
 | `1.0.57` | 2026-11-25 | Lane 1 Author (`ATT-9019`, `--as agent1`) | `ATT-9019` | Promoted `REQ-MIG-062` to `[Verified]` after migrating `ClusterNamingDialog` (`ImportBackupTabsScreen.kt`) to Lite-Mode `PathPreviewMap` + bounded LRU `createSensorMarker` descriptor cache (`MapUtils.kt`), hoisting single-pass `samplePolylineStations` + thread-safe generation-guarded `ClusterPreviewStationCache` (`WorkoutClusterCorridorDetector.kt`, `WorkoutClusterEngine.kt`, `WorkoutClusterRepository.kt`), passing `95/95` targeted unit & Compose tests across 16 suites (`0` fail/err/skip, `0` new warnings), live `emulator-5554` verification (`ATT-9019_import_backup_screen.png`, `CRASH_LOGCAT_CLEAN`), and SHA-256 evidence bundle (`docs/engineering/test_evidence/tickets/ATT-9019/`). |
 | `1.0.56` | 2026-11-25 | Lane 1 Author (`ATT-9019`, `--as agent1`) | `ATT-9019` | Added `[Planned]` `REQ-MIG-062` (`SYSREQ-DEX-002`, `SYSREQ-DEX-004`, `.1`–`.2`) for Lite-Mode `PathPreviewMap` + bounded `createSensorMarker` descriptor caching in `ClusterNamingDialog`, and single-pass `samplePolylineStations` hoisting + thread-safe mutation-invalidated `ClusterPreviewStationCache` in `WorkoutClusterEngine` (`N/A - 0 string changes`). |
 | `1.0.55` | 2026-11-23 | Lane 1 Author (`ATT-9021`, `--as agent1`) | `ATT-9021` | Promoted `REQ-DAT-050` to `[Verified]` after Gate 3 (`ATT-9672`) PASS implementation (`WorkoutSummaries.db` v32 `EPIC` column + `onCreate`/`onUpgrade` parity + `updateWorkoutData`, `WorkoutData`/`WorkoutExportHeader`/`WorkoutDataMapper`/`WorkoutRepository`/`EditWorkoutViewModel.updateIsEpic` + `mergeTelemetryPreservingUserEdits` 20-field preservation, FIT 2.0 field `8` `is_epic` export/parse/import round-trip), `120/120` targeted Tier-1 unit & contract tests PASS across 14 suites (`0` fail/err/skip, `0` new warnings), `3/3` safety linters PASS, live `emulator-5554` boot smoke `CRASH_LOGCAT_CLEAN` (`PRAGMA user_version = 32`, `epic` column verified, `ATT-9021_emulator_smoke.png`), and SHA-256 evidence bundle (`docs/engineering/test_evidence/tickets/ATT-9021/`). |

@@ -166,7 +166,9 @@ class MovingSpeedHistogram {
  * gyroscope, rotation vector, or `ACTIVITY_RECOGNITION` permission are unavailable.
  */
 @Suppress("MagicNumber", "ComplexMethod", "ReturnCount")
-class KinematicSportTypeDiscriminator {
+class KinematicSportTypeDiscriminator @JvmOverloads constructor(
+    sportSpeedPriors: SportSpeedPriors = SportSpeedPriors.DEFAULT
+) {
     companion object {
         private const val FS_HZ = ImuCadenceDspConstants.FS_HZ
         private const val GRID_STEP_MS = ImuCadenceDspConstants.GRID_STEP_MS
@@ -235,8 +237,17 @@ class KinematicSportTypeDiscriminator {
     private var totalCoastingSeconds: Double = 0.0
 
     // Signed evidence accumulator: positive -> BIKE, negative -> RUN
+    private var sportSpeedPriors: SportSpeedPriors = sportSpeedPriors.clamped()
     private var evidenceScore: Double = 0.0
     private var committedSportType: BSportType = BSportType.UNKNOWN
+
+    val currentSportSpeedPriors: SportSpeedPriors
+        @Synchronized get() = sportSpeedPriors
+
+    @Synchronized
+    fun setSportSpeedPriors(priors: SportSpeedPriors) {
+        sportSpeedPriors = priors.clamped()
+    }
 
     val inferredBSportType: BSportType
         @Synchronized get() = committedSportType
@@ -412,6 +423,13 @@ class KinematicSportTypeDiscriminator {
             else -> null
         }
 
+        val priors = sportSpeedPriors
+        val bikeCarriageVoteFloorMps = minOf(
+            priors.minBikeSpeedMps,
+            maxOf(MIN_BIKE_CARRIAGE_VOTE_SPEED_MPS, priors.maxWalkSpeedMps)
+        )
+        val highBikeSpeedMps = priors.maxRunSpeedMps.coerceIn(HIGH_BIKE_SPEED_MPS, SportSpeedPriors.MAX_RUN_MAX_MPS)
+
         var hasPhysiologicalRunFootstrike = false
         if (activeStepHz != null && activeStepHz > 0.0) {
             val stepLengthM = speedMps / activeStepHz
@@ -423,23 +441,23 @@ class KinematicSportTypeDiscriminator {
                     else -> 2.2
                 }
                 deltaScore -= runWeight * dtSec
-            } else if (speedMps > HIGH_BIKE_SPEED_MPS && stepLengthM > BIKE_CYCLE_DISTANCE_M) {
+            } else if (speedMps > highBikeSpeedMps && stepLengthM > BIKE_CYCLE_DISTANCE_M) {
                 deltaScore += 2.0 * dtSec
             }
-        } else if (!confirmedCoasting && speedMps > HIGH_BIKE_SPEED_MPS) {
-            // High speed (> 5.0 m/s) with zero step/footstrike coherence -> cycling
+        } else if (!confirmedCoasting && speedMps > highBikeSpeedMps) {
+            // High speed (> highBikeSpeedMps) with zero step/footstrike coherence -> cycling
             deltaScore += 2.0 * dtSec
         }
 
-        // 3. Carriage mode coupling (subordinated to active physiological footstrikes & cycling speed floor)
+        // 3. Carriage mode coupling (subordinated to active physiological footstrikes & bounded cycling speed floor)
         if (!hasPhysiologicalRunFootstrike) {
             when (lastCarriageMode) {
                 PhoneCarriageMode.BIKE_HANDLEBAR,
                 PhoneCarriageMode.BIKE_JERSEY_BACK,
                 PhoneCarriageMode.BIKE_FRONT_POCKET -> {
-                    // Prevent walking-speed (< 1.8 m/s) pocket carriage flickers from falsely latching BIKE
-                    // while preserving steep 2.0 m/s uphill MTB climbs (REQ-FIL-030.1, REQ-FIL-046.1).
-                    if (speedMps >= MIN_BIKE_CARRIAGE_VOTE_SPEED_MPS) {
+                    // Prevent walking-speed pocket carriage flickers from falsely latching BIKE
+                    // while preserving steep 2.0 m/s uphill MTB climbs (REQ-FIL-030.1, REQ-FIL-046.1, REQ-FIL-047.2).
+                    if (speedMps >= bikeCarriageVoteFloorMps) {
                         deltaScore += 1.2 * dtSec
                     }
                 }
@@ -447,7 +465,7 @@ class KinematicSportTypeDiscriminator {
                 PhoneCarriageMode.RUN_BICEP_ARM,
                 PhoneCarriageMode.RUN_HANDHELD -> {
                     // Require either non-contradicted IMU absence or corroborated footstrikes when 50-Hz ACC is live
-                    if (!confirmedCoasting && speedMps <= HIGH_BIKE_SPEED_MPS && !accHasWindow) {
+                    if (!confirmedCoasting && speedMps <= highBikeSpeedMps && !accHasWindow) {
                         deltaScore -= 1.0 * dtSec
                     }
                 }

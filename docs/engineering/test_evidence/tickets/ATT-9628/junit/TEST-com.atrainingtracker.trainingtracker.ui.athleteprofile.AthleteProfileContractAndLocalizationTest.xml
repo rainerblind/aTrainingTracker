@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileContractAndLocalizationTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:21:09.171Z" hostname="rainer-HP-EliteBook-850-G5" time="0.267">
+  <properties/>
+  <testcase name="NavRoutes and AppNavigationDrawer map drawer_athlete_profile bidirectionally" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileContractAndLocalizationTest" time="0.025"/>
+  <testcase name="AthleteProfileScreen adheres to REQ-UI-495 layout, localization, and PMC height contracts (TST-UI-495)" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileContractAndLocalizationTest" time="0.025"/>
+  <testcase name="all 9 locales contain Athlete Profile strings with matching positional format specifiers" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileContractAndLocalizationTest" time="0.203"/>
+  <testcase name="all 9 locales contain Morning HRV and empty state strings in strings_hrv (REQ-UI-513_6)" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileContractAndLocalizationTest" time="0.004"/>
+  <testcase name="ic_athlete_profile vector drawable exists and uses true curved geometric primitives (Rule 37)" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileContractAndLocalizationTest" time="0.001"/>
+  <testcase name="resolveFitnessHubTabs resolves exact tab ordering and conditional presence for all 4 permutations (REQ-UI-513_4, TST-UI-513_3a)" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileContractAndLocalizationTest" time="0.004"/>
+  <testcase name="AthleteProfileScreen adheres to REQ-UI-513_4 hub tab ordering, pure helper binding, and dynamic clamping (TST-UI-513_3b)" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileContractAndLocalizationTest" time="0.002"/>
+  <testcase name="AthleteProfileScreen applies WindowInsets navigationBars to LazyColumn bottom contentPadding and hosts 4 Profile and Zones tabs (Rule 41, REQ-UI-397)" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileContractAndLocalizationTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModelLocalRestoreTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:14:17.747Z" hostname="rainer-HP-EliteBook-850-G5" time="9.933">
+  <properties/>
+  <testcase name="testLastBackupInfo_whenCreationFailsAndTargetsMissing_infersLocalFailed" classname="com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModelLocalRestoreTest" time="1.051"/>
+  <testcase name="testRestoreFromLocalBackup_whenRestoreReturnsFalse_emitsError" classname="com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModelLocalRestoreTest" time="1.141"/>
+  <testcase name="testRestoreFromLocalBackup_whenFileExistsAndRestoreSucceeds_invokesMigrationEngine" classname="com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModelLocalRestoreTest" time="1.14"/>
+  <testcase name="testRestoreFromLocalBackup_whenFileMissing_emitsError" classname="com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModelLocalRestoreTest" time="0.936"/>
+  <testcase name="testLastBackupInfo_whenTargetsSerialized_parsesLocalDropboxGoogleDriveStatuses" classname="com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModelLocalRestoreTest" time="0.919"/>
+  <testcase name="testGetAutomaticBackupTimestamp_whenFileExists_returnsLastModified" classname="com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModelLocalRestoreTest" time="0.89"/>
+  <testcase name="testGetAutomaticBackupTimestamp_whenFileIsEmpty_returnsNull" classname="com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModelLocalRestoreTest" time="0.908"/>
+  <testcase name="testLastBackupInfo_whenTargetsMissing_infersTargetsFromStatus" classname="com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModelLocalRestoreTest" time="0.958"/>
+  <testcase name="testRestoreFromLocalBackup_whenRestoreThrowsException_emitsError" classname="com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModelLocalRestoreTest" time="1.086"/>
+  <testcase name="testGetAutomaticBackupTimestamp_whenFileDoesNotExist_returnsNull" classname="com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModelLocalRestoreTest" time="0.904"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

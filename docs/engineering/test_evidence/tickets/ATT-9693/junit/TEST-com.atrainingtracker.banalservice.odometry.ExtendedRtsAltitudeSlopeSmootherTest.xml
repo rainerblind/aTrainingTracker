@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.odometry.ExtendedRtsAltitudeSlopeSmootherTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-11-25T10:58:32.062Z" hostname="rainer-HP-EliteBook-850-G5" time="0.675">
+  <properties/>
+  <testcase name="testPauseGapSegmentation_zeroPhantomJumpAndTrailingSingleSampleAndBiasCarryover_TST_FIL_045_3" classname="com.atrainingtracker.banalservice.odometry.ExtendedRtsAltitudeSlopeSmootherTest" time="0.426"/>
+  <testcase name="testBarometerFreeDemOnlyLeadingNullAndSingleSample_finiteAndPhysicallyBounded_tstFil033_3" classname="com.atrainingtracker.banalservice.odometry.ExtendedRtsAltitudeSlopeSmootherTest" time="0.009"/>
+  <testcase name="testWalkingSpeedSlopeRegularization_qnhSeedingAndUrbanDemPlateau_tstFil048_2" classname="com.atrainingtracker.banalservice.odometry.ExtendedRtsAltitudeSlopeSmootherTest" time="0.08"/>
+  <testcase name="testSteepMountainTransientDemStepAndStandstill_staysBoundedWithoutOvershoot_tstFil033_1" classname="com.atrainingtracker.banalservice.odometry.ExtendedRtsAltitudeSlopeSmootherTest" time="0.009"/>
+  <testcase name="testLowSpeedBrakingProtection_eliminatesFlatBrakingPlungeAndPreservesDownhill_TST_FIL_040_4" classname="com.atrainingtracker.banalservice.odometry.ExtendedRtsAltitudeSlopeSmootherTest" time="0.004"/>
+  <testcase name="testSustainedBaroResetStep_absorbedIntoBiasWithoutSlopeSpike_TST_STB_025_4" classname="com.atrainingtracker.banalservice.odometry.ExtendedRtsAltitudeSlopeSmootherTest" time="0.004"/>
+  <testcase name="testGenuineHikingClimbAndCyclingDescent_baroAndBaroFree_tstFil048_3" classname="com.atrainingtracker.banalservice.odometry.ExtendedRtsAltitudeSlopeSmootherTest" time="0.026"/>
+  <testcase name="testRefBeforeBaroMissingTick0QnhAndEpochPairedBaroDropout_tstFil048_2" classname="com.atrainingtracker.banalservice.odometry.ExtendedRtsAltitudeSlopeSmootherTest" time="0.041"/>
+  <testcase name="testStandstillClamping_suppressesFalseClimbAccumulation" classname="com.atrainingtracker.banalservice.odometry.ExtendedRtsAltitudeSlopeSmootherTest" time="0.016"/>
+  <testcase name="testZumBaeckerStartupDemGridStepAndStandstill_noSlopeBlowupOrInitialOvershoot_tstFil033_1" classname="com.atrainingtracker.banalservice.odometry.ExtendedRtsAltitudeSlopeSmootherTest" time="0.017"/>
+  <testcase name="testHysteresisDeadband_rejectsMicroRipplesWhilePreservingRealClimb_tstFil027_5" classname="com.atrainingtracker.banalservice.odometry.ExtendedRtsAltitudeSlopeSmootherTest" time="0.014"/>
+  <testcase name="testCarriageModeBaroVarianceScaling_dampensPocketJitterVsHandlebar_tstFil028_4" classname="com.atrainingtracker.banalservice.odometry.ExtendedRtsAltitudeSlopeSmootherTest" time="0.003"/>
+  <testcase name="testDelayedAnchorConvergence_eliminatesInitialElevationBias" classname="com.atrainingtracker.banalservice.odometry.ExtendedRtsAltitudeSlopeSmootherTest" time="0.011"/>
+  <testcase name="testHelperGuards_lowSpeedGainClampAndJosephSpd_tstFil033_1" classname="com.atrainingtracker.banalservice.odometry.ExtendedRtsAltitudeSlopeSmootherTest" time="0.004"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

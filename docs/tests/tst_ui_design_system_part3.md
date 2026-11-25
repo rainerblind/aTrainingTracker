@@ -1,14 +1,14 @@
 # Living Test Specification: UI Components & Design System (Part 3 of 3)
 
 **Document ID**: `DOC-TST-UI-P3`  
-**Version**: 1.0.49  
+**Version**: 1.0.50  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `ui_design_system_part3`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 101
+**Total Tests**: 102
 
 ---
 
@@ -1417,7 +1417,7 @@
      - Verify that across all 4 sort orders, `isNewlyDiscovered == true` sensors remain pinned at the very top of the list in reverse discovery order.
   3. *DevicesTabbedViewModel Sort Order State & SavedStateHandle (`TST-UI-528.3`, `DevicesTabbedViewModelTest.kt`)*:
      - Verify default sort order is `ALPHABETICAL`.
-     - Verify updating sort order updates state flow and saves to `SavedStateHandle`.
+     - Verify updating sort order updates state flow and saves to `SavedStateHandle` *(extended by `TST-UI-2806` / `ATT-8101` for DataStore persistence across ViewModel re-instantiation)*.
   4. *Top App Bar Sort Button Visibility Contract Tests (`TST-UI-528.4`, `DevicesTabbedScreenContractTest.kt`)*:
      - Verify Sort button is present on sensor tabs (0, 1, 2) and hidden on Equipment tabs (3, 4).
   5. *9-Language Localization Parity Verification (`TST-UI-528.5`, `TranslationParityTest.kt`)*:
@@ -2001,6 +2001,25 @@
   3. *Live Emulator Verification (`TST-UI-2805.3`, `emulator-5554`)*:
      - Verify live `emulator-5554` (`com.atrainingtracker.debug`) launch, clean `logcat -b crash -d`, and `Rule 8.5` PNG inspection via `read_file`.
 
+### TST-UI-2806: **Durable Cross-Restart Persistence of Sensor List Sort Order Verification Suite (`ATT-8101`)** [Verified]
+- **Requirement(s)**: `REQ-UI-2806`
+- **Component**: `SettingsDataStore.kt`, `DevicesTabbedViewModel.kt`, `DevicesTabbedViewModelTest.kt`
+- **Verification Evidence**:
+  - `DevicesTabbedViewModelTest` (`24/24` PASS, incl. `testSettingsDataStore_deviceSortOrderFlow_defaultsToAlphabeticalAndPersistsAllValues`, `testSettingsDataStore_deviceSortOrderFlow_invalidTokenFallsBackToAlphabetical`, `testSortOrder_persistsAcrossViewModelReinstantiation_simulatingAppRestart`, `testSortOrder_invalidStoredValueInDataStore_fallsBackToAlphabeticalOnRestart`, and `testSortOrder_explicitSavedStateAndImmediateSelectionNotOverwrittenByDelayedDataStoreEmission`).
+  - Adjacent & Contract suites: `DevicesTabbedScreenContractTest` (`4/4`), `DeviceSortOrderTest` (`6/6`), `DeviceListViewModelPriorityTest` (`5/5`), `DataStoreHotPathContractTest` (`4/4`), `PreferenceSingletonsLifecycleTest` (`6/6`), `ArchitectureConformanceContractTest` (`11/11`): `60/60` PASS across `7` suites (`0` fail, `0` err, `0` skip).
+  - Live `emulator-5554` (`com.atrainingtracker.debug`): selected `Battery Level`, executed `am force-stop`, relaunched cold to Sensors screen, verified checkmark persisted on `Battery Level` in `/tmp/att8101_sensors.png` via `read_file` with `0` crashes in `logcat -b crash -d`.
+- **Jira**: `ATT-8101`
+- **Test Description**:
+  1. *`SettingsDataStore` Persistence & Corrupt-Token Fallback (`TST-UI-2806.1`, `DevicesTabbedViewModelTest`)*:
+     - Verify `SettingsDataStore.createForTesting(..., InMemoryPreferencesDataStore())` defaults `deviceSortOrderFlow` to `DeviceSortOrder.ALPHABETICAL` when unset.
+     - Verify `setDeviceSortOrder` persists each `DeviceSortOrder` value (`FIRST_SEEN`, `LAST_USAGE`, `BATTERY_LEVEL`, `ALPHABETICAL`) and invalid/unknown persisted tokens fall back safely to `DeviceSortOrder.ALPHABETICAL`.
+  2. *`DevicesTabbedViewModel` Cross-Restart Re-Instantiation & Precedence (`TST-UI-2806.2`, `DevicesTabbedViewModelTest`)*:
+     - Exercise real `DevicesTabbedViewModel` + real `SettingsDataStore` (`InMemoryPreferencesDataStore`) across ViewModel re-instantiation with a brand-new empty `SavedStateHandle()`, verifying the selected sort order survives restart and populates `SavedStateHandle`.
+     - Verify an invalid token in `SettingsDataStore` resolves safely to `ALPHABETICAL`, and verify explicit `SavedStateHandle` or immediate `setSortOrder` selection is not overwritten by delayed DataStore emissions.
+  3. *Hot-Path Safety & Live Emulator Verification (`TST-UI-2806.3`, `DataStoreHotPathContractTest`, `emulator-5554`)*:
+     - Verify `DataStoreHotPathContractTest` passes (zero `runBlocking` in `SettingsDataStore.kt`).
+     - Verify live `emulator-5554` (`com.atrainingtracker.debug`) launch to the Sensors screen, clean `logcat -b crash -d`, and `Rule 8.5` PNG inspection via `read_file`.
+
 ---
 
 ## Change History
@@ -2051,3 +2070,4 @@
 | `1.0.45` | 2026-11-23 | Lane 2 Author (`ATT-9610`, `--as agent1`) | `ATT-9610` | Promoted `TST-UI-2804` to `[Verified]` (`214/214` targeted/dependent tests PASS across `34` suites; live `emulator-5554` PNG `ATT-9610_sensor_source_dialog.png` visually inspected via `read_file` with `0` crashes in `logcat -b crash -d`; pre-existing `ATT-9639` `MeasuredNfrBenchmarkTest#testNfr014` isolated per Rule 1.3). |
 | `1.0.46` | 2026-11-23 | Lane 1 Author (`ATT-8721`, `--as agent1`) | `ATT-8721` | Added `TST-UI-2805` (`[Planned]`, `.1`–`.3`) for dynamic section-to-tab resolution unit tests, `WorkoutSummary` & `WorkoutDetailTabbedContent` Compose UI navigation/fallback/single-page tests, and live `emulator-5554` verification. |
 | `1.0.47` | 2026-11-23 | Lane 1 Author (`ATT-8721`, `--as agent1`) | `ATT-8721` | Promoted `TST-UI-2805` to `[Verified]` (`79/79` targeted/adjacent/contract tests PASS across `13` suites; live `emulator-5554` PNGs `ATT-8721_emulator_smoke.png` & `ATT-8721_emulator_map_tab.png` inspected via `read_file` with `0` crashes in `logcat -b crash -d`). |
+| `1.0.48` | 2026-11-25 | Lane 1 Author (`ATT-8101`, `--as agent1`) | `ATT-8101` | Added and verified `TST-UI-2806` (`[Verified]`, `.1`–`.3`, extending `TST-UI-528.3`) covering `SettingsDataStore` persistence & invalid-token fallback, real `DevicesTabbedViewModel` + `InMemoryPreferencesDataStore` restart tests, `DataStoreHotPathContractTest` (`0` `runBlocking`), `60/60` PASS across `7` suites, and live `emulator-5554` cold-restart verification (`0` crashes). |

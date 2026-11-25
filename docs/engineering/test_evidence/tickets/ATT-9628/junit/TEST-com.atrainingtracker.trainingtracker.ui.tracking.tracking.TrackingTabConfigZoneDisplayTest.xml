@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingTabConfigZoneDisplayTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:23:06.302Z" hostname="rainer-HP-EliteBook-850-G5" time="5.019">
+  <properties/>
+  <testcase name="testSensorGridConfigurationMode_zoneDisplayControlsPersistImmediately" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingTabConfigZoneDisplayTest" time="3.863"/>
+  <testcase name="testCaptureZoneDisplayTileAndTabsScreenshot_LightAndDark" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingTabConfigZoneDisplayTest" time="1.003"/>
+  <testcase name="testDefaultZoneProfileTarget_mapsAllActivityTypes" classname="com.atrainingtracker.trainingtracker.ui.tracking.tracking.TrackingTabConfigZoneDisplayTest" time="0.153"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[System.logW: A resource failed to call SQLiteConnection.close. 
+System.logW: A resource failed to call SQLiteConnectionPool.close. 
+]]></system-err>
+</testsuite>

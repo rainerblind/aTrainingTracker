@@ -19,8 +19,23 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath
 
 import android.util.Log
+import com.atrainingtracker.trainingtracker.routes.GeoUtils
 import org.json.JSONArray
 import org.json.JSONObject
+import java.security.MessageDigest
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.OffsetDateTime
+import java.time.ZoneId
+
+data class StravaActivityPhoto(
+    val uniqueId: String,
+    val url: String,
+    val caption: String? = null,
+    val createdAtMs: Long? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null
+)
 
 data class StravaActivity(
     val id: Long? = null,
@@ -246,5 +261,142 @@ object StravaActivityParser {
     fun minimize(activityJson: JSONObject?): String? {
         if (activityJson == null) return null
         return minimize(activityJson.toString())
+    }
+
+    /**
+     * Parses a Strava API v3 `GET /activities/{id}/photos` JSONArray into [StravaActivityPhoto] items.
+     */
+    @JvmStatic
+    fun parseActivityPhotos(photosJsonArray: JSONArray?): List<StravaActivityPhoto> {
+        if (photosJsonArray == null || photosJsonArray.length() == 0) return emptyList()
+        val result = mutableListOf<StravaActivityPhoto>()
+        val seenIds = mutableSetOf<String>()
+        for (i in 0 until photosJsonArray.length()) {
+            val photoObj = photosJsonArray.optJSONObject(i) ?: continue
+            val parsed = parsePhotoObject(photoObj) ?: continue
+            if (seenIds.add(parsed.uniqueId)) {
+                result.add(parsed)
+            }
+        }
+        return result
+    }
+
+    /**
+     * Fallback parser extracting primary photo metadata from a Strava activity's `photos` (`photos_summary`) object.
+     */
+    @JvmStatic
+    fun parsePhotosSummary(activityJson: JSONObject?): List<StravaActivityPhoto> {
+        if (activityJson == null) return emptyList()
+        val photosObj = activityJson.optJSONObject("photos") ?: return emptyList()
+        val primary = photosObj.optJSONObject("primary") ?: return emptyList()
+        val parsed = parsePhotoObject(primary) ?: return emptyList()
+        return listOf(parsed)
+    }
+
+    /**
+     * Returns true only when [activityJson] explicitly declares zero photos across all count/summary fields.
+     */
+    @JvmStatic
+    fun hasZeroPhotosHint(activityJson: JSONObject?): Boolean {
+        if (activityJson == null) return false
+        val hasTotalCount = activityJson.has("total_photo_count") && !activityJson.isNull("total_photo_count")
+        val hasPhotoCount = activityJson.has("photo_count") && !activityJson.isNull("photo_count")
+        if (!hasTotalCount && !hasPhotoCount) return false
+
+        val totalCount = if (hasTotalCount) activityJson.optInt("total_photo_count", -1) else 0
+        val photoCount = if (hasPhotoCount) activityJson.optInt("photo_count", -1) else 0
+        if (totalCount != 0 || photoCount != 0) return false
+
+        val photosObj = activityJson.optJSONObject("photos") ?: return true
+        val summaryCount = photosObj.optInt("count", 0)
+        return summaryCount == 0 && photosObj.optJSONObject("primary") == null
+    }
+
+    private fun parsePhotoObject(obj: JSONObject): StravaActivityPhoto? {
+        val url = extractBestPhotoUrl(obj) ?: return null
+        val rawUniqueId = obj.optString("unique_id").takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) }
+            ?: obj.optString("id_str").takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) }
+            ?: obj.optLong("id", 0L).takeIf { it > 0L }?.toString()
+            ?: sha256Hex(url).take(16)
+        val sanitizedId = rawUniqueId.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+        val caption = obj.optString("caption").takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) }
+
+        val createdAtMs = parseIsoTimestampMs(obj.optString("created_at"))
+            ?: parseLocalTimestampMs(obj.optString("created_at_local"))
+
+        var lat: Double? = null
+        var lng: Double? = null
+        val locationArr = obj.optJSONArray("location")
+        if (locationArr != null && locationArr.length() >= 2) {
+            val rawLat = locationArr.optDouble(0, Double.NaN)
+            val rawLng = locationArr.optDouble(1, Double.NaN)
+            if (!rawLat.isNaN() && !rawLng.isNaN() && GeoUtils.isValidGpsCoordinate(rawLat, rawLng)) {
+                lat = rawLat
+                lng = rawLng
+            }
+        }
+
+        return StravaActivityPhoto(
+            uniqueId = sanitizedId,
+            url = url,
+            caption = caption,
+            createdAtMs = createdAtMs,
+            latitude = lat,
+            longitude = lng
+        )
+    }
+
+    private fun extractBestPhotoUrl(obj: JSONObject): String? {
+        val urlsObj = obj.optJSONObject("urls")
+        if (urlsObj != null) {
+            val candidates = mutableListOf<Pair<Int, String>>()
+            val fallbackCandidates = mutableListOf<String>()
+            val keys = urlsObj.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                val value = urlsObj.optString(key).trim()
+                if (!isHttpsUrl(value)) continue
+                val sizeInt = key.toIntOrNull()
+                if (sizeInt != null) {
+                    // Size "0" in Strava often represents original/full resolution when paired with small sizes
+                    val rank = if (sizeInt == 0) Int.MAX_VALUE else sizeInt
+                    candidates.add(rank to value)
+                } else if (key.equals("original", ignoreCase = true) || key.equals("full", ignoreCase = true)) {
+                    candidates.add(Int.MAX_VALUE to value)
+                } else {
+                    fallbackCandidates.add(value)
+                }
+            }
+            val bestNumeric = candidates.maxByOrNull { it.first }?.second
+            if (bestNumeric != null) return bestNumeric
+            if (fallbackCandidates.isNotEmpty()) return fallbackCandidates.first()
+        }
+
+        val directUrl = obj.optString("url").trim()
+        return directUrl.takeIf { isHttpsUrl(it) }
+    }
+
+    private fun isHttpsUrl(url: String): Boolean {
+        return url.startsWith("https://", ignoreCase = true)
+    }
+
+    private fun parseIsoTimestampMs(raw: String?): Long? {
+        if (raw.isNullOrBlank() || raw.equals("null", ignoreCase = true)) return null
+        val trimmed = raw.trim()
+        return runCatching { Instant.parse(trimmed).toEpochMilli() }.getOrNull()
+            ?: runCatching { OffsetDateTime.parse(trimmed).toInstant().toEpochMilli() }.getOrNull()
+    }
+
+    private fun parseLocalTimestampMs(raw: String?): Long? {
+        if (raw.isNullOrBlank() || raw.equals("null", ignoreCase = true)) return null
+        val trimmed = raw.trim()
+        return parseIsoTimestampMs(trimmed) ?: runCatching {
+            LocalDateTime.parse(trimmed).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        }.getOrNull()
+    }
+
+    private fun sha256Hex(input: String): String {
+        val digest = MessageDigest.getInstance("SHA-256").digest(input.toByteArray(Charsets.UTF_8))
+        return digest.joinToString("") { "%02x".format(it) }
     }
 }

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.CyclingPowerMetricsDeviceLiveHrDriftTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:08:55.421Z" hostname="rainer-HP-EliteBook-850-G5" time="19.916">
+  <properties/>
+  <testcase name="testLiveHrDrift_gating_missingPowerSensorEmitsNull" classname="com.atrainingtracker.banalservice.devices.CyclingPowerMetricsDeviceLiveHrDriftTest" time="7.021"/>
+  <testcase name="testLiveHrDrift_lifecycleParity_resetSessionClearsState" classname="com.atrainingtracker.banalservice.devices.CyclingPowerMetricsDeviceLiveHrDriftTest" time="0.542"/>
+  <testcase name="testLiveHrDrift_gating_missingHrSensorEmitsNull" classname="com.atrainingtracker.banalservice.devices.CyclingPowerMetricsDeviceLiveHrDriftTest" time="0.484"/>
+  <testcase name="testCardioBaselineProvider_30DayRollingAverageResolution" classname="com.atrainingtracker.banalservice.devices.CyclingPowerMetricsDeviceLiveHrDriftTest" time="1.647"/>
+  <testcase name="testLiveHrDrift_gating_disabledSettingEmitsNull" classname="com.atrainingtracker.banalservice.devices.CyclingPowerMetricsDeviceLiveHrDriftTest" time="0.532"/>
+  <testcase name="testLiveHrDrift_stepResponse_appliesLagCompensation" classname="com.atrainingtracker.banalservice.devices.CyclingPowerMetricsDeviceLiveHrDriftTest" time="0.535"/>
+  <testcase name="testLiveHrDrift_steadyStateExactMatch_emitsZeroDrift" classname="com.atrainingtracker.banalservice.devices.CyclingPowerMetricsDeviceLiveHrDriftTest" time="0.493"/>
+  <testcase name="testInRideMinute8To25Calibration_updatesBaselineWhenR2Qualifies" classname="com.atrainingtracker.banalservice.devices.CyclingPowerMetricsDeviceLiveHrDriftTest" time="2.145"/>
+  <testcase name="testDefaultInRideCalibrator_fitsSyntheticStepSignal" classname="com.atrainingtracker.banalservice.devices.CyclingPowerMetricsDeviceLiveHrDriftTest" time="2.772"/>
+  <testcase name="testZeroQueryLoop_baselineAndEnablementCachedAtSessionReset" classname="com.atrainingtracker.banalservice.devices.CyclingPowerMetricsDeviceLiveHrDriftTest" time="0.604"/>
+  <testcase name="testLiveHrDrift_pauseHandling_flushesWindowAfterLongPause" classname="com.atrainingtracker.banalservice.devices.CyclingPowerMetricsDeviceLiveHrDriftTest" time="0.48"/>
+  <testcase name="testLiveHrDrift_growingWarmUpWindow_emitsFromFirstSampleWithoutBlankDelay" classname="com.atrainingtracker.banalservice.devices.CyclingPowerMetricsDeviceLiveHrDriftTest" time="0.469"/>
+  <testcase name="testInRideMinute8To25Calibration_retainsBaselineWhenR2BelowThreshold" classname="com.atrainingtracker.banalservice.devices.CyclingPowerMetricsDeviceLiveHrDriftTest" time="2.182"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

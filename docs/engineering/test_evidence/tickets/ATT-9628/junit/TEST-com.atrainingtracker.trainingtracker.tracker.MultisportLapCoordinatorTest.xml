@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.tracker.MultisportLapCoordinatorTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:16:22.610Z" hostname="rainer-HP-EliteBook-850-G5" time="1.4">
+  <properties/>
+  <testcase name="workoutSamplesBackfill_addsMissingLapNrColumnAndFallsBackToUtcTimeColumn" classname="com.atrainingtracker.trainingtracker.tracker.MultisportLapCoordinatorTest" time="0.144"/>
+  <testcase name="multiTransitionWithManualLapDirectSwitchAndSessionIsolation_reconcilesMonotonically_tstTrk096_2" classname="com.atrainingtracker.trainingtracker.tracker.MultisportLapCoordinatorTest" time="0.222"/>
+  <testcase name="brickTransition_persistsNamedLapsWithUtcTimeStart_advancesSynchronously_andBackfillsSamplesDb" classname="com.atrainingtracker.trainingtracker.tracker.MultisportLapCoordinatorTest" time="0.136"/>
+  <testcase name="directSwitchUnder10s_skipsTransitionAndConservesTotalTimeAndDistance" classname="com.atrainingtracker.trainingtracker.tracker.MultisportLapCoordinatorTest" time="0.1"/>
+  <testcase name="concurrentSamplingAndMultisportTransitions_zeroNonMonotonicAnomaliesAndZeroDeadlocks_tstTrk096_3" classname="com.atrainingtracker.trainingtracker.tracker.MultisportLapCoordinatorTest" time="0.317"/>
+  <testcase name="emptyManualSplit_doesNotLeakPendingStartTimestamp_tstTrk090_1" classname="com.atrainingtracker.trainingtracker.tracker.MultisportLapCoordinatorTest" time="0.098"/>
+  <testcase name="autoPauseInsideT2_partialAndFull_enforcesReqTrk002AndContiguousLapNr" classname="com.atrainingtracker.trainingtracker.tracker.MultisportLapCoordinatorTest" time="0.099"/>
+  <testcase name="singleSportMultiLap_persistsPreMutationUtcTimeStart_withPauseNeutrality_underNonUtcTimezone_tstTrk090_1" classname="com.atrainingtracker.trainingtracker.tracker.MultisportLapCoordinatorTest" time="0.078"/>
+  <testcase name="row425RaceInterleaving_inFlightStaleAndTornLapNrEnforcedMonotonically_tstTrk096_1" classname="com.atrainingtracker.trainingtracker.tracker.MultisportLapCoordinatorTest" time="0.088"/>
+  <testcase name="manualLapInterleaving_clampsBoundariesAndClearsActiveLegAnchorAfterManualLap" classname="com.atrainingtracker.trainingtracker.tracker.MultisportLapCoordinatorTest" time="0.117"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
