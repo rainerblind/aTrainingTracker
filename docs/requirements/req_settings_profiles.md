@@ -1,14 +1,14 @@
 # Living Requirements: Settings, Profiles & Localization
 
 **Document ID**: `DOC-REQ-SET`  
-**Version**: 1.0.51  
+**Version**: 1.0.54  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Requirements**: 130
+**Total Requirements**: 131
 
 ---
 
@@ -3140,6 +3140,35 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 ---
 
+### REQ-SET-134: Reactive Sport-Type List & Picker Refresh on Swimming Activation and External Mutations (`ATT-8445`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-SET-134`
+- **System Requirement(s)**: `SYSREQ-TRK-011`, `SYSREQ-TRK-001`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration, On-Device Manual
+- **Implementation**: `SportTypesRepository.kt`, `SportTypeDatabaseManager.java`, `SportTypeReconciliationHelper.kt`, `SportTypeViewModel.kt`, `SportTypesTabsScreen.kt`, `SportTypesComposeHelpers.kt`, `EditWorkoutViewModel.kt`, `EquipmentViewModel.kt`, `WorkoutClusterHeatmapScreen.kt`, `ManualClusterScreen.kt`, `ImportBackupTabsScreen.kt`
+- **Localization Parity**: `N/A - 0 string changes` (`0` edits to `res/values*/strings*.xml`)
+- **Rationale**: Activating Swimming in Expert Settings (`ensureSwimSportTypeExists()`, `REQ-SET-107.2`) writes the `SWIM` row into `SportType.db`, but `SportTypeViewModel` (Activity-scoped via `viewModel(activity)` in `ATrainingTrackerApp.kt`) and downstream pickers (`EditWorkoutViewModel`, `EquipmentViewModel`, `EditWorkoutClusterIdentityDialog`, `ManualClusterScreen`, `ImportBackupTabsScreen`) cached sport types without a repository change signal or `ON_RESUME` reload, hiding Swimming until an app restart.
+- **Description**:
+  1. *Repository Mutation Change Signal (`REQ-SET-134.1`)*: `SportTypesRepository.Companion` SHALL expose `sportTypesChanged: SharedFlow<Unit>` and `notifySportTypesChanged()` (reset in `resetForTesting()`). `SportTypeDatabaseManager` (`ensureSwimSportTypeExists()` on insert, `updateSportType()`, `delete()`) and `SportTypeReconciliationHelper` (`reconcileOrphanSportTypes()` when `insertedCount > 0`, `claimPlaceholder()`, `pruneUnreferencedPlaceholders()` when `deletedCount > 0`) SHALL invoke `SportTypesRepository.notifySportTypesChanged()` strictly when `SportType.db` is mutated (zero spurious events on idempotent no-ops).
+  2. *`SportTypeViewModel` & `SportTypesTabsScreen` Live Refresh (`REQ-SET-134.2`)*: `SportTypeViewModel` (`@JvmOverloads` preserving `(Application)` and `(Application, WorkoutRepository)` constructors) SHALL collect `sportTypesChangedFlow` to invoke `loadSportTypes()`, and `SportTypesTabsScreen` SHALL attach a `Lifecycle.Event.ON_RESUME` observer calling `viewModel.loadSportTypes()` so newly activated Swimming (under `All` and `Other` tabs) and any external `SportType.db` mutations appear immediately without an app restart.
+  3. *Downstream Sport-Type Picker Reactivity (`REQ-SET-134.3`)*: `EditWorkoutViewModel` SHALL query `sportTypesRepository.sportTypesList` dynamically and refresh `_sportTypeNames` on `sportTypesChanged`; `EquipmentViewModel` SHALL expose live `bikeSportTypes` / `runSportTypes` getters and reload equipment on `sportTypesChanged`; and `EditWorkoutClusterIdentityDialog`, `ManualClusterScreen`, and `ImportBackupTabsScreen` SHALL reuse shared `@Composable fun rememberSportTypesList(...)` keyed on `sportTypesChanged` while preserving all `RepositoryUiCleanlinessContractTest` invariants.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Refines `REQ-SET-107` (`ATT-7999`) and `REQ-UI-257` (`EquipmentRepository.equipmentLinksChanged`) across `SportTypesRepository.kt`, `SportTypeDatabaseManager.java`, `SportTypeViewModel.kt`, `SportTypesTabsScreen.kt`, and downstream pickers.
+  2. *Historical Origin & Commit Trace*: `ATT-7999` introduced `ensureSwimSportTypeExists()`; `ATT-8129` replaced legacy `SportTypeListFragment` with `SportTypesTabsScreen` + Activity-scoped `SportTypeViewModel`.
+  3. *Root Reason for Existing Formulation*: Activity-scoping `SportTypeViewModel` avoided redundant tab reloads, while `ATT-7999` omitted a reactive repository change stream for `SportType.db`.
+  4. *Preservation of Core Invariants*: Fresh `SportType.db` v3 seeds strictly 5 defaults; `ensureSwimSportTypeExists()` remains idempotent with `minSpeed = 0.0, maxSpeed = 0.0` (`REQ-SET-107.1`–`.2`); `@JvmOverloads` preserves `AndroidViewModelFactory` reflection (`Rule 3.5`); zero `*DatabaseManager.getInstance(` in `trainingtracker/ui/`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* Swimming is inactive and `SportTypeViewModel` is already initialized, *When* Expert Settings invokes `ensureSwimSportTypeExists()`, *Then* `sportTypesChanged` emits once and `SportTypeViewModel.sportTypes` updates immediately with Swimming without an app restart (while a second idempotent `ensureSwimSportTypeExists()` call emits zero extra events).
+• *Given* `SportTypesTabsScreen` resumes or navigates back from Expert Settings after Swimming activation, *When* `ON_RESUME` fires, *Then* `viewModel.loadSportTypes()` refreshes the displayed list so Swimming appears immediately.
+• *Given* `EditWorkoutViewModel`, `EquipmentViewModel`, or `rememberSportTypesList` Compose pickers are active, *When* `SportType.db` is mutated and `sportTypesChanged` emits, *Then* all pickers reflect the updated sport-type list immediately without restart.
+
+**Invariants**: `SportType.db` `DB_VERSION = 3` unchanged; fresh install seeds 5 defaults; `@JvmOverloads` preserved on `SportTypeViewModel`; zero `*DatabaseManager.getInstance(` in `trainingtracker/ui/`; `0` UI string edits (`N/A - 0 string changes`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -3193,3 +3222,6 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 | `1.0.48` | 2026-11-23 | Lane 2 Author (`ATT-9611`, `--as agent1`) | `ATT-9611` | Promoted `REQ-SET-130` to `[Verified]` following Stage 4/5 construction & verification (`250/250 PASS` across 24 Polar/`WorkoutSamples`/Contract suites, `0` production Kotlin/Java warnings, `PolarOfflineHrTimestampAligner.kt` `266` LoC, `PolarVeritySenseOfflineController.kt` `1,476/1,500`, `PolarH10OfflineController.kt` `936/1,500`, `WorkoutSamplesDatabaseManager.java` `1,478/1,500`, and `docs/engineering/walkthroughs/ATT-9611_walkthrough.md`). |
 | `1.0.49` | 2026-11-24 | Lane 2 Author (`ATT-9578`, `--as agent1`) | `ATT-9578` | Added `REQ-SET-131` (`[Planned]`, `.1`–`.4`, refining `REQ-SET-079` & `REQ-EXP-045.1`) for zero-`runBlocking`, cold-start-safe smartphone raw telemetry opt-in resolution via eager `MutableStateFlow` + delta-only `SharedPreferences` cold-start mirror in `TuningPreferencesDataStore`, `O(1)` delegation from `SmartphoneRawTelemetryRecorder.isEnabled` through `SettingsDataStoreJavaHelper`, and `DataStoreHotPathContractTest` regression guard (`N/A - 0 string changes`). |
 | `1.0.50` | 2026-11-24 | Lane 2 Author (`ATT-9578`, `--as agent1`) | `ATT-9578` | Promoted `REQ-SET-131` to `[Verified]` following Stage 4/5 construction & verification (`122/122 PASS` across 24 suites, `0` new production warnings, `TuningPreferencesDataStore.kt` `2,279/2,410`, `SettingsDataStoreJavaHelper.kt` `370`, `SmartphoneRawTelemetryRecorder.kt` `835`, live `emulator-5554` smoke `CRASH_LOGCAT_CLEAN`, evidence bundle `docs/engineering/test_evidence/tickets/ATT-9578/`). |
+| `1.0.51` | 2026-11-25 | Lane 2 Author (`ATT-8445`, `--as agent1`) | `ATT-8445` | Added `REQ-SET-134` (`[Planned]`, `.1`–`.3`, refining `REQ-SET-107` & `REQ-UI-257`) for reactive `SportTypesRepository.sportTypesChanged` signaling, `SportTypeViewModel`/`SportTypesTabsScreen` live refresh on Swimming activation and `ON_RESUME`, and downstream picker reactivity (`N/A - 0 string changes`). |
+| `1.0.52` | 2026-11-25 | Lane 2 Author (`ATT-8445`, `--as agent1`) | `ATT-8445` | Promoted `REQ-SET-134` to `[Verified]` following Stage 4/5 construction & verification (`68/68 PASS` across 12 targeted unit/Compose/contract suites, `0` new production/test compiler warnings, live `emulator-5554` Swimming activation & immediate Sport Types refresh `CRASH_COUNT=0`, `Rule 8.5` before/after PNGs verified). |
+| `1.0.53` | 2026-11-25 | Lane 2 Author (`ATT-8445`, `--as agent1`) | `ATT-8445` | Stage 6 Bounce 1/5 heal: grounded `REQ-SET-134.1` against authentic `SportTypeReconciliationHelper.reconcileOrphanSportTypes()` (`insertedCount > 0`) and `claimPlaceholder()` (`Rule 8.7`) and wired `notifySportTypesChanged()` in `reconcileOrphanSportTypes()`. |

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.build.UiReflectionOnlyTestAuditContractTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-25T02:17:32.449Z" hostname="rainer-HP-EliteBook-850-G5" time="0.432">
+  <properties/>
+  <testcase name="testBaseline_containsOnlyExpectedLegacyCount" classname="com.atrainingtracker.trainingtracker.build.UiReflectionOnlyTestAuditContractTest" time="0.277"/>
+  <testcase name="testUiReflectionAudit_noUnallowlistedReflectionOnlyUiTests" classname="com.atrainingtracker.trainingtracker.build.UiReflectionOnlyTestAuditContractTest" time="0.15"/>
+  <testcase name="testRatchetingTripwire_andLegitimateReflectionProtections" classname="com.atrainingtracker.trainingtracker.build.UiReflectionOnlyTestAuditContractTest" time="0.002"/>
+  <testcase name="testBehavioralComposeMandate_codingStandardsAndSkillsAligned" classname="com.atrainingtracker.trainingtracker.build.UiReflectionOnlyTestAuditContractTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -22,11 +22,13 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
+import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
 import com.atrainingtracker.util.safeEnumValueOf
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -59,7 +61,8 @@ data class SportTypeItem(
 
 class SportTypeViewModel @JvmOverloads constructor(
     application: Application,
-    private val workoutRepository: WorkoutRepository = WorkoutRepository.getInstance(application)
+    private val workoutRepository: WorkoutRepository = WorkoutRepository.getInstance(application),
+    private val sportTypesChangedFlow: Flow<Unit> = SportTypesRepository.sportTypesChanged
 ) : AndroidViewModel(application) {
     private val dbSportTypeManager = SportTypeDatabaseManager.getInstance(application)
     private val dbLinksHelper = SportTypeEquipmentLinkManager.getInstance(application)
@@ -80,11 +83,24 @@ class SportTypeViewModel @JvmOverloads constructor(
     init {
         loadSportTypes()
         observeWorkoutMutations()
+        observeSportTypesChanged()
     }
 
     private fun observeWorkoutMutations() {
         viewModelScope.launch(Dispatchers.IO) {
             workoutRepository.workoutMutationEvents.collect {
+                loadSportTypes()
+            }
+        }
+    }
+
+    /**
+     * Observes external SportType.db mutations (e.g. Swimming activation in Expert Settings)
+     * so SportTypesTabsScreen updates immediately without an app restart (REQ-SET-134.2).
+     */
+    private fun observeSportTypesChanged() {
+        viewModelScope.launch(Dispatchers.IO) {
+            sportTypesChangedFlow.collect {
                 loadSportTypes()
             }
         }

@@ -68,6 +68,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
 import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
+import com.atrainingtracker.trainingtracker.ui.common.rememberSportTypesList
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSelectionDialog
 import com.atrainingtracker.trainingtracker.ui.clusters.ClusterTuningContent
 import com.atrainingtracker.trainingtracker.ui.clusters.ClusterInfoDialog
@@ -1006,7 +1007,7 @@ fun ImportMappingDialog(
 ) {
     val context = LocalContext.current
     val appContext = context.applicationContext
-    val localSportTypes = remember { SportTypesRepository.getInstance(context).getSportTypes(null) }
+    val localSportTypes = rememberSportTypesList(bSportType = null)
     val localEquipment = remember { EquipmentRepository.getInstance(context).equipmentItems }
 
     val sportMapping = remember {

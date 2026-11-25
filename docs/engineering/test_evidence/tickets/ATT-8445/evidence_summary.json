@@ -1,0 +1,63 @@
+{
+  "android_test_summary": {
+    "details": "69 Android unit tests passed (12 targeted JUnit XML; 301-suite auto-selection included TuningPreferencesDataStoreRoundTripTest with known ATT-9681 livelock).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 69
+  },
+  "checks": [
+    {
+      "details": "69 Android unit tests passed (12 targeted JUnit XML; 301-suite auto-selection included TuningPreferencesDataStoreRoundTripTest with known ATT-9681 livelock).",
+      "failing_tests": [],
+      "name": "dependent_unit_tests",
+      "passed": true
+    },
+    {
+      "details": "All safety linters passed.",
+      "name": "static_safety_linters",
+      "passed": true
+    },
+    {
+      "details": "Deliverable lint passed (1 file(s)).",
+      "name": "deliverable_lint",
+      "passed": true
+    },
+    {
+      "details": "PASS: Zero Git conflict markers detected (12678 tracked file(s) scanned).",
+      "name": "conflict_markers",
+      "passed": true
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "aa2bfa7066b2379e07972785e93cd94a1c65f3e5",
+  "junit_xml_files": [
+    "junit/TEST-com.atrainingtracker.banalservice.database.SportTypeSwimTemplateTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.sporttype.SportTypeViewModelRefreshTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.sporttype.SportTypeViewModelRetiredTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.sporttype.SportTypesTabsScreenComposeTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.sporttype.SportTypesTabsScreenContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.AndroidViewModelReflectionContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.UiReflectionOnlyTestAuditContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.RepositoryUiCleanlinessContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.common.SportTypesComposeHelpersTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModelLifecycleTest.xml"
+  ],
+  "python_test_summary": {
+    "details": "Skipped (--skip-tests).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "risk_tier": "tier-b",
+  "run_started_utc": "2026-11-25T03:49:57.836949+00:00",
+  "schema_version": "1.0.0",
+  "screenshots": [
+    "screenshots/ATT-8445_sport_types_before.png",
+    "screenshots/ATT-8445_sport_types_after.png"
+  ],
+  "ticket_key": "ATT-8445",
+  "ui_touching": true,
+  "verdict": "PASS"
+}

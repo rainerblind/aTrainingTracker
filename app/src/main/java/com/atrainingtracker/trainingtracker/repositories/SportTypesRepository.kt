@@ -20,14 +20,17 @@ package com.atrainingtracker.trainingtracker.repositories
 
 import android.app.Application
 import android.content.Context
+import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.TrainingApplication
-import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlin.getValue
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 
 /**
  * Domain representation of basic sport type identification and mapping (REQ-UI-511.1).
@@ -144,6 +147,33 @@ class SportTypesRepository private constructor(private val context: Context) :
                     || lower.contains("stationary")
         }
 
+        @Volatile
+        private var _sportTypesChanged = MutableSharedFlow<Unit>(
+            replay = 0,
+            extraBufferCapacity = 64,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST
+        )
+
+        /**
+         * Reactive event stream emitted whenever SportType.db is mutated
+         * (e.g. Swimming activation, custom sport creation/edit/deletion, reconciliation) (REQ-SET-134.1).
+         */
+        @JvmStatic
+        val sportTypesChanged: SharedFlow<Unit>
+            get() = _sportTypesChanged.asSharedFlow()
+
+        /**
+         * Dispatches a sport-type mutation notification across active ViewModels and Compose pickers (REQ-SET-134.1).
+         */
+        @JvmStatic
+        fun notifySportTypesChanged() {
+            try {
+                _sportTypesChanged.tryEmit(Unit)
+            } catch (t: Throwable) {
+                if (DEBUG) Log.w(TAG, "Failed to emit sportTypesChanged event: ${t.message}")
+            }
+        }
+
         // The single, volatile instance of the repository.
         // @Volatile guarantees that writes to this field are immediately visible to other threads.
         @Volatile
@@ -189,6 +219,11 @@ class SportTypesRepository private constructor(private val context: Context) :
         @androidx.annotation.VisibleForTesting
         fun resetForTesting(newInstance: SportTypesRepository? = null) {
             INSTANCE = newInstance
+            _sportTypesChanged = MutableSharedFlow(
+                replay = 0,
+                extraBufferCapacity = 64,
+                onBufferOverflow = BufferOverflow.DROP_OLDEST
+            )
         }
     }
 

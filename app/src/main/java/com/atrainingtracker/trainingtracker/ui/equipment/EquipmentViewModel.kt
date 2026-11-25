@@ -127,8 +127,10 @@ class EquipmentViewModel @JvmOverloads constructor(
     val runSensorsList: List<SimpleSensorInfo>
         get() = _shoeSensors.value.ifEmpty { effectiveDeviceRepo.getSensorsForSportType(BSportType.RUN) }
 
-    val bikeSportTypes by lazy { effectiveSportRepo.getSportTypes(BSportType.BIKE) }
-    val runSportTypes by lazy { effectiveSportRepo.getSportTypes(BSportType.RUN) }
+    val bikeSportTypes: List<com.atrainingtracker.trainingtracker.repositories.SimpleSportTypeInfo>
+        get() = effectiveSportRepo.getSportTypes(BSportType.BIKE)
+    val runSportTypes: List<com.atrainingtracker.trainingtracker.repositories.SimpleSportTypeInfo>
+        get() = effectiveSportRepo.getSportTypes(BSportType.RUN)
 
     @Volatile
     private var loadJob: Job? = null
@@ -138,6 +140,15 @@ class EquipmentViewModel @JvmOverloads constructor(
         observeSyncStatus()
         observeExternalEquipmentLinks()
         observeWorkoutMutations()
+        observeSportTypesChanged()
+    }
+
+    private fun observeSportTypesChanged() {
+        viewModelScope.launch(ioDispatcher) {
+            SportTypesRepository.sportTypesChanged.collect {
+                loadEquipment()
+            }
+        }
     }
 
     private fun observeWorkoutMutations() {

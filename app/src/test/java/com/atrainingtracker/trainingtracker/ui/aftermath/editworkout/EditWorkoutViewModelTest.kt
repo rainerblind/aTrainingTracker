@@ -800,4 +800,31 @@ class EditWorkoutViewModelTest {
         assertEquals(123456.0, merged.totalDistance, 0.001)
         assertEquals(3200L, merged.ascentMeters)
     }
+
+    @Test
+    fun testSportTypesChanged_refreshesSportTypeNamesWithoutRestart_TST_SET_134_3() {
+        val initial = createTestWorkout()
+        val viewModel = createViewModel(initial)
+
+        // Expand full list ("+ all sports +")
+        viewModel.updateSportName("+ all sports +")
+        assertEquals(listOf("Road Cycling"), viewModel.sportTypeNames.value)
+
+        // Simulate Swimming activation in SportTypesRepository
+        every { mockSportTypesRepository.sportTypesList } returns listOf(
+            SimpleSportTypeInfo(1L, "Road Cycling", BSportType.BIKE),
+            SimpleSportTypeInfo(6L, "Swimming", BSportType.UNKNOWN)
+        )
+        every { mockSportTypesRepository.getBSportType(6L) } returns BSportType.UNKNOWN
+        every { mockSportTypesRepository.getStravaName(6L) } returns "Swim"
+
+        SportTypesRepository.notifySportTypesChanged()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(listOf("Road Cycling", "Swimming"), viewModel.sportTypeNames.value)
+
+        viewModel.updateSportName("Swimming")
+        assertEquals(6L, viewModel.workoutData.value?.sportId)
+        assertEquals("Swimming", viewModel.workoutData.value?.sportName)
+    }
 }
