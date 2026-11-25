@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMapOfflineModeTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-25T11:45:50.469Z" hostname="rainer-HP-EliteBook-850-G5" time="5.441">
+  <properties/>
+  <testcase name="resolveOfflineAwareMapProperties_activatesMapTypeNoneAndFallsBackCleanly" classname="com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMapOfflineModeTest" time="2.104"/>
+  <testcase name="isOfflineOsmActive_requiresBothOfflineSourceAndAtLeastOneMapFile" classname="com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMapOfflineModeTest" time="0.117"/>
+  <testcase name="offlineOsmAttributionBadge_rendersOdblCreditAndTogglesConditionallyInCompose" classname="com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMapOfflineModeTest" time="3.107"/>
+  <testcase name="offlineBaseTileZIndex_sitsStrictlyBeneathAllMapOverlays" classname="com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMapOfflineModeTest" time="0.113"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

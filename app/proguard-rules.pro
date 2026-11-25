@@ -43,6 +43,12 @@
 # --- GPX Parser ---
 -keep class io.ticofab.androidgpxparser.** { *; }
 
+# --- Mapsforge Offline Vector Maps & AndroidSVG (ATT-8175 / REQ-MAP-071.1) ---
+-keep class org.mapsforge.** { *; }
+-dontwarn org.mapsforge.**
+-keep class com.caverock.androidsvg.** { *; }
+-dontwarn com.caverock.androidsvg.**
+
 # --- AndroidX Lifecycle ViewModels ---
 # Preserve constructors accessed via ViewModelProvider reflection
 -keepclassmembers class * extends androidx.lifecycle.ViewModel {

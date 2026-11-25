@@ -285,6 +285,32 @@ dependencies {
     implementation 'com.google.android.play:review-ktx:2.0.2'
     implementation 'com.google.maps.android:maps-compose:8.6.0'
     implementation 'com.google.maps.android:android-maps-utils:5.2.0'
+
+    // --- Mapsforge Offline Vector Maps (LGPLv3, ATT-8175 / REQ-MAP-071.1) ---
+    // Exclude kxml2/xmlpull from implementation to prevent AGP/R8 duplicate org.xmlpull.v1.* conflicts
+    // with the Android SDK runtime while preserving testImplementation 'net.sf.kxml:kxml2:2.3.0' for JVM tests.
+    def mapsforgeVersion = '0.25.0'
+    implementation("org.mapsforge:mapsforge-core:${mapsforgeVersion}") {
+        exclude group: 'net.sf.kxml', module: 'kxml2'
+        exclude group: 'xmlpull', module: 'xmlpull'
+    }
+    implementation("org.mapsforge:mapsforge-map:${mapsforgeVersion}") {
+        exclude group: 'net.sf.kxml', module: 'kxml2'
+        exclude group: 'xmlpull', module: 'xmlpull'
+    }
+    implementation("org.mapsforge:mapsforge-map-reader:${mapsforgeVersion}") {
+        exclude group: 'net.sf.kxml', module: 'kxml2'
+        exclude group: 'xmlpull', module: 'xmlpull'
+    }
+    implementation("org.mapsforge:mapsforge-map-android:${mapsforgeVersion}") {
+        exclude group: 'net.sf.kxml', module: 'kxml2'
+        exclude group: 'xmlpull', module: 'xmlpull'
+    }
+    implementation("org.mapsforge:mapsforge-themes:${mapsforgeVersion}") {
+        exclude group: 'net.sf.kxml', module: 'kxml2'
+        exclude group: 'xmlpull', module: 'xmlpull'
+    }
+    implementation 'com.caverock:androidsvg:1.4'
     implementation platform('com.google.firebase:firebase-bom:34.18.0')
     implementation 'com.google.firebase:firebase-analytics'
     implementation 'com.google.firebase:firebase-crashlytics'

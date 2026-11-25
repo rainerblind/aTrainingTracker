@@ -1,0 +1,45 @@
+# Stage 3 Implementation Plan — ATT-8175: Mapsforge Vector `TileProvider` & Offline Base-Map Mode
+
+- **Ticket**: `ATT-8175` (`5 SP`, Feature, `tier-a`, Epic `ATT-8171`) | **Target Release**: `V5.0.0` | **Risk Rating**: `HIGH`
+- **Traceability**: `REQ-MAP-071` (`REQ-MAP-071.1`–`.5`, `SYSREQ-TRK-004`, `SYSREQ-TRK-009`) <-> `TST-MAP-074` (`TST-MAP-074.1`–`.4`)
+- **Database / Parallel Hygiene**: `0` SQLite migrations; `0` edits to `SettingsDataStore.kt` (Lane 1 `ATT-9628`), `MyPreferenceManager.kt`, or `PathPreviewMap.kt`; dedicated `values*/strings_offline_maps.xml` across all 9 locales.
+
+## 1. SWE.2 Architectural Decomposition, Threading & Resource Model
+
+- **Layer 1 — Build, ProGuard & Graphics Bootstrap (`app/build.gradle`, `app/proguard-rules.pro`, `TrainingApplication.java`, `ui/map/offline/OfflineMapGraphicInitializer.kt`)**:
+  - Add `org.mapsforge:{mapsforge-core,mapsforge-map,mapsforge-map-reader,mapsforge-map-android,mapsforge-themes}:0.25.0` (excluding `net.sf.kxml:kxml2` & `xmlpull:xmlpull` on `implementation` while keeping `testImplementation 'net.sf.kxml:kxml2:2.3.0'`) + `com.caverock:androidsvg:1.4`.
+  - Add `-keep` / `-dontwarn` rules for `org.mapsforge.**` and `com.caverock.androidsvg.**` in `app/proguard-rules.pro`.
+  - `OfflineMapGraphicInitializer.initialize(application, sdkInt = Build.VERSION.SDK_INT)` guards `sdkInt > 0` + `AtomicBoolean` idempotency + `try/catch (Throwable)` around `AndroidGraphicFactory.createInstance(application)`, invoked from `TrainingApplication.onCreate()` right after `MapsInitializer.initialize(this)` (`+3` LoC -> `1,979 / 2,050` LoC).
+- **Layer 2 — Orthogonal Preferences & Storage (`ui/map/offline/MapBaseSource.kt`, `OfflineMapPreferences.kt`, `OfflineMapStorage.kt`)**:
+  - `enum class MapBaseSource { GOOGLE, OFFLINE_OSM }` (`safeValueOf` defaulting to `GOOGLE`).
+  - `OfflineMapPreferences`: isolated `"offline_map_prefs"` `SharedPreferences` + process-wide `MutableStateFlow<MapBaseSource>` (`observeBaseSource(context)` / `getBaseSource(context)` / `setBaseSource(context, source)`), defensive `try/catch` for plain-JVM contexts (`Coding Standards §5.5`), zero impact on `WorkoutBaseMapType`.
+  - `OfflineMapStorage`: resolves app-private `offline_maps/` directory (`File(context.getExternalFilesDir(null) ?: context.filesDir, "offline_maps")`) and `listInstalledMapFiles(dir)` filtering readable non-empty `*.map` files sorted by name (ignoring `.tmp`/`.part`).
+- **Layer 3 — Thread-Safe Vector Tile Engine & Manager (`ui/map/offline/MapsforgeOfflineTileProvider.kt`, `OfflineMapTileProviderManager.kt`)**:
+  - Narrow internal `OfflineVectorTileEngine` interface (`supportsTile`, `renderTilePng`, `close`) with `MapsforgeVectorTileEngine` implementation wrapping `MultiMapDataStore(DataPolicy.RETURN_ALL)` (opening each valid `.map` individually in `try/catch`), `DatabaseRenderer`, `RenderThemeFuture(AndroidGraphicFactory.INSTANCE, renderTheme, displayModel)`, and `finally { tileBitmap.decrementRefCount() }` bitmap cleanup.
+  - `MapsforgeOfflineTileProvider` implements `TileProvider`:
+    - Fast-path byte-bounded `LruCache<Long, ByteArray>` (`MAX_TILE_CACHE_BYTES = 16 * 1024 * 1024`, packed `(z, x, y)` `Long` key).
+    - `ReentrantReadWriteLock` (`stateLock`): `getTile()` holds read lock + serializes `renderTilePng` under `renderLock`, returns `TileProvider.NO_TILE` when closed/empty/unsupported, and inserts into LRU only if `generation` still matches; `reload(files, theme)` & `close()` hold write lock, safely close prior engine, increment `generation`, evict LRU cache, open new engine, and publish `installedMapCountFlow` + `revisionFlow`.
+  - `OfflineMapTileProviderManager`: singleton manager holding one shared `MapsforgeOfflineTileProvider` (`===` across all `ATrainingTrackerMap` mounts and 1-Hz updates), exposing `getOrCreateProvider(context)` and `reload(context, renderTheme = MapsforgeThemes.DEFAULT)` for `ATT-8174`/`ATT-8173`.
+- **Layer 4 — `ATrainingTrackerMap.kt` Integration & Attribution UI (`ui/map/ATrainingTrackerMap.kt`, `ui/map/offline/OfflineOsmAttributionBadge.kt`)**:
+  - Pure helper `resolveOfflineAwareMapProperties(baseSource, installedMapCount, isDark, context, useMutedStyle, mapTypeOverride)` returning `MapProperties(mapType = MapType.NONE, mapStyleOptions = null)` iff `baseSource == MapBaseSource.OFFLINE_OSM && installedMapCount > 0`, else delegating unchanged to existing Google `MapProperties` resolution.
+  - Inside `GoogleMap { ... }`: when `isOfflineOsmActive`, mount `TileOverlay(tileProvider = offlineProvider, state = tileOverlayState, zIndex = -100f)` (`OFFLINE_BASE_TILE_Z_INDEX = -100f`) and `LaunchedEffect(providerRevision) { tileOverlayState.clearTileCache() }`.
+  - Inside `BoxWithConstraints`: when `isOfflineOsmActive`, render `OfflineOsmAttributionBadge` (`Alignment.BottomStart`, respecting `contentPadding`). `map.snapshot` in `MapEffect` captures `TileOverlay` tiles natively.
+- **UI Consistency (`docs/design_guidelines.md §5`)**:
+  - *Reference component*: Compact floating map badge style (matching map HUD pills in `FullScreenWorkoutMapOverlay.kt`).
+  - *Theme tokens*: `RoundedCornerShape(4.dp)`, `padding(horizontal = 6.dp, vertical = 2.dp)`, `MaterialTheme.colorScheme.surface.copy(alpha = 0.78f)`, `MaterialTheme.colorScheme.onSurface`, `MaterialTheme.typography.labelSmall`, `maxLines = 1, softWrap = false`, `testTag("offline_osm_attribution")`. Verified across Light, Dark, and AMOLED via `@Preview` and `emulator-5554`. No one-off raw colors.
+
+## 2. Atomic Implementation Steps (Stage 4 Construction)
+
+| Step | Target File(s) | Atomic Change | Req / Test |
+|---|---|---|---|
+| **1** | `app/build.gradle`, `app/proguard-rules.pro`, `OfflineMapGraphicInitializer.kt`, `TrainingApplication.java` | Add Mapsforge `0.25.0` + `androidsvg:1.4` with `kxml2`/`xmlpull` exclusions, ProGuard rules, and `SDK_INT == 0`-safe `OfflineMapGraphicInitializer` wired in `TrainingApplication.onCreate()`. | `REQ-MAP-071.1` / `TST-MAP-074.2` |
+| **2** | `MapBaseSource.kt`, `OfflineMapPreferences.kt`, `OfflineMapStorage.kt` (`ui/map/offline/`) | Implement orthogonal `MapBaseSource` enum, isolated `OfflineMapPreferences` (`"offline_map_prefs"` + reactive `StateFlow`), and `OfflineMapStorage` `.map` file discovery. | `REQ-MAP-071.3` / `TST-MAP-074.2` |
+| **3** | `MapsforgeOfflineTileProvider.kt`, `OfflineMapTileProviderManager.kt` (`ui/map/offline/`) | Implement `OfflineVectorTileEngine` + `MapsforgeVectorTileEngine` (`MultiMapDataStore(DataPolicy.RETURN_ALL)`), `MapsforgeOfflineTileProvider` (`ReentrantReadWriteLock`, `renderLock`, `16 MiB` PNG LRU, `NO_TILE`, `reload()`/`close()`), and singleton `OfflineMapTileProviderManager`. | `REQ-MAP-071.2` / `TST-MAP-074.1` |
+| **4** | `values*/strings_offline_maps.xml` (9 locales), `OfflineOsmAttributionBadge.kt`, `ATrainingTrackerMap.kt` | Add 9-locale strings, `OfflineOsmAttributionBadge` with multi-theme `@Preview`s, `resolveOfflineAwareMapProperties`, `TileOverlay(zIndex = -100f)`, revision-driven `clearTileCache()`, and live badge wiring in `ATrainingTrackerMap.kt`. | `REQ-MAP-071.4` / `TST-MAP-074.3` |
+| **5** | `docs/architecture.md`, unit/UI tests (`MapsforgeOfflineTileProviderTest`, `OfflineMapPreferencesAndStorageTest`, `ATrainingTrackerMapOfflineModeTest`, `PathPreviewMapOfflineInvariantTest`, `ProGuardRulesContractTest`) | Update `docs/architecture.md` (`§2`, `§4.9` per `Rule 8.8`), author full `TST-MAP-074.1`–`.4` test suites, run Tier 1 targeted Gradle tests + `TranslationParityTest` + `ArchitectureConformanceContractTest`, and verify live on `emulator-5554` (Light & Dark screenshots + `read_file`). | `REQ-MAP-071.1`–`.5` / `TST-MAP-074.1`–`.4` |
+
+## 3. Invariants, Rollback & Stage 4 Verification Commands
+
+- **Existing Users & Invariants**: Fresh & upgrading users default to `MapBaseSource.GOOGLE` (`0` behavior change until opted into `OFFLINE_OSM` with `>= 1` `.map` file); `WorkoutBaseMapType` is preserved across toggles; `PathPreviewMap.kt` stays untouched in Lite Mode; `MapsforgeOfflineTileProvider` remains `===` across 1-Hz tracking updates (`REQ-MAP-051`); `TrainingApplication.java <= 2,050` LoC; clean `git revert` restores baseline.
+- **Stage 4 Targeted Test Command**:
+  `./gradlew :app:testDebugUnitTest --rerun --tests "com.atrainingtracker.trainingtracker.ui.map.offline.*" --tests "com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMapOfflineModeTest" --tests "com.atrainingtracker.trainingtracker.ui.map.PathPreviewMapOfflineInvariantTest" --tests "com.atrainingtracker.trainingtracker.ui.map.MapPolylineMemoryStabilityTest" --tests "com.atrainingtracker.trainingtracker.ui.map.DarkMapStyleResolutionTest" --tests "com.atrainingtracker.trainingtracker.ui.map.PathPreviewMapBoundsTest" --tests "com.atrainingtracker.trainingtracker.ui.map.WorkoutMapLayerPreferencesTest" --tests "com.atrainingtracker.trainingtracker.proguard.ProGuardRulesContractTest" --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest" --tests "com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest"`

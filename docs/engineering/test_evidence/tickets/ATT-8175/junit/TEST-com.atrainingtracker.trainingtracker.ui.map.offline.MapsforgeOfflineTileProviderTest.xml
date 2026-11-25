@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.offline.MapsforgeOfflineTileProviderTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-25T11:45:56.194Z" hostname="rainer-HP-EliteBook-850-G5" time="0.165">
+  <properties/>
+  <testcase name="getTile_returnsNoTileWhenEmptyOrUnsupportedOrOutOfBounds" classname="com.atrainingtracker.trainingtracker.ui.map.offline.MapsforgeOfflineTileProviderTest" time="0.011"/>
+  <testcase name="normalizedUserScaleFactor_cancelsDoubleHiDpiScaling" classname="com.atrainingtracker.trainingtracker.ui.map.offline.MapsforgeOfflineTileProviderTest" time="0.001"/>
+  <testcase name="mapsforgeVectorTileEngine_skipsCorruptAndEmptyMapFilesSafely" classname="com.atrainingtracker.trainingtracker.ui.map.offline.MapsforgeOfflineTileProviderTest" time="0.025"/>
+  <testcase name="byteBoundedLruCache_evictsLeastRecentlyUsedWithinCeiling" classname="com.atrainingtracker.trainingtracker.ui.map.offline.MapsforgeOfflineTileProviderTest" time="0.001"/>
+  <testcase name="noOpMapsforgeTileCache_holdsZeroMemoryAndNeverThrows" classname="com.atrainingtracker.trainingtracker.ui.map.offline.MapsforgeOfflineTileProviderTest" time="0.002"/>
+  <testcase name="concurrentGetTileAndHotSwapReloadAndClose_zeroRacesAndSerializedRenderer" classname="com.atrainingtracker.trainingtracker.ui.map.offline.MapsforgeOfflineTileProviderTest" time="0.123"/>
+  <testcase name="reload_closesOldEngineEvictsCacheAndBumpsRevision" classname="com.atrainingtracker.trainingtracker.ui.map.offline.MapsforgeOfflineTileProviderTest" time="0.001"/>
+  <testcase name="tileCoordinateValidation_rejectsOutOfBoundsAndAcceptsValidCorners" classname="com.atrainingtracker.trainingtracker.ui.map.offline.MapsforgeOfflineTileProviderTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

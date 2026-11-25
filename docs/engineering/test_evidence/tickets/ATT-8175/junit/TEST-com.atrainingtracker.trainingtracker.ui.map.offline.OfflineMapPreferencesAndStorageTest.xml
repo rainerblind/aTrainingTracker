@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.offline.OfflineMapPreferencesAndStorageTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-25T11:45:36.478Z" hostname="rainer-HP-EliteBook-850-G5" time="6.539">
+  <properties/>
+  <testcase name="offlineMapGraphicInitializer_guardsSdkZeroAndExecutesIdempotently" classname="com.atrainingtracker.trainingtracker.ui.map.offline.OfflineMapPreferencesAndStorageTest" time="5.728"/>
+  <testcase name="offlineMapTileProviderManager_sharesReferentiallyStableInstanceAndSkipsGraphicsWhenEmpty" classname="com.atrainingtracker.trainingtracker.ui.map.offline.OfflineMapPreferencesAndStorageTest" time="0.172"/>
+  <testcase name="mapBaseSource_safeValueOfHandlesValidCaseInsensitiveAndUnknownTokens" classname="com.atrainingtracker.trainingtracker.ui.map.offline.OfflineMapPreferencesAndStorageTest" time="0.188"/>
+  <testcase name="offlineMapPreferences_persistsOrthogonallyToWorkoutBaseMapType" classname="com.atrainingtracker.trainingtracker.ui.map.offline.OfflineMapPreferencesAndStorageTest" time="0.349"/>
+  <testcase name="offlineMapStorage_filtersValidSortedMapFilesAndIgnoresPartials" classname="com.atrainingtracker.trainingtracker.ui.map.offline.OfflineMapPreferencesAndStorageTest" time="0.102"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,67 @@
+{
+  "android_test_summary": {
+    "details": "106 Android unit tests passed (16 JUnit XML; Rule 1.3 TrainingApplication 276-suite fan-out waiver).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 106
+  },
+  "checks": [
+    {
+      "details": "Android: 106 tests passed across 16 targeted suites (Rule 1.3 waiver for TrainingApplication 276-suite fan-out / ATT-9681, ATT-9701) | Python: N/A",
+      "failing_tests": [],
+      "name": "dependent_unit_tests",
+      "passed": true
+    },
+    {
+      "details": "All safety linters passed.",
+      "name": "static_safety_linters",
+      "passed": true
+    },
+    {
+      "details": "Deliverable lint passed (2 file(s)).",
+      "name": "deliverable_lint",
+      "passed": true
+    },
+    {
+      "details": "PASS: Zero Git conflict markers detected (13342 tracked file(s) scanned).",
+      "name": "conflict_markers",
+      "passed": true
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "6bed33a4cea4e2122f0489cd6d0733b7a71dfbac",
+  "junit_xml_files": [
+    "junit/TEST-com.atrainingtracker.trainingtracker.TrainingApplicationLapTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.TrainingApplicationStravaSyncTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.TrainingApplicationTrackingTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.exporter.TrainingApplicationDropboxPreferencesTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.localization.TranslationParityTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.proguard.ProGuardRulesContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.TrainingApplicationTrackedTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.ATrainingTrackerMapOfflineModeTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.DarkMapStyleResolutionTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.MapPolylineMemoryStabilityTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.PathPreviewMapBoundsTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.PathPreviewMapOfflineInvariantTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.WorkoutMapLayerPreferencesTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.offline.MapsforgeOfflineTileProviderTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.offline.OfflineMapPreferencesAndStorageTest.xml"
+  ],
+  "python_test_summary": {
+    "details": "Skipped (--skip-tests).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "risk_tier": "tier-a",
+  "run_started_utc": "2026-11-25T11:46:27.703080+00:00",
+  "schema_version": "1.0.0",
+  "screenshots": [
+    "screenshots/ATT-8175_offline_map_light.png",
+    "screenshots/ATT-8175_offline_map_dark.png"
+  ],
+  "ticket_key": "ATT-8175",
+  "ui_touching": true,
+  "verdict": "PASS"
+}

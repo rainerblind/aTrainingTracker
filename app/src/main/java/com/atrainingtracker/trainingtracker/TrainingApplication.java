@@ -1539,6 +1539,8 @@ public class TrainingApplication extends Application {
         ContextCompat.registerReceiver(this, mResumeFromPaused, new IntentFilter(REQUEST_RESUME_FROM_PAUSED), ContextCompat.RECEIVER_NOT_EXPORTED);
 
         com.google.android.gms.maps.MapsInitializer.initialize(this);
+        // ATT-8175 / REQ-MAP-071.1: Safe Mapsforge AndroidGraphicFactory bootstrap (SDK_INT == 0 guarded)
+        com.atrainingtracker.trainingtracker.ui.map.offline.OfflineMapGraphicInitializer.initialize(this);
 
         runWorkoutClusterMigration();
         KnownLocationsDatabaseManager.getInstance(this).healLegacyLocationsAsync();

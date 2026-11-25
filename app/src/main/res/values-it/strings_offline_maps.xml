@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="offline_map_osm_attribution">© OpenStreetMap contributors</string>
+    <string name="offline_map_source_google">Google Maps</string>
+    <string name="offline_map_source_osm">OSM offline</string>
+</resources>

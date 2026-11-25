@@ -1,14 +1,14 @@
 # Living Test Specification: Maps, Polylines & Navigation
 
 **Document ID**: `DOC-TST-MAPS`  
-**Version**: 1.0.11  
+**Version**: 1.0.13  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `maps_navigation`  
 **Prefixes**: `GEO`, `MAP`, `NAV`, `ROU`  
 **Scope**: Map rendering, polylines, navigation overlays, GPX track follow-me, and routing.  
-**Total Tests**: 74
+**Total Tests**: 75
 
 ---
 
@@ -1378,6 +1378,29 @@
   3. *Localization, Contract & Live Emulator Visual Inspection (`TST-MAP-073.3`)*:
   • Run `TranslationParityTest` across all 9 locales, `LiveSegmentSheetContractTest`, `ArchitectureConformanceContractTest` (`MapDetailLayout.kt <= 1,500` LoC), `FullScreenWorkoutMapUiTest`, and live `emulator-5554` verification capturing expanded/collapsed/metric-switched/readout PNG screenshots in Light & Dark modes inspected via `read_file` (`Rule 8.5`).
 
+### TST-MAP-074: **Mapsforge Offline Vector `TileProvider`, Orthogonal Base-Map Mode & `ATrainingTrackerMap` Verification Suite** [Verified]
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration, On-Device Manual
+- **Requirement(s)**: `REQ-MAP-071` (`REQ-MAP-071.1`..`REQ-MAP-071.5`)
+- **Component**: `OfflineMapGraphicInitializer.kt`, `MapBaseSource.kt`, `OfflineMapPreferences.kt`, `OfflineMapStorage.kt`, `MapsforgeOfflineTileProvider.kt`, `OfflineMapTileProviderManager.kt`, `OfflineOsmAttributionBadge.kt`, `ATrainingTrackerMap.kt`, `TrainingApplication.java`, `app/proguard-rules.pro`
+- **Verification Evidence**: `app/src/test/java/com/atrainingtracker/trainingtracker/ui/map/offline/MapsforgeOfflineTileProviderTest.kt` (`8/8 PASS`), `app/src/test/java/com/atrainingtracker/trainingtracker/ui/map/offline/OfflineMapPreferencesAndStorageTest.kt` (`5/5 PASS`), `app/src/test/java/com/atrainingtracker/trainingtracker/ui/map/ATrainingTrackerMapOfflineModeTest.kt` (`4/4 PASS`), `app/src/test/java/com/atrainingtracker/trainingtracker/ui/map/PathPreviewMapOfflineInvariantTest.kt` (`1/1 PASS`), `app/src/test/java/com/atrainingtracker/trainingtracker/ui/map/MapPolylineMemoryStabilityTest.kt` (`4/4 PASS`), `app/src/test/java/com/atrainingtracker/trainingtracker/ui/map/DarkMapStyleResolutionTest.kt` (`8/8 PASS`), `app/src/test/java/com/atrainingtracker/trainingtracker/ui/map/PathPreviewMapBoundsTest.kt` (`8/8 PASS`), `app/src/test/java/com/atrainingtracker/trainingtracker/ui/map/WorkoutMapLayerPreferencesTest.kt` (`8/8 PASS`), `app/src/test/java/com/atrainingtracker/trainingtracker/proguard/ProGuardRulesContractTest.kt` (`3/3 PASS`), `app/src/test/java/com/atrainingtracker/trainingtracker/localization/TranslationParityTest.kt` (`11/11 PASS`), `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt` (`11/11 PASS`), live `emulator-5554` Light & Dark screenshots `docs/engineering/walkthroughs/img/ATT-8175_offline_map_light.png` & `ATT-8175_offline_map_dark.png` (`ATT-8175`)
+- **Jira**: `ATT-8175` | **Target Release**: `V5.0.0`
+- **Test Description**:
+  1. *Thread-Safe `MapsforgeOfflineTileProvider`, Multi-Region Stitching, Bounded LRU & Hot-Swap (`TST-MAP-074.1`, `MapsforgeOfflineTileProviderTest.kt`)*:
+  • Verify `MultiMapDataStore(DataPolicy.RETURN_ALL)` configuration across multiple `.map` files, skipping empty/corrupt/partial files individually.
+  • Verify bounded `<= 16 MiB` PNG `LruCache<Long, ByteArray>` cache hits skip re-rasterization, cache evicts deterministically on `reload()`/`close()`, and out-of-bounds/closed/empty calls return `TileProvider.NO_TILE`.
+  • Stress-test concurrent `getTile(x, y, zoom)` worker threads against simultaneous `reload()` and `close()` calls asserting `0` exceptions, generation-fenced cache integrity, and monotonic `revisionFlow` increments.
+  2. *Orthogonal `MapBaseSource` Persistence, Storage Discovery, `SDK_INT == 0` Bootstrap & ProGuard Contracts (`TST-MAP-074.2`, `OfflineMapPreferencesAndStorageTest.kt`, `ProGuardRulesContractTest.kt`)*:
+  • Verify `OfflineMapPreferences` persists `GOOGLE`/`OFFLINE_OSM` in isolated `"offline_map_prefs"` with reactive `StateFlow` updates and defensive unknown-token fallback without altering `WorkoutBaseMapType`.
+  • Verify `OfflineMapStorage.listInstalledMapFiles(...)` discovers valid `*.map` files sorted deterministically while filtering `.tmp`/`.part`/empty files.
+  • Verify `OfflineMapGraphicInitializer` safely no-ops at `SDK_INT == 0` and stays idempotent on Android/Robolectric; verify `ProGuardRulesContractTest` covers `org.mapsforge.**`, `com.caverock.androidsvg.**`, and `MapBaseSource` reflection safety.
+  3. *`ATrainingTrackerMap` Offline Mode, Z-Order, Attribution Badge, 1-Hz Stability & `PathPreviewMap` Invariance (`TST-MAP-074.3`, `ATrainingTrackerMapOfflineModeTest.kt`, `PathPreviewMapOfflineInvariantTest.kt`, `MapPolylineMemoryStabilityTest.kt`)*:
+  • Verify `resolveOfflineAwareMapProperties` resolves `MapType.NONE` with null custom style iff `OFFLINE_OSM && installedMapCount > 0` and falls back to Google (`mapTypeOverride`/`useMutedStyle`/`DarkMapStyle`) when `GOOGLE` or `0` maps installed.
+  • Verify `OFFLINE_BASE_TILE_Z_INDEX == -100f`, process-shared `MapsforgeOfflineTileProvider` referential stability (`===`) across 1-Hz updates (`REQ-MAP-051`), behavioral Compose UI rendering of `OfflineOsmAttributionBadge` (`© OpenStreetMap contributors`, `createComposeRule()`), and `PathPreviewMap` Lite-Mode invariance.
+  4. *9-Language Localization, Architecture Conformance & Live Emulator Verification (`TST-MAP-074.4`)*:
+  • Run `TranslationParityTest` across all 9 locales (`values*/strings_offline_maps.xml`), `ArchitectureConformanceContractTest` (`TrainingApplication.java <= 2,050` LoC, `docs/architecture.md` updated), and live `emulator-5554` verification capturing Light & Dark PNG screenshots inspected via `read_file` (`Rule 8.5`).
+
 ---
 
 ## Change History
@@ -1394,3 +1417,5 @@
 | `1.0.8` | 2026-11-24 | Lane 1 Author (`ATT-9029`, `--as agent1`) | `ATT-9029` | Added & verified (`[Verified]`) `TST-MAP-072` verifying `REQ-MAP-069` (`WorkoutMapLayerPreferencesTest`, `FullScreenWorkoutMapUiTest`, `TranslationParityTest`, `ArchitectureConformanceContractTest`, and live `emulator-5554` verification). |
 | `1.0.9` | 2026-11-24 | Lane 1 Author (`ATT-9029`, `--as agent1`) | `ATT-9029` | Updated `TST-MAP-072` verification evidence after Stage 6 BOUNCE 1/5 (`62/62 PASS` across 9 suites including reactive cold-start hydration, dark-mode unset base-map default, non-`BEST` technical track fallback, and live Dark Mode `emulator-5554` screenshots). |
 | `1.0.10` | 2026-11-24 | Lane 2 Author (`ATT-9030`, `--as agent1`) | `ATT-9030` | Added & verified (`[Verified]`) `TST-MAP-073` verifying `REQ-MAP-070` (`59/59 PASS` across 7 unit/Compose/contract/localization suites incl. Stage 6 BOUNCE 1/5 `SLOPE` + zone-threshold fallback parity + 6 live Light/Dark `emulator-5554` screenshots). |
+| `1.0.12` | 2026-11-25 | Lane 3 Author (`ATT-8175`, `--as agent1`) | `ATT-8175` | Added `TST-MAP-074` (`[Planned]`) specifying verification suite for `REQ-MAP-071` (`MapsforgeOfflineTileProviderTest`, `OfflineMapPreferencesAndStorageTest`, `ATrainingTrackerMapOfflineModeTest`, `PathPreviewMapOfflineInvariantTest`, `ProGuardRulesContractTest`, 9-locale parity, and live `emulator-5554` check). |
+| `1.0.13` | 2026-11-25 | Lane 3 Author (`ATT-8175`, `--as agent1`) | `ATT-8175` | Promoted `TST-MAP-074` to `[Verified]` (`71/71 PASS` across 11 targeted unit/Robolectric/Compose/ProGuard/localization/architecture suites + live `emulator-5554` Light & Dark `monaco.map` visual verification). |

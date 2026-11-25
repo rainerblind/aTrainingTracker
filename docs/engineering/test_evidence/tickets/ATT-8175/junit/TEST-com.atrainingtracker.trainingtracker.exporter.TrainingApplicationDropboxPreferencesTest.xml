@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.exporter.TrainingApplicationDropboxPreferencesTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-25T11:45:41.824Z" hostname="rainer-HP-EliteBook-850-G5" time="8.595">
+  <properties/>
+  <testcase name="testDefaultValues_areTrueForBackwardCompatibility" classname="com.atrainingtracker.trainingtracker.exporter.TrainingApplicationDropboxPreferencesTest" time="8.339"/>
+  <testcase name="testGranularToggles_persistAndRetrieveCorrectly" classname="com.atrainingtracker.trainingtracker.exporter.TrainingApplicationDropboxPreferencesTest" time="0.147"/>
+  <testcase name="testDeleteDropboxCredential_purgesCredentialAndAccountEmail" classname="com.atrainingtracker.trainingtracker.exporter.TrainingApplicationDropboxPreferencesTest" time="0.109"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Exception in thread "Thread-16" java.lang.NullPointerException: Cannot invoke "android.content.SharedPreferences.edit()" because "com.atrainingtracker.trainingtracker.TrainingApplication.cSharedPreferences" is null
+	at com.atrainingtracker.trainingtracker.TrainingApplication.lambda$runWorkoutClusterMigration$0(TrainingApplication.java:1561)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+]]></system-err>
+</testsuite>

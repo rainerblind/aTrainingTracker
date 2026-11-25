@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.TrainingApplicationTrackedTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-25T11:45:14.922Z" hostname="rainer-HP-EliteBook-850-G5" time="0.001">
+  <properties/>
+  <testcase name="testIsActivelyTracked_whenTrackingModeIsReady_returnsFalseForAnyId" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.TrainingApplicationTrackedTest" time="0.001"/>
+  <testcase name="testIsActivelyTracked_whenTrackingModeIsTracking_returnsTrueOnlyForActiveWorkoutId" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.TrainingApplicationTrackedTest" time="0.0"/>
+  <testcase name="testActiveWorkoutId_updatesAndResetsCorrectly" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.TrainingApplicationTrackedTest" time="0.0"/>
+  <testcase name="testIsActivelyTracked_whenTrackingModeIsPaused_returnsTrueForActiveWorkoutId" classname="com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.TrainingApplicationTrackedTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
