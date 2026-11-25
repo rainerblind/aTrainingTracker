@@ -65,7 +65,7 @@ class SportTypesComposeHelpersTest {
 
     @Test
     fun testRememberSportTypesList_recomposesImmediatelyOnSportTypesChanged_TST_SET_134_3() {
-        every { mockRepo.getSportTypes(BSportType.UNKNOWN) } returns listOf(
+        every { mockRepo.sportTypesList } returns listOf(
             SimpleSportTypeInfo(1L, "Other", BSportType.UNKNOWN),
             SimpleSportTypeInfo(3L, "Bike", BSportType.BIKE)
         )
@@ -84,7 +84,7 @@ class SportTypesComposeHelpersTest {
         composeTestRule.onNodeWithText("Bike").assertIsDisplayed()
         composeTestRule.onNodeWithText("Swimming").assertDoesNotExist()
 
-        every { mockRepo.getSportTypes(BSportType.UNKNOWN) } returns listOf(
+        every { mockRepo.sportTypesList } returns listOf(
             SimpleSportTypeInfo(1L, "Other", BSportType.UNKNOWN),
             SimpleSportTypeInfo(3L, "Bike", BSportType.BIKE),
             SimpleSportTypeInfo(6L, "Swimming", BSportType.UNKNOWN)

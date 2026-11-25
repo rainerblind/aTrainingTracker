@@ -40,6 +40,11 @@ fun rememberSportTypesList(bSportType: BSportType? = BSportType.UNKNOWN): List<S
         }
     }
     return remember(context, bSportType, revision) {
-        SportTypesRepository.getInstance(context).getSportTypes(bSportType)
+        val repository = SportTypesRepository.getInstance(context)
+        if (bSportType == BSportType.UNKNOWN) {
+            repository.sportTypesList
+        } else {
+            repository.getSportTypes(bSportType)
+        }
     }
 }
