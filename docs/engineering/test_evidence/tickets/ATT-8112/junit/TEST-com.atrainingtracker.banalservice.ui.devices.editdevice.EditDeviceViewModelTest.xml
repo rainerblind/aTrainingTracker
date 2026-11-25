@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceViewModelTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-25T01:01:45.207Z" hostname="rainer-HP-EliteBook-850-G5" time="3.092">
+  <properties/>
+  <testcase name="testEditDeviceViewModel_stagesRadarTailLightInDraftAndDiscardsOnCancel" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceViewModelTest" time="2.064"/>
+  <testcase name="testBikePowerFeatures_decodesCleanlyWithoutCorrectionCheckboxes" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceViewModelTest" time="0.008"/>
+  <testcase name="testEditDeviceViewModel_noObsoleteCheckboxCallbacks" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceViewModelTest" time="0.006"/>
+  <testcase name="testEditDeviceViewModel_hasResetTirePressureBaselineMethod" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceViewModelTest" time="0.006"/>
+  <testcase name="testBikePowerSensorsHelper_noObsoleteCheckboxHelpers" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceViewModelTest" time="0.005"/>
+  <testcase name="testPowerFeaturesDisplayMapping" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceViewModelTest" time="0.579"/>
+  <testcase name="testOnEquipmentChanged_stagesWheelPositionsInDraftOnly_untilSaveChanges" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceViewModelTest" time="0.424"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

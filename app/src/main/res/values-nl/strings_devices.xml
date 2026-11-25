@@ -102,6 +102,7 @@
     <string name="device_altitude_position_pros_cons">+ Immuun voor weer en barometrische drift; absolute hoogte zonder kalibratie.\n- Vereist actieve internetverbinding voor niet-gecachte gebieden; afhankelijk van GPS-nauwkeurigheid (kan verspringen op bruggen en kliffen).</string>
 
     <!-- ATT Odometry Fusion Device Configuration (ATT-7751, REQ-SEN-028) -->
+    <string name="device_att_fused_sources_header">Gegevensbronnen</string>
     <string name="device_att_fused_how_it_works">Combineert GNSS-posities, gekalibreerde wielomwentelingen en 3D-gyroscooprotaties in een 5-toestands Extended Kalman Filter (EKF) met continue gegist bestek-navigatie.</string>
     <string name="device_att_fused_pros_cons">+ Ononderbroken registratie in tunnels en dichte bossen; submeter-precisie; uitschieteronderdrukking.\n- Hoger batterijverbruik door continu bemonsteren van de gyroscoop.</string>
     <string name="device_att_fused_toggle_gnss">GNSS-posities gebruiken</string>

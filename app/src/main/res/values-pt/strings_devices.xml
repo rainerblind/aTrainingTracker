@@ -102,6 +102,7 @@
     <string name="device_altitude_position_pros_cons">+ Imune ao clima e deriva barométrica; altitude absoluta sem calibração.\n- Requer conexão ativa à internet para áreas sem cache; depende da precisão do GPS (pode variar em pontes e despenhadeiros).</string>
 
     <!-- ATT Odometry Fusion Device Configuration (ATT-7751, REQ-SEN-028) -->
+    <string name="device_att_fused_sources_header">Fontes de dados</string>
     <string name="device_att_fused_how_it_works">Combina posições GNSS, rotações de roda calibradas e rotações de giroscópio 3D em um filtro de Kalman estendido (EKF) de 5 estados com navegação estimada contínua.</string>
     <string name="device_att_fused_pros_cons">+ Rastreamento contínuo em túneis e florestas densas; precisão submétrica; rejeição de discrepâncias.\n- Maior consumo de bateria pela amostragem contínua do giroscópio.</string>
     <string name="device_att_fused_toggle_gnss">Usar posições GNSS</string>

@@ -142,6 +142,7 @@
     <string name="device_altitude_position_pros_cons">+ Immune to weather and barometric drift; accurate absolute height without calibration.\n- Requires active internet connection for uncached areas; depends on GPS accuracy and can be stepped on bridges or cliffs.</string>
 
     <!-- ATT Odometry Fusion Device Configuration (ATT-7751, REQ-SEN-028) -->
+    <string name="device_att_fused_sources_header">Input Sources</string>
     <string name="device_att_fused_how_it_works">Fuses GNSS position fixes, calibrated wheel revolutions, and 3D gyroscope turns into a continuous 5-state unicycle Extended Kalman Filter (EKF) with sub-second dead reckoning.</string>
     <string name="device_att_fused_pros_cons">+ Uninterrupted tracking through tunnels and dense forest canopy; sub-meter precision; outlier rejection.\n- Increased battery consumption from continuous phone gyroscope sampling.</string>
     <string name="device_att_fused_toggle_gnss">Use GNSS Positions</string>

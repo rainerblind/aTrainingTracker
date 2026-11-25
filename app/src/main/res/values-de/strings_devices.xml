@@ -113,6 +113,7 @@
     <string name="device_altitude_position_pros_cons">+ Wetterunabhängig und ohne Barometerdrift; absolute Höhe ohne Kalibrierung.\n- Erfordert aktive Internetverbindung für ungecachte Gebiete; abhängig von GPS-Genauigkeit, auf Brücken und Steilhängen ungenauer.</string>
 
     <!-- ATT Odometry Fusion Device Configuration (ATT-7751, REQ-SEN-028) -->
+    <string name="device_att_fused_sources_header">Datenquellen</string>
     <string name="device_att_fused_how_it_works">Fusioniert GNSS-Positionen, kalibrierte Radumdrehungen und 3D-Gyroskopdrehungen in einem kontinuierlichen 5-Zustands-Unicycle-Extended-Kalman-Filter (EKF) mit Koppelnavigation im Subsekundentakt.</string>
     <string name="device_att_fused_pros_cons">+ Lückenlose Aufzeichnung in Tunnels und dichtem Wald; Submeter-Präzision; Ausreißerunterdrückung.\n- Höherer Akkuverbrauch durch kontinuierliche Abtastung des Smartphone-Gyroskops.</string>
     <string name="device_att_fused_toggle_gnss">GNSS-Positionen nutzen</string>

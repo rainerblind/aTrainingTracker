@@ -1,0 +1,28 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "ea0adae24304c6c39188d0bed26c80b497038a42",
+  "files": {
+    "evidence_summary.json": "1ced1ae12713cf81589db69f1a42096f7d79c2b5e1d4b5b44c91141b89edba77",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.EditDeviceDialogAltitudeGuardsTest.xml": "093fbdcf7aa3d0cca20a8df527f84ebd2fb6d784d28369ae8197a86751b348b1",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.EditDeviceDialogGuardsTest.xml": "17e93016ff19af83bfa0410355a356d19c12fbf466c5aee33a4bf422839048ed",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogDraftLocaleRotationTest.xml": "bb60a71e5da73836142137c40ae265532ae5fa773dbaf3822599bb7afb06b89c",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogErtsSmoothingTest.xml": "956b8a7949e2977cd835f4eefe934017d5c0cbe14fc91187df45df71667316a2",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogRadarBondingTest.xml": "27fd90b917daae368155ebe5abf991d08b2f6fa7a05ea183b799934d26afea8e",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogRadarLightTest.xml": "65d86dc0c5c269ad40a79444af5113e58ecb8cc3f28b4b6b378b3abe9a347e11",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogWheelGuidanceTest.xml": "c2f71bacff4ad90edbd55cc5caca85442266e44425c6f1c967ead23c57b91fe5",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceEquipmentWheelPositionTest.xml": "928014e2bc9a681b0a70c495b3423a1552fc36f0dcc6cdd4e7cc674b7450876c",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFusedSourcesUiTest.xml": "511b715605cae0b14c025e9dc5dba47c52e18a0770d3dfcf03b41b9a665ab074",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDevicePolarBackupTest.xml": "899f4c73d0c84cc8018abf020128650166ea51dfcdbebfce6569bd0d93dd5b16",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDevicePolarLiveImuTest.xml": "59e885e275b780ecadf9a044e267121b6b97150872a4765f971c746ce795d717",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceViewModelTest.xml": "c9dcb4701909f2966d3b5e3d837e5b90eea2713d62d05f1a552b3f3cbdd7ba8d",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceWheelCircumferenceTest.xml": "b8fc3148512f3aefbb5c229fafcccc9c5a15652229dcd5fdf9db8f2e3a0c2356",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml": "d3b43f108f61a9128d19830171ec33de9719469bd1ab2c746ee3a3ff2280bc6a",
+    "junit/TEST-com.atrainingtracker.trainingtracker.localization.TranslationParityTest.xml": "12cf8c5545c89cc9ec3af67bf7e7f42c1f67123700e65c316db39b9c123aee41",
+    "screenshots/att8112_altitude_fused_sources_after.png": "34406c1dfa5eafd813f9768343d96b18c073e13362e541498afeb91c0255b197",
+    "screenshots/att8112_altitude_fused_sources_before_att6279.png": "fa7bec8714a75fd244a7d8bae84dc222bde0ba07fd83e7875138912adf36b813",
+    "screenshots/att8112_odometry_fused_sources_after.png": "8e4346228ee3fff98a9a8f2f77f49524676624fc10221b377800c236b42abf1a"
+  },
+  "run_started_utc": "2026-11-25T01:18:10.388816+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-8112"
+}

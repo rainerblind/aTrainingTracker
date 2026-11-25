@@ -102,6 +102,7 @@
     <string name="device_altitude_position_pros_cons">+ Niewrażliwa na pogodę i dryf ciśnienia; bezwzględna wysokość bez kalibracji.\n- Wymaga aktywnego połączenia z internetem w niebuforowanych obszarach; zależy od dokładności GPS (schodkowa na mostach i urwiskach).</string>
 
     <!-- ATT Odometry Fusion Device Configuration (ATT-7751, REQ-SEN-028) -->
+    <string name="device_att_fused_sources_header">Źródła danych</string>
     <string name="device_att_fused_how_it_works">Łączy pozycje GNSS, skalibrowane obroty koła i obroty żyroskopu 3D w 5-stanowy rozszerzony filtr Kalmana (EKF) z ciągłą nawigacją zliczeniową.</string>
     <string name="device_att_fused_pros_cons">+ Płynne śledzenie w tunelach i gęstym lesie; precyzja submetrowa; odrzucanie błędnych pomiarów.\n- Większe zużycie baterii przez ciągłe próbkowanie żyroskopu.</string>
     <string name="device_att_fused_toggle_gnss">Użyj pozycji GNSS</string>
