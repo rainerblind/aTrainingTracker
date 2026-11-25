@@ -29,18 +29,27 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.R
@@ -565,5 +574,172 @@ class EditDevicePolarLiveImuTest {
         outFile.parentFile?.mkdirs()
         FileOutputStream(outFile).use { out -> bmp.compress(Bitmap.CompressFormat.PNG, 100, out) }
         assertTrue("ATT-8949 PNG screenshot must exist", outFile.exists() && outFile.length() > 0L)
+    }
+
+    @Test
+    fun testPolarOfflineSection_bleShownVsAntPlusHidden_ATT_8442() {
+        val h10Mac = "AA:BB:CC:DD:EE:71"
+        val verityMac = "AA:BB:CC:DD:EE:72"
+        PolarOfflineCapabilityStore.recordDisMetadata(context, h10Mac, modelNumber = "H10", serialNumber = "1C3B2421")
+        PolarOfflineCapabilityStore.recordDisMetadata(context, verityMac, modelNumber = "Verity Sense", serialNumber = "9876ABCD")
+
+        val bleH10 = DeviceUiData(
+            id = 101L, protocol = Protocol.BLUETOOTH_LE, deviceType = DeviceType.HRM, lastSeen = "now",
+            manufacturer = "Polar Electro", deviceName = "Polar H10 1C3B2421", isPaired = true,
+            linkedEquipment = emptyList(), availableEquipment = emptyList(), powerFeaturesFlags = null,
+            batteryPercentage = 95, linkedSportTypes = emptyList(), deviceTypeIconRes = 0,
+            batteryStatusIconRes = 0, onEquipmentResId = 0, wheelCircumference = null,
+            calibrationFactor = null, powerFeatures = null, baselineCircumference = null,
+            polarH10OfflineRecording = true, polarLiveImuEnabled = false, isConnected = true,
+            mainValue = "140 bpm", allValues = null
+        )
+        val antH10 = bleH10.copy(id = 102L, protocol = Protocol.ANT_PLUS)
+        val antVerity = bleH10.copy(
+            id = 103L,
+            protocol = Protocol.ANT_PLUS,
+            deviceName = "Polar Verity Sense 9876ABCD"
+        )
+
+        var activeDevice by mutableStateOf(bleH10)
+        var activePersisted by mutableStateOf(bleH10)
+        var activeMac by mutableStateOf<String?>(h10Mac)
+
+        composeTestRule.setContent {
+            ATrainingTrackerTheme(darkTheme = false) {
+                PolarOfflineDeviceSectionContent(
+                    data = activeDevice,
+                    persistedIdentity = activePersisted,
+                    polarMac = activeMac,
+                    onOfflineRecordingChanged = {},
+                    onLiveImuEnabledChanged = {}
+                )
+            }
+        }
+
+        // BLE Polar H10 -> both cards rendered
+        composeTestRule.onNodeWithTag("polar_backup_recording_card").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("polar_live_imu_card").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("polar_backup_recording_switch").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("polar_live_imu_switch").assertIsDisplayed()
+
+        // ANT+ Polar H10 (even with Polar Electro manufacturer and stored DIS metadata) -> 0 Polar cards
+        composeTestRule.runOnIdle {
+            activeDevice = antH10
+            activePersisted = antH10
+            activeMac = h10Mac
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("polar_backup_recording_card").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("polar_live_imu_card").assertDoesNotExist()
+
+        // ANT+ Polar Verity Sense -> 0 Polar cards
+        composeTestRule.runOnIdle {
+            activeDevice = antVerity
+            activePersisted = antVerity
+            activeMac = verityMac
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("polar_backup_recording_card").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("polar_live_imu_card").assertDoesNotExist()
+
+        // Mixed protocol safety: ANT+ data with BLE persistedIdentity -> still 0 Polar cards
+        composeTestRule.runOnIdle {
+            activeDevice = antH10
+            activePersisted = bleH10
+            activeMac = h10Mac
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("polar_backup_recording_card").assertDoesNotExist()
+        composeTestRule.onNodeWithTag("polar_live_imu_card").assertDoesNotExist()
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "de-rDE-w360dp-h800dp-xxhdpi")
+    fun testPolarCards_german130FontScale_zeroTextSwitchOverlap_ATT_8442() {
+        var backupToggledTo: Boolean? = null
+        var imuToggledTo: Boolean? = null
+        var isVeritySense by mutableStateOf(false)
+
+        composeTestRule.setContent {
+            val baseDensity = LocalDensity.current
+            CompositionLocalProvider(
+                LocalDensity provides Density(density = baseDensity.density, fontScale = 1.3f)
+            ) {
+                ATrainingTrackerTheme(darkTheme = false) {
+                    Surface(modifier = Modifier.padding(16.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            PolarBackupRecordingCard(
+                                checked = true,
+                                isVeritySense = isVeritySense,
+                                isAndroid13Plus = true,
+                                onCheckedChange = { backupToggledTo = it }
+                            )
+                            PolarLiveImuCard(
+                                checked = true,
+                                isVeritySense = isVeritySense,
+                                isAndroid13Plus = true,
+                                onCheckedChange = { imuToggledTo = it }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        fun assertCardTitleAndSwitchNonOverlapping(titleText: String, cardTag: String, switchTag: String) {
+            val cardBounds = composeTestRule.onNodeWithTag(cardTag)
+                .assertIsDisplayed()
+                .getUnclippedBoundsInRoot()
+            val titleBounds = composeTestRule.onNodeWithText(titleText)
+                .assertIsDisplayed()
+                .getUnclippedBoundsInRoot()
+            val switchBounds = composeTestRule.onNodeWithTag(switchTag)
+                .assertIsDisplayed()
+                .assertIsEnabled()
+                .assertIsOn()
+                .getUnclippedBoundsInRoot()
+
+            assertTrue(
+                "Title '$titleText' right (${titleBounds.right}) must stay strictly left of switch left (${switchBounds.left})",
+                titleBounds.right < switchBounds.left
+            )
+            assertTrue(
+                "Switch '$switchTag' right (${switchBounds.right}) must stay inside card right (${cardBounds.right})",
+                switchBounds.right <= cardBounds.right
+            )
+        }
+
+        composeTestRule.waitForIdle()
+        // Polar H10 in German at 130% font scale on w360dp
+        assertCardTitleAndSwitchNonOverlapping(
+            titleText = "Polar H10 Backup-Aufzeichnung",
+            cardTag = "polar_backup_recording_card",
+            switchTag = "polar_backup_recording_switch"
+        )
+        assertCardTitleAndSwitchNonOverlapping(
+            titleText = "Live-IMU-Streaming (ACC/GYRO)",
+            cardTag = "polar_live_imu_card",
+            switchTag = "polar_live_imu_switch"
+        )
+
+        composeTestRule.onNodeWithTag("polar_backup_recording_switch").performClick()
+        composeTestRule.onNodeWithTag("polar_live_imu_switch").performClick()
+        composeTestRule.waitForIdle()
+        assertEquals(false, backupToggledTo)
+        assertEquals(false, imuToggledTo)
+
+        // Polar Verity Sense in German at 130% font scale on w360dp
+        composeTestRule.runOnIdle { isVeritySense = true }
+        composeTestRule.waitForIdle()
+        assertCardTitleAndSwitchNonOverlapping(
+            titleText = "Polar Verity Sense-Backup-Aufzeichnung",
+            cardTag = "polar_backup_recording_card",
+            switchTag = "polar_backup_recording_switch"
+        )
+        assertCardTitleAndSwitchNonOverlapping(
+            titleText = "Live-IMU-Streaming (ACC/GYRO)",
+            cardTag = "polar_live_imu_card",
+            switchTag = "polar_live_imu_switch"
+        )
     }
 }

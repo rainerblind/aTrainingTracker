@@ -1252,16 +1252,15 @@ private fun PolarOfflineDeviceSection(
     persistedIdentity: DeviceUiData,
     viewModel: EditDeviceViewModel
 ) {
-    val polarMac = if (persistedIdentity.protocol == Protocol.BLUETOOTH_LE) {
-        remember(persistedIdentity.id) {
-            try {
-                viewModel.getBluetoothMacAddress(persistedIdentity.id)
-            } catch (_: Throwable) {
-                null
-            }
+    if (data.protocol != Protocol.BLUETOOTH_LE || persistedIdentity.protocol != Protocol.BLUETOOTH_LE) {
+        return
+    }
+    val polarMac = remember(persistedIdentity.id) {
+        try {
+            viewModel.getBluetoothMacAddress(persistedIdentity.id)
+        } catch (_: Throwable) {
+            null
         }
-    } else {
-        null
     }
     PolarOfflineDeviceSectionContent(
         data = data,
@@ -1273,9 +1272,9 @@ private fun PolarOfflineDeviceSection(
 }
 
 /**
- * Stateless Polar backup & live-IMU toggle section gated on [persistedIdentity] (immutable pre-edit
- * device identity) and hardware capability metadata so live keystroke drafts in the rename field
- * cannot falsely enable or hide Polar options (`REQ-CON-049.4`).
+ * Stateless Polar backup & live-IMU toggle section gated strictly on `Protocol.BLUETOOTH_LE` and
+ * [persistedIdentity] (immutable pre-edit device identity) + hardware capability metadata so
+ * non-BLE (e.g., ANT+) sensors and live rename drafts never show Polar options (`ATT-8442`, `REQ-CON-049.4`).
  */
 @Composable
 internal fun PolarOfflineDeviceSectionContent(
@@ -1285,6 +1284,9 @@ internal fun PolarOfflineDeviceSectionContent(
     onOfflineRecordingChanged: (Boolean) -> Unit,
     onLiveImuEnabledChanged: (Boolean) -> Unit
 ) {
+    if (data.protocol != Protocol.BLUETOOTH_LE || persistedIdentity.protocol != Protocol.BLUETOOTH_LE) {
+        return
+    }
     val dialogContext = LocalContext.current
     val isH10 = isPolarH10Device(persistedIdentity, dialogContext, polarMac)
     val isVeritySense = !isH10 && isPolarVeritySenseDevice(persistedIdentity, dialogContext, polarMac)
@@ -1334,6 +1336,8 @@ fun PolarBackupRecordingCard(
         disabledHintRes = R.string.device_polar_h10_backup_recording_requires_android_13,
         checked = checked,
         enabled = isAndroid13Plus,
+        cardTestTag = "polar_backup_recording_card",
+        switchTestTag = "polar_backup_recording_switch",
         onCheckedChange = onCheckedChange
     )
 }
@@ -1360,6 +1364,8 @@ fun PolarLiveImuCard(
         disabledHintRes = R.string.device_polar_live_imu_requires_android_13,
         checked = checked,
         enabled = isAndroid13Plus,
+        cardTestTag = "polar_live_imu_card",
+        switchTestTag = "polar_live_imu_switch",
         onCheckedChange = onCheckedChange
     )
 }
@@ -1371,10 +1377,14 @@ private fun PolarFeatureToggleCard(
     disabledHintRes: Int,
     checked: Boolean,
     enabled: Boolean,
+    cardTestTag: String,
+    switchTestTag: String,
     onCheckedChange: (Boolean) -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(cardTestTag),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
@@ -1392,6 +1402,7 @@ private fun PolarFeatureToggleCard(
                 checked = checked,
                 enabled = enabled,
                 disabledHint = stringResource(disabledHintRes),
+                switchTestTag = switchTestTag,
                 onCheckedChange = onCheckedChange
             )
             Text(

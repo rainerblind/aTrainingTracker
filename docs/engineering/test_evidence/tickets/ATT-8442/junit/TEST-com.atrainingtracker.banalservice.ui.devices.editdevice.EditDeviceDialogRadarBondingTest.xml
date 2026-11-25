@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogRadarBondingTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-25T03:52:30.451Z" hostname="rainer-HP-EliteBook-850-G5" time="1.739">
+  <properties/>
+  <testcase name="testRadarV2BondingSnackbarEffect_suppressesTrackingWithoutBurningLatch_andCancelsOnReadyToTracking_tstCon061_3" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogRadarBondingTest" time="0.703"/>
+  <testcase name="testRadarV2BondingSnackbarEffect_neverDismissesUnrelatedSnackbar_onInitialTrackingOrReadyToTracking_tstCon061_3" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogRadarBondingTest" time="0.216"/>
+  <testcase name="testRadarV2BondingHintCard_rendersInteractiveCtaAndCapturesLightDarkPng_tstCon061_3" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogRadarBondingTest" time="0.53"/>
+  <testcase name="testShouldShowRadarV2BondingHint_macNormalizationAndProtocolMatrix_tstCon061_3" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogRadarBondingTest" time="0.12"/>
+  <testcase name="testRadarV2BondingHintCard_german360dp_singleLineButtonFit_tstCon061_3" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogRadarBondingTest" time="0.17"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDevicePolarBackupTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-25T03:52:32.313Z" hostname="rainer-HP-EliteBook-850-G5" time="0.092">
+  <properties/>
+  <testcase name="testVeritySenseDetection_matchesRenamedDeviceWithStoredPftpCapability" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDevicePolarBackupTest" time="0.087"/>
+  <testcase name="testProtocolGateNonPolarMfgAndEmptyNameResilience_TST_CON_049_4" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDevicePolarBackupTest" time="0.002"/>
+  <testcase name="testPolarBackupRecordingCard_andStringsContractExist" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDevicePolarBackupTest" time="0.0"/>
+  <testcase name="testRenamedH10WithDisMetadata_routesToH10NotVeritySenseEvenWithLegacyOfflineRec" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDevicePolarBackupTest" time="0.001"/>
+  <testcase name="testProtocolGate_bleOnlyForPolarH10AndVeritySenseEvenWithManufacturerAndDisMetadata_ATT_8442" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDevicePolarBackupTest" time="0.001"/>
+  <testcase name="testVeritySenseDetection_matchesOpticalModelsAndExcludesH10AndGenericHrm" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDevicePolarBackupTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

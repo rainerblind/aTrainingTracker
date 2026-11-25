@@ -139,6 +139,33 @@ class EditDevicePolarBackupTest {
     }
 
     @Test
+    fun testProtocolGate_bleOnlyForPolarH10AndVeritySenseEvenWithManufacturerAndDisMetadata_ATT_8442() {
+        val h10Mac = "AA:BB:CC:DD:EE:61"
+        val verityMac = "AA:BB:CC:DD:EE:62"
+        PolarOfflineCapabilityStore.recordDisMetadata(null, h10Mac, modelNumber = "H10", serialNumber = "1C3B2421")
+        PolarOfflineCapabilityStore.markOfflineRecordingCapable(null, verityMac)
+        PolarOfflineCapabilityStore.recordDisMetadata(null, verityMac, modelNumber = "Verity Sense", serialNumber = "9876ABCD")
+
+        val bleH10 = createHrmUiData("Polar H10 1C3B2421", manufacturer = "Polar Electro")
+        val bleVerity = createHrmUiData("Polar Verity Sense 9876ABCD", manufacturer = "Polar Electro")
+        assertTrue(isPolarH10Device(bleH10, macAddress = h10Mac))
+        assertTrue(isPolarVeritySenseDevice(bleVerity, macAddress = verityMac))
+
+        for (nonBleProtocol in Protocol.entries.filter { it != Protocol.BLUETOOTH_LE }) {
+            val nonBleH10 = bleH10.copy(protocol = nonBleProtocol)
+            val nonBleVerity = bleVerity.copy(protocol = nonBleProtocol)
+            assertFalse(
+                "isPolarH10Device must reject $nonBleProtocol",
+                isPolarH10Device(nonBleH10, macAddress = h10Mac)
+            )
+            assertFalse(
+                "isPolarVeritySenseDevice must reject $nonBleProtocol",
+                isPolarVeritySenseDevice(nonBleVerity, macAddress = verityMac)
+            )
+        }
+    }
+
+    @Test
     fun testPolarBackupRecordingCard_andStringsContractExist() {
         val clazz = Class.forName("com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogKt")
         val cardMethod = clazz.declaredMethods.firstOrNull { it.name.startsWith("PolarBackupRecordingCard") }
