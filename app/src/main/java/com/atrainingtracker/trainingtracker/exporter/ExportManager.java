@@ -87,7 +87,7 @@ public class ExportManager {
                     case GPX -> new GPXFileWriter(context);
                     case FIT -> new FitFileWriter(context);
                     case RAW_SENSOR -> new RawSensorFileExporter(context);
-                    case STRAVA -> new TCXFileWriter(context);
+                    case STRAVA -> new FitFileWriter(context);
                     default -> new NotYetImplementedExporter(context);
                 };
             case DROPBOX:
@@ -335,6 +335,14 @@ public class ExportManager {
                     if (targetFile.exists()) {
                         boolean deleted = targetFile.delete();
                         if (DEBUG) Log.d(TAG, "Deleted export file: " + targetFile.getAbsolutePath() + " (success=" + deleted + ")");
+                    }
+                    // Also clean residual pre-upgrade Strava/*.tcx so fallback upload cannot pick up stale pre-crop TCX (REQ-EXP-051.2)
+                    if (format == FileFormat.STRAVA) {
+                        File legacyStravaTcx = new File(baseDir, format.getDirName() + File.separator + fileBaseName + ".tcx");
+                        if (legacyStravaTcx.exists()) {
+                            boolean deletedLegacy = legacyStravaTcx.delete();
+                            if (DEBUG) Log.d(TAG, "Deleted legacy Strava TCX cache: " + legacyStravaTcx.getAbsolutePath() + " (success=" + deletedLegacy + ")");
+                        }
                     }
                 } catch (Throwable t) {
                     Log.w(TAG, "Failed deleting cached export file for " + format + ": " + fileBaseName, t);

@@ -31,6 +31,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusRepository
 import com.atrainingtracker.trainingtracker.exporter.BaseExporter
 import com.atrainingtracker.trainingtracker.exporter.ExportInfo
+import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaPhotoPreferences
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
@@ -78,7 +79,9 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
         private const val ERROR = "error"
         private const val STATUS = "status"
         private const val DATA_TYPE = "data_type"
+        private const val FIT = "fit"
         private const val TCX = "tcx"
+        private const val LEGACY_TCX_EXTENSION = ".tcx"
         private const val FILE = "file"
 
         // Update fields
@@ -181,10 +184,37 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
         }
     }
 
+    /**
+     * Resolves the upload payload file for [exportInfo]. Prefers the primary `.fit` file
+     * (`exportInfo.shortPath`) when present and non-empty, falling back to an existing non-empty
+     * legacy `Strava/<fileBaseName>.tcx` file for pre-upgrade offline queues (REQ-EXP-051.4).
+     */
+    internal fun resolveUploadFile(exportInfo: ExportInfo, baseDir: File = getBaseDirFile(mContext)): File {
+        val primaryFile = File(baseDir, exportInfo.shortPath)
+        if (primaryFile.exists() && primaryFile.length() > 0L) {
+            return primaryFile
+        }
+        if (exportInfo.fileFormat == FileFormat.STRAVA) {
+            val legacyTcx = File(
+                baseDir,
+                "${exportInfo.fileFormat.dirName}${File.separator}${exportInfo.fileBaseName}$LEGACY_TCX_EXTENSION"
+            )
+            if (legacyTcx.exists() && legacyTcx.length() > 0L) {
+                Log.i(TAG, "Using legacy queued TCX file for Strava upload: ${legacyTcx.name}")
+                return legacyTcx
+            }
+        }
+        return primaryFile
+    }
+
+    internal fun resolveDataType(file: File): String {
+        return if (file.name.endsWith(LEGACY_TCX_EXTENSION, ignoreCase = true)) TCX else FIT
+    }
+
     override fun doExport(exportInfo: ExportInfo): ExportResult {
         Log.i(TAG, "doExport: fileBaseName=${exportInfo.fileBaseName}, shortPath=${exportInfo.shortPath}")
 
-        val file = File(getBaseDirFile(mContext), exportInfo.shortPath)
+        val file = resolveUploadFile(exportInfo)
         val accessToken = StravaHelper.getRefreshedAccessToken()
 
         if (accessToken.isNullOrEmpty()) {
@@ -215,7 +245,7 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
         if (existingStravaActivity != null) {
             val activityId = existingStravaActivity.optString(ID).ifBlank { existingStravaActivity.optString("id") }
             if (activityId.isNotBlank()) {
-                Log.i(TAG, "Found pre-existing Strava activity $activityId ('${existingStravaActivity.optString(NAME)}') for ${exportInfo.fileBaseName}. Bypassing TCX upload.")
+                Log.i(TAG, "Found pre-existing Strava activity $activityId ('${existingStravaActivity.optString(NAME)}') for ${exportInfo.fileBaseName}. Bypassing file upload.")
                 exportStatusRepo.updateStravaAll(
                     exportInfo.fileBaseName,
                     activityId,
@@ -236,12 +266,13 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
             return ExportResult(false, false, "File to upload does not exist or is empty: ${file.name}")
         }
 
-        Log.i(TAG, "Starting to upload to Strava: ${file.name} (${file.length()} bytes)")
+        val dataType = resolveDataType(file)
+        Log.i(TAG, "Starting to upload to Strava: ${file.name} (${file.length()} bytes, data_type=$dataType)")
 
         // 1. Build Multipart Request
         val requestBody = MultipartBody.Builder()
             .setType(MultipartBody.Companion.FORM)
-            .addFormDataPart(DATA_TYPE, TCX)
+            .addFormDataPart(DATA_TYPE, dataType)
             .addFormDataPart(
                 FILE,
                 file.name,

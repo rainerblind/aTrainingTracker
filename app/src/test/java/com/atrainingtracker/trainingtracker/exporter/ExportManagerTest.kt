@@ -195,6 +195,10 @@ class ExportManagerTest {
                     writeText("derived-${format.name}-$fileBaseName")
                 }
             }
+            // Residual pre-upgrade Strava/*.tcx file must also be purged on invalidation (REQ-EXP-051.2 / TST-EXP-051.1)
+            val legacyStravaTcx = File(File(tempFilesDir, FileFormat.STRAVA.dirName), "$fileBaseName.tcx").apply {
+                writeText("<TrainingCenterDatabase/>")
+            }
 
             val rawDir = File(tempFilesDir, FileFormat.RAW_SENSOR.dirName).apply { mkdirs() }
             val polarPayload = byteArrayOf(0x1F, 0x8B.toByte(), 0x08, 0x00, 0x11, 0x22, 0x33)
@@ -214,10 +218,11 @@ class ExportManagerTest {
             // 3. Execute invalidation
             exportManager.invalidateWorkoutExport(fileBaseName)
 
-            // 4. All 6 derived caches MUST be deleted
+            // 4. All 6 derived caches + residual legacy Strava .tcx MUST be deleted
             for ((format, file) in derivedFiles) {
                 assertFalse("Derived cache for $format must be deleted: ${file.absolutePath}", file.exists())
             }
+            assertFalse("Residual legacy Strava .tcx must be deleted on invalidation", legacyStravaTcx.exists())
 
             // 5. All raw_sensor sidecars & HealthConnect sentinel MUST survive byte-for-byte
             assertTrue("Polar raw sidecar must NOT be deleted", polarSidecar.exists())

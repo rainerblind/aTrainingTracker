@@ -30,7 +30,7 @@ public enum FileFormat {
     RAW_SENSOR("raw_sensor", ".polar_raw.csv.gz", R.string.file_format_raw_sensor, false),
 
     // not the best solution but should work.
-    STRAVA("Strava", ".tcx", R.string.Strava, true),
+    STRAVA("Strava", ".fit", R.string.Strava, true),
     HEALTH_CONNECT("HealthConnect", "", R.string.health_connect_title, false);
 
     public static final FileFormat[] STANDARD_FILE_FORMATS = new FileFormat[]{CSV, GC, TCX, GPX, FIT, RAW_SENSOR};
@@ -86,9 +86,9 @@ public enum FileFormat {
             case GPX:
                 return "application/gpx+xml";
             case TCX:
-            case STRAVA:
                 return "application/vnd.garmin.tcx+xml";
             case FIT:
+            case STRAVA:
                 return "application/vnd.ant.fit";
             case CSV:
                 return "text/csv";

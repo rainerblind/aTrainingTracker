@@ -99,7 +99,7 @@ class BaseExporterDownloadsTest {
     fun testFileFormat_getMimeType_returnsExpectedStandards() {
         assertEquals("application/gpx+xml", FileFormat.GPX.mimeType)
         assertEquals("application/vnd.garmin.tcx+xml", FileFormat.TCX.mimeType)
-        assertEquals("application/vnd.garmin.tcx+xml", FileFormat.STRAVA.mimeType)
+        assertEquals("application/vnd.ant.fit", FileFormat.STRAVA.mimeType)
         assertEquals("application/vnd.ant.fit", FileFormat.FIT.mimeType)
         assertEquals("text/csv", FileFormat.CSV.mimeType)
         assertEquals("application/json", FileFormat.GC.mimeType)

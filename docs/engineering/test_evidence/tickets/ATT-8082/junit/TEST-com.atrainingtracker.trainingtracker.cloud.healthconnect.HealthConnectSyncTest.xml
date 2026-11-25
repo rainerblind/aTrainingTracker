@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectSyncTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-25T09:09:16.833Z" hostname="rainer-HP-EliteBook-850-G5" time="1.685">
+  <properties/>
+  <testcase name="testSyncSuccessWhenEnabledAndPermitted" classname="com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectSyncTest" time="1.039"/>
+  <testcase name="testSyncRecordsFinishedSuccessInExportStatusDb" classname="com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectSyncTest" time="0.093"/>
+  <testcase name="testRoutePermissionGatingWhenRouteDenied" classname="com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectSyncTest" time="0.12"/>
+  <testcase name="testSyncRecordsFinishedFailedInExportStatusDbOnFailure" classname="com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectSyncTest" time="0.097"/>
+  <testcase name="testSyncIdempotentFallbackToUpdate" classname="com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectSyncTest" time="0.108"/>
+  <testcase name="testForceManualSyncBypassesGlobalDisabledSetting" classname="com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectSyncTest" time="0.107"/>
+  <testcase name="testSyncDisabledBySetting" classname="com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectSyncTest" time="0.119"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+Intent = Intent { act=com.trainingtracker.EXPORT_STATUS_CHANGED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: []
+]]></system-err>
+</testsuite>

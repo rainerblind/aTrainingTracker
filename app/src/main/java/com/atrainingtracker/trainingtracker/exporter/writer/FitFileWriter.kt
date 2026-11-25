@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.exporter.writer
 
 import android.content.Context
 import android.util.Log
+import com.atrainingtracker.BuildConfig
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.database.DatabaseConstants
@@ -27,6 +28,7 @@ import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrInterval
 import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrRepository
 import com.atrainingtracker.trainingtracker.exporter.ExportInfo
+import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
 import com.atrainingtracker.trainingtracker.settings.PoolLengthUnit
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
@@ -38,6 +40,8 @@ import com.garmin.fit.ActivityMesg
 import com.garmin.fit.DateTime
 import com.garmin.fit.DeveloperDataIdMesg
 import com.garmin.fit.DeveloperField
+import com.garmin.fit.DeviceIndex
+import com.garmin.fit.DeviceInfoMesg
 import com.garmin.fit.DisplayMeasure
 import com.garmin.fit.Event
 import com.garmin.fit.EventMesg
@@ -115,10 +119,28 @@ class FitFileWriter(context: Context) : BaseFileWriter(context.applicationContex
         private const val TAG: String = "FitFileWriter"
         private const val DEBUG: Boolean = false
 
+        const val CREATOR_PRODUCT_NAME: String = "aTrainingTracker"
+        internal const val MAX_FIT_SOFTWARE_VERSION: Float = 655.34f
+
         private const val SEMICIRCLES_FACTOR: Double = 2147483648.0 / 180.0
         private const val CM_TO_MM: Double = 10.0
         private val DATE_TIME_FORMATTER: DateTimeFormatter =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.US)
+
+        /**
+         * Parses an app version string (e.g. `"5.0.0-dev"`, `"5.12.3"`) into a FIT
+         * `DeviceInfoMesg.software_version` float (`UINT16`, `scale = 100`, bounded to
+         * `[0.0f, 655.34f]` so `0xFFFF` `UINT16_INVALID` is never emitted; REQ-EXP-051.3).
+         */
+        internal fun parseSoftwareVersion(versionName: String? = BuildConfig.VERSION_NAME): Float {
+            if (versionName.isNullOrBlank()) return 0.0f
+            val parts = versionName.trim().split(Regex("[.-]"))
+            val major = parts.getOrNull(0)?.toIntOrNull()?.takeIf { it >= 0 } ?: return 0.0f
+            val minor = parts.getOrNull(1)?.toIntOrNull()?.takeIf { it >= 0 }
+            val candidate = if (minor != null) "$major.$minor".toFloatOrNull() else major.toFloat()
+            if (candidate == null || candidate.isNaN() || candidate < 0.0f) return 0.0f
+            return candidate.coerceAtMost(MAX_FIT_SOFTWARE_VERSION)
+        }
 
         /**
          * 16-byte MyBikeTraffic / Bike Radar Connect-IQ application ID
@@ -331,7 +353,29 @@ class FitFileWriter(context: Context) : BaseFileWriter(context.applicationContex
             fileIdMesg.setProduct(1)
             fileIdMesg.setSerialNumber(1L)
             fileIdMesg.setTimeCreated(DateTime(startDate))
+            fileIdMesg.setProductName(CREATOR_PRODUCT_NAME)
             encoder.write(fileIdMesg)
+
+            // 1b. Creator DeviceInfoMesg (REQ-EXP-051.3 / ATT-8082)
+            val creatorDeviceInfo = DeviceInfoMesg().apply {
+                setTimestamp(DateTime(startDate))
+                setDeviceIndex(DeviceIndex.CREATOR)
+                setManufacturer(Manufacturer.DEVELOPMENT)
+                setProduct(1)
+                setSerialNumber(1L)
+                setProductName(CREATOR_PRODUCT_NAME)
+                val swVersion = parseSoftwareVersion(BuildConfig.VERSION_NAME)
+                if (swVersion > 0.0f) {
+                    setSoftwareVersion(swVersion)
+                }
+            }
+            encoder.write(creatorDeviceInfo)
+
+            val isStravaExport = exportInfo.fileFormat == FileFormat.STRAVA
+            val includeHrData = !isStravaExport || haveHR
+            val includePowerData = !isStravaExport || havePower
+            val includeCadenceData = !isStravaExport || haveCadence
+            val includeAltitudeData = !isStravaExport || haveAltitude
 
             // Determine sport mapping
             var sport = Sport.GENERIC
@@ -391,7 +435,7 @@ class FitFileWriter(context: Context) : BaseFileWriter(context.applicationContex
             }
 
             var rrIntervals: List<WorkoutRrInterval>? = null
-            if (resolvedWorkoutId > 0) {
+            if (includeHrData && resolvedWorkoutId > 0) {
                 try {
                     rrIntervals = WorkoutRrRepository.getInstance(mContext).getIntervalsForWorkoutBlocking(resolvedWorkoutId)
                 } catch (e: Exception) {
@@ -666,42 +710,44 @@ class FitFileWriter(context: Context) : BaseFileWriter(context.applicationContex
                         }
                     }
 
-                    // Cycling Power Dynamics (REQ-EXP-043.2 / ATT-8196)
-                    if (sample.pedalPowerBalance != null) {
-                        val bal = sample.pedalPowerBalance
-                        if (!bal.isNaN() && bal in 0.0..100.0) {
-                            val encoded = ((bal.roundToInt() and LeftRightBalance.MASK.toInt()) or LeftRightBalance.RIGHT.toInt()).toShort()
-                            record.setLeftRightBalance(encoded)
+                    // Cycling Power Dynamics (REQ-EXP-043.2 / ATT-8196, gated on Strava power opt-out per REQ-EXP-051.3)
+                    if (includePowerData) {
+                        if (sample.pedalPowerBalance != null) {
+                            val bal = sample.pedalPowerBalance
+                            if (!bal.isNaN() && bal in 0.0..100.0) {
+                                val encoded = ((bal.roundToInt() and LeftRightBalance.MASK.toInt()) or LeftRightBalance.RIGHT.toInt()).toShort()
+                                record.setLeftRightBalance(encoded)
+                            }
                         }
-                    }
-                    if (sample.torqueEffectivenessL != null) {
-                        val teL = sample.torqueEffectivenessL
-                        if (!teL.isNaN() && teL in 0.0..100.0) {
-                            record.setLeftTorqueEffectiveness(teL.toFloat())
+                        if (sample.torqueEffectivenessL != null) {
+                            val teL = sample.torqueEffectivenessL
+                            if (!teL.isNaN() && teL in 0.0..100.0) {
+                                record.setLeftTorqueEffectiveness(teL.toFloat())
+                            }
                         }
-                    }
-                    if (sample.torqueEffectivenessR != null) {
-                        val teR = sample.torqueEffectivenessR
-                        if (!teR.isNaN() && teR in 0.0..100.0) {
-                            record.setRightTorqueEffectiveness(teR.toFloat())
+                        if (sample.torqueEffectivenessR != null) {
+                            val teR = sample.torqueEffectivenessR
+                            if (!teR.isNaN() && teR in 0.0..100.0) {
+                                record.setRightTorqueEffectiveness(teR.toFloat())
+                            }
                         }
-                    }
-                    if (sample.pedalSmoothnessL != null) {
-                        val psL = sample.pedalSmoothnessL
-                        if (!psL.isNaN() && psL in 0.0..100.0) {
-                            record.setLeftPedalSmoothness(psL.toFloat())
+                        if (sample.pedalSmoothnessL != null) {
+                            val psL = sample.pedalSmoothnessL
+                            if (!psL.isNaN() && psL in 0.0..100.0) {
+                                record.setLeftPedalSmoothness(psL.toFloat())
+                            }
                         }
-                    }
-                    if (sample.pedalSmoothnessR != null) {
-                        val psR = sample.pedalSmoothnessR
-                        if (!psR.isNaN() && psR in 0.0..100.0) {
-                            record.setRightPedalSmoothness(psR.toFloat())
+                        if (sample.pedalSmoothnessR != null) {
+                            val psR = sample.pedalSmoothnessR
+                            if (!psR.isNaN() && psR in 0.0..100.0) {
+                                record.setRightPedalSmoothness(psR.toFloat())
+                            }
                         }
-                    }
-                    if (sample.pedalSmoothnessCombined != null) {
-                        val psComb = sample.pedalSmoothnessCombined
-                        if (!psComb.isNaN() && psComb in 0.0..100.0) {
-                            record.setCombinedPedalSmoothness(psComb.toFloat())
+                        if (sample.pedalSmoothnessCombined != null) {
+                            val psComb = sample.pedalSmoothnessCombined
+                            if (!psComb.isNaN() && psComb in 0.0..100.0) {
+                                record.setCombinedPedalSmoothness(psComb.toFloat())
+                            }
                         }
                     }
 
@@ -715,16 +761,18 @@ class FitFileWriter(context: Context) : BaseFileWriter(context.applicationContex
                         record.setStanceTime(gctMs.toFloat())
                     }
 
-                    // Accumulate online pedal and running dynamics (REQ-EXP-043.3, REQ-SET-116.4)
-                    sessionPedalAcc.add(sample)
-                    sessionRdAcc.add(sample)
+                    // Accumulate online pedal and running dynamics (REQ-EXP-043.3, REQ-SET-116.4, REQ-EXP-051.3)
                     val sampleLap = if (sample.lapNr > 0) sample.lapNr else 1
-                    var lapAcc = lapPedalAccMap[sampleLap]
-                    if (lapAcc == null) {
-                        lapAcc = PedalDynamicsAccumulator()
-                        lapPedalAccMap[sampleLap] = lapAcc
+                    if (includePowerData) {
+                        sessionPedalAcc.add(sample)
+                        var lapAcc = lapPedalAccMap[sampleLap]
+                        if (lapAcc == null) {
+                            lapAcc = PedalDynamicsAccumulator()
+                            lapPedalAccMap[sampleLap] = lapAcc
+                        }
+                        lapAcc.add(sample)
                     }
-                    lapAcc.add(sample)
+                    sessionRdAcc.add(sample)
                     val lapRdAcc = lapRdAccMap.getOrPut(sampleLap) { RunningDynamicsAccumulator() }
                     lapRdAcc.add(sample)
 
@@ -934,8 +982,10 @@ class FitFileWriter(context: Context) : BaseFileWriter(context.applicationContex
             val header = exportHeader
             if (header != null) {
                 header.calories?.let { sessionMesg.setTotalCalories(it) }
-                header.totalAscent?.let { sessionMesg.setTotalAscent(it) }
-                header.totalDescent?.let { sessionMesg.setTotalDescent(it) }
+                if (includeAltitudeData) {
+                    header.totalAscent?.let { sessionMesg.setTotalAscent(it) }
+                    header.totalDescent?.let { sessionMesg.setTotalDescent(it) }
+                }
                 header.avgSpeedMps?.let { sessionMesg.setAvgSpeed(it.toFloat()) }
                 header.rpe?.let { sessionMesg.setWorkoutRpe((it * 10).toShort()) }
                 header.feel?.let { sessionMesg.setWorkoutFeel(((it - 1) * 25).toShort()) }
@@ -943,20 +993,26 @@ class FitFileWriter(context: Context) : BaseFileWriter(context.applicationContex
 
             // Populate extrema from WorkoutRepository (REQ-DAT-042.1)
             val repo = WorkoutRepository.getInstance(mContext)
-            val maxHr = repo.getExtremaValue(resolvedWorkoutId, SensorType.HR, ExtremaType.MAX)
-            if (maxHr != null) sessionMesg.setMaxHeartRate(maxHr.roundToInt().toShort())
-            val avgHr = repo.getExtremaValue(resolvedWorkoutId, SensorType.HR, ExtremaType.AVG)
-            if (avgHr != null) sessionMesg.setAvgHeartRate(avgHr.roundToInt().toShort())
+            if (includeHrData) {
+                val maxHr = repo.getExtremaValue(resolvedWorkoutId, SensorType.HR, ExtremaType.MAX)
+                if (maxHr != null) sessionMesg.setMaxHeartRate(maxHr.roundToInt().toShort())
+                val avgHr = repo.getExtremaValue(resolvedWorkoutId, SensorType.HR, ExtremaType.AVG)
+                if (avgHr != null) sessionMesg.setAvgHeartRate(avgHr.roundToInt().toShort())
+            }
 
-            val maxPower = repo.getExtremaValue(resolvedWorkoutId, SensorType.POWER, ExtremaType.MAX)
-            if (maxPower != null) sessionMesg.setMaxPower(maxPower.roundToInt())
-            val avgPower = repo.getExtremaValue(resolvedWorkoutId, SensorType.POWER, ExtremaType.AVG)
-            if (avgPower != null) sessionMesg.setAvgPower(avgPower.roundToInt())
+            if (includePowerData) {
+                val maxPower = repo.getExtremaValue(resolvedWorkoutId, SensorType.POWER, ExtremaType.MAX)
+                if (maxPower != null) sessionMesg.setMaxPower(maxPower.roundToInt())
+                val avgPower = repo.getExtremaValue(resolvedWorkoutId, SensorType.POWER, ExtremaType.AVG)
+                if (avgPower != null) sessionMesg.setAvgPower(avgPower.roundToInt())
+            }
 
-            val maxCad = repo.getExtremaValue(resolvedWorkoutId, SensorType.CADENCE, ExtremaType.MAX)
-            if (maxCad != null) sessionMesg.setMaxCadence(maxCad.roundToInt().toShort())
-            val avgCad = repo.getExtremaValue(resolvedWorkoutId, SensorType.CADENCE, ExtremaType.AVG)
-            if (avgCad != null) sessionMesg.setAvgCadence(avgCad.roundToInt().toShort())
+            if (includeCadenceData) {
+                val maxCad = repo.getExtremaValue(resolvedWorkoutId, SensorType.CADENCE, ExtremaType.MAX)
+                if (maxCad != null) sessionMesg.setMaxCadence(maxCad.roundToInt().toShort())
+                val avgCad = repo.getExtremaValue(resolvedWorkoutId, SensorType.CADENCE, ExtremaType.AVG)
+                if (avgCad != null) sessionMesg.setAvgCadence(avgCad.roundToInt().toShort())
+            }
 
             val maxSpeed = repo.getExtremaValue(resolvedWorkoutId, SensorType.SPEED_mps, ExtremaType.MAX)
             if (maxSpeed != null) sessionMesg.setMaxSpeed(maxSpeed.toFloat())
@@ -967,59 +1023,61 @@ class FitFileWriter(context: Context) : BaseFileWriter(context.applicationContex
             val avgGctFallback = repo.getExtremaValue(resolvedWorkoutId, SensorType.GROUND_CONTACT_TIME, ExtremaType.AVG)
             applyRunningDynamicsToSession(sessionMesg, sessionRdAcc, avgVoFallback, avgGctFallback)
 
-            // Populate standard FIT session power/stress metrics (REQ-MIG-053.2 / ATT-7747)
-            var np = if (header?.normalizedPower != null) {
-                header.normalizedPower
-            } else {
-                repo.getExtremaValue(resolvedWorkoutId, SensorType.NORMALIZED_POWER, ExtremaType.END)
-            }
-            if (np == null && resolvedWorkoutId > 0) {
-                np = repo.getExtremaValue(resolvedWorkoutId, SensorType.NORMALIZED_POWER, ExtremaType.AVG)
-            }
-            if (np != null && np > 0.0) {
-                sessionMesg.setNormalizedPower(np.roundToInt())
-            }
+            // Populate standard FIT session power/stress metrics (REQ-MIG-053.2 / ATT-7747, REQ-EXP-051.3)
+            if (includePowerData) {
+                var np = if (header?.normalizedPower != null) {
+                    header.normalizedPower
+                } else {
+                    repo.getExtremaValue(resolvedWorkoutId, SensorType.NORMALIZED_POWER, ExtremaType.END)
+                }
+                if (np == null && resolvedWorkoutId > 0) {
+                    np = repo.getExtremaValue(resolvedWorkoutId, SensorType.NORMALIZED_POWER, ExtremaType.AVG)
+                }
+                if (np != null && np > 0.0) {
+                    sessionMesg.setNormalizedPower(np.roundToInt())
+                }
 
-            var ifVal = if (header?.intensityFactor != null) {
-                header.intensityFactor
-            } else {
-                repo.getExtremaValue(resolvedWorkoutId, SensorType.INTENSITY_FACTOR, ExtremaType.END)
-            }
-            if (ifVal == null && resolvedWorkoutId > 0) {
-                ifVal = repo.getExtremaValue(resolvedWorkoutId, SensorType.INTENSITY_FACTOR, ExtremaType.AVG)
-            }
-            if (ifVal != null && ifVal > 0.0) {
-                sessionMesg.setIntensityFactor(ifVal.toFloat())
-            }
+                var ifVal = if (header?.intensityFactor != null) {
+                    header.intensityFactor
+                } else {
+                    repo.getExtremaValue(resolvedWorkoutId, SensorType.INTENSITY_FACTOR, ExtremaType.END)
+                }
+                if (ifVal == null && resolvedWorkoutId > 0) {
+                    ifVal = repo.getExtremaValue(resolvedWorkoutId, SensorType.INTENSITY_FACTOR, ExtremaType.AVG)
+                }
+                if (ifVal != null && ifVal > 0.0) {
+                    sessionMesg.setIntensityFactor(ifVal.toFloat())
+                }
 
-            var tss = if (header?.tss != null) {
-                header.tss
-            } else {
-                repo.getExtremaValue(resolvedWorkoutId, SensorType.TSS, ExtremaType.END)
-            }
-            if (tss == null && resolvedWorkoutId > 0) {
-                tss = repo.getExtremaValue(resolvedWorkoutId, SensorType.TSS, ExtremaType.AVG)
-            }
-            if (tss == null && resolvedWorkoutId > 0) {
-                tss = repo.getExtremaValue(resolvedWorkoutId, SensorType.TSS, ExtremaType.MAX)
-            }
-            if (tss != null && tss > 0.0) {
-                sessionMesg.setTrainingStressScore(tss.toFloat())
-            }
+                var tss = if (header?.tss != null) {
+                    header.tss
+                } else {
+                    repo.getExtremaValue(resolvedWorkoutId, SensorType.TSS, ExtremaType.END)
+                }
+                if (tss == null && resolvedWorkoutId > 0) {
+                    tss = repo.getExtremaValue(resolvedWorkoutId, SensorType.TSS, ExtremaType.AVG)
+                }
+                if (tss == null && resolvedWorkoutId > 0) {
+                    tss = repo.getExtremaValue(resolvedWorkoutId, SensorType.TSS, ExtremaType.MAX)
+                }
+                if (tss != null && tss > 0.0) {
+                    sessionMesg.setTrainingStressScore(tss.toFloat())
+                }
 
-            var workKj = if (header?.workKj != null) {
-                header.workKj
-            } else {
-                repo.getExtremaValue(resolvedWorkoutId, SensorType.WORK_KJ, ExtremaType.END)
-            }
-            if (workKj == null && resolvedWorkoutId > 0) {
-                workKj = repo.getExtremaValue(resolvedWorkoutId, SensorType.WORK_KJ, ExtremaType.AVG)
-            }
-            if (workKj == null && resolvedWorkoutId > 0) {
-                workKj = repo.getExtremaValue(resolvedWorkoutId, SensorType.WORK_KJ, ExtremaType.MAX)
-            }
-            if (workKj != null && workKj > 0.0) {
-                sessionMesg.setTotalWork((workKj * 1000.0).roundToLong())
+                var workKj = if (header?.workKj != null) {
+                    header.workKj
+                } else {
+                    repo.getExtremaValue(resolvedWorkoutId, SensorType.WORK_KJ, ExtremaType.END)
+                }
+                if (workKj == null && resolvedWorkoutId > 0) {
+                    workKj = repo.getExtremaValue(resolvedWorkoutId, SensorType.WORK_KJ, ExtremaType.AVG)
+                }
+                if (workKj == null && resolvedWorkoutId > 0) {
+                    workKj = repo.getExtremaValue(resolvedWorkoutId, SensorType.WORK_KJ, ExtremaType.MAX)
+                }
+                if (workKj != null && workKj > 0.0) {
+                    sessionMesg.setTotalWork((workKj * 1000.0).roundToLong())
+                }
             }
 
             // Attach Session Metadata Developer Fields (REQ-MIG-053.1 / ATT-7747)

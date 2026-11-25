@@ -188,14 +188,16 @@ class CloudHealthConnectIntegrationTest {
         })
 
         val stravaInfo = ExportInfo(fileBaseName, FileFormat.STRAVA, ExportType.COMMUNITY)
-        val tcxFile = File(BaseExporter.getBaseDirFile(context), stravaInfo.shortPath)
-        tcxFile.parentFile?.mkdirs()
-        tcxFile.writeText("<TrainingCenterDatabase/>")
+        val fitFile = File(BaseExporter.getBaseDirFile(context), stravaInfo.shortPath)
+        assertTrue("Strava ExportInfo must resolve to .fit file", fitFile.name.endsWith(".fit"))
+        fitFile.parentFile?.mkdirs()
+        fitFile.writeBytes(byteArrayOf(0x0E, 0x20, 0x8D.toByte(), 0x08, 0x00, 0x00, 0x00, 0x00, '.'.code.toByte(), 'F'.code.toByte(), 'I'.code.toByte(), 'T'.code.toByte(), 0x00, 0x00))
 
         mockkStatic(StravaHelper::class)
         every { StravaHelper.getRefreshedAccessToken() } returns "test-oauth-access-token"
 
         val dispatchedPaths = mutableListOf<String>()
+        var capturedUploadBody = ""
         var pollCount = 0
         val interceptor = Interceptor { chain ->
             val req = chain.request()
@@ -204,8 +206,12 @@ class CloudHealthConnectIntegrationTest {
             when {
                 req.method == "GET" && path == "/api/v3/athlete/activities" ->
                     jsonResponse(req, 200, "[]")
-                req.method == "POST" && path == "/api/v3/uploads" ->
+                req.method == "POST" && path == "/api/v3/uploads" -> {
+                    val buf = okio.Buffer()
+                    req.body?.writeTo(buf)
+                    capturedUploadBody = buf.readUtf8()
                     jsonResponse(req, 201, """{"id": 9001, "status": "Your activity is still being processed."}""")
+                }
                 req.method == "GET" && path == "/api/v3/uploads/9001" -> {
                     pollCount++
                     if (pollCount == 1) {
@@ -229,6 +235,14 @@ class CloudHealthConnectIntegrationTest {
 
         assertTrue("Strava upload + polling + PUT update must succeed: ${result.answer()}", result.success())
         assertTrue(dispatchedPaths.contains("POST /api/v3/uploads"))
+        assertTrue(
+            "Strava upload multipart body must specify data_type=fit (REQ-EXP-051.4)",
+            capturedUploadBody.contains("name=\"data_type\"") && capturedUploadBody.contains("\r\n\r\nfit\r\n")
+        )
+        assertTrue(
+            "Strava upload multipart body must upload .fit filename",
+            capturedUploadBody.contains("filename=\"$fileBaseName.fit\"")
+        )
         assertTrue(dispatchedPaths.contains("PUT /api/v3/activities/777888"))
         assertEquals("777888", ExportStatusRepository.getInstance(context).getStravaActivityId(fileBaseName))
 
@@ -239,7 +253,7 @@ class CloudHealthConnectIntegrationTest {
                 jsonResponse(chain.request(), 503, "Service Unavailable")
             }.build()
         ).apply { sleepStrategy = {} }
-        val retryResult = retryUploader.uploadToStrava(stravaInfo, tcxFile, "test-oauth-access-token")
+        val retryResult = retryUploader.uploadToStrava(stravaInfo, fitFile, "test-oauth-access-token")
         assertFalse(retryResult.success())
         assertTrue("HTTP 503 must mark shallRetry = true", retryResult.shallRetry())
 

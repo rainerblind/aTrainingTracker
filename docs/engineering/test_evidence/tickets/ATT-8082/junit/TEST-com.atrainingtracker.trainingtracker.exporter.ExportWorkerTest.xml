@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.exporter.ExportWorkerTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-25T09:09:26.662Z" hostname="rainer-HP-EliteBook-850-G5" time="6.19">
+  <properties/>
+  <testcase name="testExportWorker_transientFailureBelowMaxRetries_retries" classname="com.atrainingtracker.trainingtracker.exporter.ExportWorkerTest" time="1.593"/>
+  <testcase name="testExportWorker_success" classname="com.atrainingtracker.trainingtracker.exporter.ExportWorkerTest" time="1.141"/>
+  <testcase name="testExportWorker_fileFailure_marksDependentUploadsFailedInOrder_TST_DAT_024_5" classname="com.atrainingtracker.trainingtracker.exporter.ExportWorkerTest" time="1.135"/>
+  <testcase name="testExportWorker_uncaughtRuntimeException_writesFailedStatus_TST_DAT_024_4" classname="com.atrainingtracker.trainingtracker.exporter.ExportWorkerTest" time="1.194"/>
+  <testcase name="testExportWorker_maxRetriesEnforced_TST_DAT_024_3" classname="com.atrainingtracker.trainingtracker.exporter.ExportWorkerTest" time="1.127"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.activities.MainActivityGoogleDriveStartupRecoveryTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-25T09:09:02.012Z" hostname="rainer-HP-EliteBook-850-G5" time="12.415">
+  <properties/>
+  <testcase name="testStartup_nullTokenWithAccount_refreshesTokenAndRecovers" classname="com.atrainingtracker.trainingtracker.activities.MainActivityGoogleDriveStartupRecoveryTest" time="11.222"/>
+  <testcase name="testStartup_nullTokenAndNoAccount_disablesUploadWithoutRecovery" classname="com.atrainingtracker.trainingtracker.activities.MainActivityGoogleDriveStartupRecoveryTest" time="0.59"/>
+  <testcase name="testStartup_validToken_triggersStuckGoogleDriveExportRecovery" classname="com.atrainingtracker.trainingtracker.activities.MainActivityGoogleDriveStartupRecoveryTest" time="0.603"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
