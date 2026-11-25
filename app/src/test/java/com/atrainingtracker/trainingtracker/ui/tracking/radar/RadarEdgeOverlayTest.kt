@@ -78,6 +78,7 @@ import com.atrainingtracker.banalservice.devices.radar.ThreatLevel
 import com.atrainingtracker.banalservice.devices.radar.VehicleSizeCategory
 import com.atrainingtracker.trainingtracker.settings.RadarClearMode
 import com.atrainingtracker.trainingtracker.settings.RadarEdgeSide
+import com.atrainingtracker.trainingtracker.settings.RadarFullScreenMarkerStyle
 import com.atrainingtracker.trainingtracker.settings.RadarTrafficOrientation
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
@@ -1809,5 +1810,284 @@ class RadarEdgeOverlayTest {
             bmp.compress(Bitmap.CompressFormat.PNG, 100, out)
         }
         assertTrue("ATT-8958 preview PNG must exist and be non-empty", outFile.exists() && outFile.length() > 0)
+    }
+
+    /**
+     * TST-TRK-073.1a / REQ-TRK-073.1 (ATT-8726): Verifies pure monotonic range latching across
+     * the 140m boundary on V1/ANT+ streams, multi-target expansion (140 -> 175) & non-shrink,
+     * mixed V2+V1 non-shrink, idempotency, invalid-previous clamping, and reset on All Clear or disconnect.
+     */
+    @Test
+    fun resolveLatchedRailMaxRange_holds175mAcross140mAndResetsOnClearOrDisconnect() {
+        fun connectedV1State(vararg ranges: Float): RadarState = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = if (ranges.isEmpty()) ThreatLevel.NONE else ThreatLevel.APPROACHING,
+            targets = ranges.mapIndexed { idx, r ->
+                RadarTarget(
+                    targetId = idx + 1,
+                    rangeMeters = r,
+                    approachSpeedMps = 15f,
+                    threatLevel = ThreatLevel.APPROACHING,
+                    lateralOffsetMeters = null,
+                    vehicleSizeCategory = VehicleSizeCategory.UNKNOWN_OR_LIGHT
+                )
+            }
+        )
+
+        // 1. V1/ANT+ target spawned at 160m crosses 140m -> stays latched at 175m with strictly decreasing normalizedY
+        var latchedMaxRange = RadarOverlayMath.MAX_RADAR_RANGE_METERS
+        var prevNormalizedY = Float.POSITIVE_INFINITY
+        for (range in listOf(160.0f, 150.0f, 140.5f, 140.0f, 139.5f, 100.0f, 50.0f, 5.0f)) {
+            latchedMaxRange = RadarOverlayMath.resolveLatchedRailMaxRange(
+                previousMaxRangeMeters = latchedMaxRange,
+                radarState = connectedV1State(range)
+            )
+            assertEquals("Range must remain latched at 175m at ${range}m", 175.0f, latchedMaxRange, 0.01f)
+            val normalizedY = RadarOverlayMath.normalizeRadarRange(range, latchedMaxRange)
+            assertTrue(
+                "normalizedY must decrease monotonically at ${range}m (prev=$prevNormalizedY, curr=$normalizedY)",
+                normalizedY < prevNormalizedY
+            )
+            prevNormalizedY = normalizedY
+        }
+
+        // Idempotency under repeated identical frame
+        assertEquals(
+            175.0f,
+            RadarOverlayMath.resolveLatchedRailMaxRange(latchedMaxRange, connectedV1State(140.0f)),
+            0.01f
+        )
+
+        // 2. All Clear resets latch to 140m; subsequent V1 target <= 140m uses full 140m scale
+        val afterClear = RadarOverlayMath.resolveLatchedRailMaxRange(latchedMaxRange, connectedV1State())
+        assertEquals(140.0f, afterClear, 0.01f)
+        val nextApproach = RadarOverlayMath.resolveLatchedRailMaxRange(afterClear, connectedV1State(120.0f))
+        assertEquals(140.0f, nextApproach, 0.01f)
+
+        // 3. Multi-target upward expansion (140 -> 175) when a 2nd car spawns > 140m, holding 175m until all clear
+        var multiLatched = RadarOverlayMath.resolveLatchedRailMaxRange(140.0f, connectedV1State(90.0f))
+        assertEquals(140.0f, multiLatched, 0.01f)
+        multiLatched = RadarOverlayMath.resolveLatchedRailMaxRange(multiLatched, connectedV1State(80.0f, 155.0f))
+        assertEquals(175.0f, multiLatched, 0.01f)
+        multiLatched = RadarOverlayMath.resolveLatchedRailMaxRange(multiLatched, connectedV1State(60.0f, 138.0f))
+        assertEquals(175.0f, multiLatched, 0.01f)
+        multiLatched = RadarOverlayMath.resolveLatchedRailMaxRange(multiLatched, connectedV1State(110.0f))
+        assertEquals(175.0f, multiLatched, 0.01f)
+        multiLatched = RadarOverlayMath.resolveLatchedRailMaxRange(multiLatched, connectedV1State())
+        assertEquals(140.0f, multiLatched, 0.01f)
+
+        // 4. Mixed V2 + V1 non-shrink when closer V2 car passes while V1 target remains
+        val mixedV2State = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.APPROACHING,
+            targets = listOf(
+                RadarTarget(targetId = 1, rangeMeters = 50f, approachSpeedMps = 12f, threatLevel = ThreatLevel.APPROACHING, vehicleSizeCategory = VehicleSizeCategory.CAR),
+                RadarTarget(targetId = 2, rangeMeters = 120f, approachSpeedMps = 10f, threatLevel = ThreatLevel.APPROACHING, vehicleSizeCategory = VehicleSizeCategory.UNKNOWN_OR_LIGHT)
+            )
+        )
+        val mixedLatched = RadarOverlayMath.resolveLatchedRailMaxRange(140.0f, mixedV2State)
+        assertEquals(175.0f, mixedLatched, 0.01f)
+        assertEquals(
+            175.0f,
+            RadarOverlayMath.resolveLatchedRailMaxRange(mixedLatched, connectedV1State(100.0f)),
+            0.01f
+        )
+
+        // 5. Disconnect states always reset latch to 140m (even if stale targets remain)
+        for (disconnectedState in listOf(
+            RadarConnectionState.DISCONNECTED_ERROR,
+            RadarConnectionState.DISCONNECTED,
+            RadarConnectionState.CONNECTING
+        )) {
+            val state = connectedV1State(160.0f).copy(connectionState = disconnectedState)
+            assertEquals(
+                "Connection state $disconnectedState must reset latch to 140m",
+                140.0f,
+                RadarOverlayMath.resolveLatchedRailMaxRange(175.0f, state),
+                0.01f
+            )
+        }
+
+        // 6. Degenerate previous values clamp strictly to {140.0f, 175.0f}
+        assertEquals(140.0f, RadarOverlayMath.resolveLatchedRailMaxRange(0.0f, connectedV1State(80.0f)), 0.01f)
+        assertEquals(140.0f, RadarOverlayMath.resolveLatchedRailMaxRange(-50.0f, connectedV1State(80.0f)), 0.01f)
+        assertEquals(175.0f, RadarOverlayMath.resolveLatchedRailMaxRange(150.0f, connectedV1State(80.0f)), 0.01f)
+    }
+
+    /**
+     * TST-TRK-073.1b / REQ-TRK-073.1 (ATT-8726): Behavioral Compose UI verification across RIGHT rail,
+     * LEFT rail, FULL_SCREEN COMPACT_BADGE, and FULL_SCREEN TOP_DOWN_VEHICLES confirming a V1 target
+     * approaching across 160m -> 141m -> 140m -> 135m -> 100m moves strictly upward with zero backward
+     * jump to the bottom, and resets back to 140m scale after All Clear.
+     */
+    @Test
+    fun edgeRailAndFullScreen_v1TargetCrossing140m_movesMonotonicallyUpwardAndResetsOnClear() {
+        fun v1State(rangeMeters: Float?): RadarState = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = if (rangeMeters == null) ThreatLevel.NONE else ThreatLevel.APPROACHING,
+            targets = if (rangeMeters == null) {
+                emptyList()
+            } else {
+                listOf(
+                    RadarTarget(
+                        targetId = 1,
+                        rangeMeters = rangeMeters,
+                        approachSpeedMps = 16f,
+                        threatLevel = ThreatLevel.APPROACHING,
+                        lateralOffsetMeters = null,
+                        vehicleSizeCategory = VehicleSizeCategory.UNKNOWN_OR_LIGHT
+                    )
+                )
+            }
+        )
+
+        var currentState by mutableStateOf(v1State(null))
+        var currentSide by mutableStateOf(RadarEdgeSide.RIGHT)
+        var currentStyle by mutableStateOf(RadarFullScreenMarkerStyle.COMPACT_BADGE)
+
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                Box(modifier = Modifier.width(360.dp).height(480.dp)) {
+                    RadarEdgeOverlay(
+                        radarState = currentState,
+                        edgeSide = currentSide,
+                        clearMode = RadarClearMode.SLIM_RAIL,
+                        fullScreenMarkerStyle = currentStyle
+                    )
+                }
+            }
+        }
+
+        val modes = listOf(
+            Triple(RadarEdgeSide.RIGHT, RadarFullScreenMarkerStyle.COMPACT_BADGE, "RadarRailTarget_1"),
+            Triple(RadarEdgeSide.LEFT, RadarFullScreenMarkerStyle.COMPACT_BADGE, "RadarRailTarget_1"),
+            Triple(RadarEdgeSide.FULL_SCREEN, RadarFullScreenMarkerStyle.COMPACT_BADGE, "RadarFullScreenMarker_1"),
+            Triple(RadarEdgeSide.FULL_SCREEN, RadarFullScreenMarkerStyle.TOP_DOWN_VEHICLES, "RadarFullScreenMarker_1")
+        )
+
+        for ((side, style, targetTag) in modes) {
+            composeTestRule.runOnIdle {
+                currentSide = side
+                currentStyle = style
+                currentState = v1State(null) // Ensure clean 140m baseline before mode scenario
+            }
+            composeTestRule.mainClock.advanceTimeBy(300L)
+            composeTestRule.waitForIdle()
+
+            val topsByRange = linkedMapOf<Float, Float>()
+            for (range in listOf(160.0f, 141.0f, 140.0f, 135.0f, 100.0f)) {
+                composeTestRule.runOnIdle { currentState = v1State(range) }
+                composeTestRule.mainClock.advanceTimeBy(300L)
+                composeTestRule.waitForIdle()
+                val topDp = composeTestRule.onNodeWithTag(targetTag, useUnmergedTree = true)
+                    .getUnclippedBoundsInRoot()
+                    .top
+                    .value
+                topsByRange[range] = topDp
+            }
+
+            val top160 = topsByRange.getValue(160.0f)
+            val top141 = topsByRange.getValue(141.0f)
+            val top140 = topsByRange.getValue(140.0f)
+            val top135 = topsByRange.getValue(135.0f)
+            val top100 = topsByRange.getValue(100.0f)
+
+            assertTrue("$side/$style: 141m ($top141) must be above 160m ($top160)", top141 < top160)
+            assertTrue(
+                "$side/$style: crossing 140m ($top140) must NOT jump downward below 141m ($top141)",
+                top140 <= top141
+            )
+            assertTrue("$side/$style: 135m ($top135) must be above 140m ($top140)", top135 < top140)
+            assertTrue("$side/$style: 100m ($top100) must be above 135m ($top135)", top100 < top135)
+
+            // All Clear resets latch to 140m: fresh V1 target at 140m renders at bottom (140/140 = 1.0),
+            // visibly lower than latched 140m (140/175 = 0.80) by ~20% of travel height (> 40dp)
+            composeTestRule.runOnIdle { currentState = v1State(null) }
+            composeTestRule.mainClock.advanceTimeBy(300L)
+            composeTestRule.waitForIdle()
+
+            composeTestRule.runOnIdle { currentState = v1State(140.0f) }
+            composeTestRule.mainClock.advanceTimeBy(300L)
+            composeTestRule.waitForIdle()
+
+            val fresh140Top = composeTestRule.onNodeWithTag(targetTag, useUnmergedTree = true)
+                .getUnclippedBoundsInRoot()
+                .top
+                .value
+            assertTrue(
+                "$side/$style: after All Clear, fresh 140m ($fresh140Top) must reset to 140m bottom below latched 140m ($top140)",
+                fresh140Top > top140 + 40f
+            )
+        }
+    }
+
+    /**
+     * TST-TRK-073.1b / REQ-TRK-073.1 (ATT-8726): Verifies DISCONNECTED_ERROR mid-approach resets
+     * the latched 175m rail scale back to 140m upon reconnect.
+     */
+    @Test
+    fun overlay_disconnectErrorMidApproach_resetsLatchedRangeTo140mOnReconnect() {
+        fun v1State(range: Float) = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.APPROACHING,
+            targets = listOf(
+                RadarTarget(
+                    targetId = 1,
+                    rangeMeters = range,
+                    approachSpeedMps = 15f,
+                    threatLevel = ThreatLevel.APPROACHING
+                )
+            )
+        )
+
+        var currentState by mutableStateOf(v1State(160.0f))
+
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                Box(modifier = Modifier.width(360.dp).height(480.dp)) {
+                    RadarEdgeOverlay(
+                        radarState = currentState,
+                        edgeSide = RadarEdgeSide.RIGHT,
+                        clearMode = RadarClearMode.SLIM_RAIL
+                    )
+                }
+            }
+        }
+        composeTestRule.mainClock.advanceTimeBy(300L)
+        composeTestRule.waitForIdle()
+
+        // Cross 140m while latched at 175m
+        composeTestRule.runOnIdle { currentState = v1State(140.0f) }
+        composeTestRule.mainClock.advanceTimeBy(300L)
+        composeTestRule.waitForIdle()
+        val latched140Top = composeTestRule.onNodeWithTag("RadarRailTarget_1", useUnmergedTree = true)
+            .getUnclippedBoundsInRoot()
+            .top
+            .value
+
+        // Disconnect error clears latch
+        composeTestRule.runOnIdle {
+            currentState = RadarState(
+                connectionState = RadarConnectionState.DISCONNECTED_ERROR,
+                overallThreatLevel = ThreatLevel.NONE,
+                targets = emptyList()
+            )
+        }
+        composeTestRule.mainClock.advanceTimeBy(300L)
+        composeTestRule.waitForIdle()
+
+        // Reconnect with V1 target at 140m -> renders at bottom (140/140 = 1.0)
+        composeTestRule.runOnIdle { currentState = v1State(140.0f) }
+        composeTestRule.mainClock.advanceTimeBy(300L)
+        composeTestRule.waitForIdle()
+        val reconnected140Top = composeTestRule.onNodeWithTag("RadarRailTarget_1", useUnmergedTree = true)
+            .getUnclippedBoundsInRoot()
+            .top
+            .value
+
+        assertTrue(
+            "Reconnected 140m target ($reconnected140Top) must reset to 140m scale below latched 140m ($latched140Top)",
+            reconnected140Top > latched140Top + 40f
+        )
     }
 }

@@ -1,0 +1,53 @@
+{
+  "android_test_summary": {
+    "details": "51 Android unit tests passed (2 JUnit XML).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 51
+  },
+  "checks": [
+    {
+      "details": "Android: 51 Android unit tests passed (2 JUnit XML). | Python: No Python tests selected.",
+      "failing_tests": [],
+      "name": "dependent_unit_tests",
+      "passed": true
+    },
+    {
+      "details": "All safety linters passed.",
+      "name": "static_safety_linters",
+      "passed": true
+    },
+    {
+      "details": "Deliverable lint passed (2 file(s)).",
+      "name": "deliverable_lint",
+      "passed": true
+    },
+    {
+      "details": "PASS: Zero Git conflict markers detected (12487 tracked file(s) scanned).",
+      "name": "conflict_markers",
+      "passed": true
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "668bc698aef1dd2d80e871066fef6a64120e5253",
+  "junit_xml_files": [
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarTopDownVehicleMarkerTest.xml"
+  ],
+  "python_test_summary": {
+    "details": "No Python tests selected.",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "risk_tier": "tier-a",
+  "run_started_utc": "2026-11-25T00:18:36.737821+00:00",
+  "schema_version": "1.0.0",
+  "screenshots": [
+    "screenshots/ATT-8726_emulator_light.png",
+    "screenshots/ATT-8726_emulator_dark.png"
+  ],
+  "ticket_key": "ATT-8726",
+  "ui_touching": true,
+  "verdict": "PASS"
+}

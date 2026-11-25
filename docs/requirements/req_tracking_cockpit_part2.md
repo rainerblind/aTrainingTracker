@@ -1,7 +1,7 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 2 of 3)
 
 **Document ID**: `DOC-REQ-TRK-P2`  
-**Version**: 1.0.108  
+**Version**: 1.0.110  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -1575,9 +1575,9 @@
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/radar/RadarEdgeOverlay.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/radar/RadarSettingsSection.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/TrackOnMapScreen.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/RadarTrafficSummaryCard.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/FitFileWriter.java`
-- **Rationale**: Following BLE V2 high-resolution radar decoding (ATT-5095 / Garmin Varia RearVue 820), the system receives 2D spatial telemetry (lateral offset, vehicle classification, lane trajectory, passing clearance). Athletes need real-time visual distinction between vehicle sizes (cars vs trucks) and lateral lane-change status on the live Cockpit vertical edge overlay, alongside configurable close-pass (< 1.5 m) safety thresholds, aftermath map hazard markers, summary card metrics, and FIT developer fields.
+- **Rationale**: Following BLE V2 high-resolution radar decoding (ATT-5095 / Garmin Varia RearVue 820), the system receives 2D spatial telemetry (lateral offset, vehicle classification, lane trajectory, passing clearance). Athletes need real-time visual distinction between vehicle sizes (cars vs trucks) and lateral lane-change status on the live Cockpit vertical edge overlay, alongside monotonic range-scale latching across the 140.0 m boundary (`ATT-8726`), configurable close-pass (< 1.5 m) safety thresholds, aftermath map hazard markers, summary card metrics, and FIT developer fields.
 - **Description**:
-  1. *Dynamic 175m Rail Scaling (`REQ-TRK-073.1`)*: The vertical radar rail SHALL dynamically scale its maximum detection range to 175.0 m when connected to a V2-capable radar or when any tracked target distance exceeds 140.0 m, falling back to 140.0 m for standard V1 and ANT+ radar streams.
+  1. *Dynamic 175m Rail Scaling with Monotonic Per-Approach Latch (`REQ-TRK-073.1`, refined in `ATT-8726`)*: `RadarOverlayMath.resolveRailMaxRange(radarState)` SHALL dynamically resolve 175.0 m when any tracked target distance exceeds 140.0 m or carries V2 telemetry (`vehicleSizeCategory != UNKNOWN_OR_LIGHT` or `lateralOffsetMeters != null`), and 140.0 m otherwise. To prevent approaching V1/ANT+ targets spawned beyond 140.0 m from jumping backward toward the bottom of the rail when crossing `<= 140.0 m`, `RadarEdgeOverlay` SHALL apply a monotonic session latch (`RadarOverlayMath.resolveLatchedRailMaxRange`) shared across both `RadarVerticalRail` (`LEFT`/`RIGHT`) and `RadarFullScreenThreatOverlay` (`COMPACT_BADGE` & `TOP_DOWN_VEHICLES`): expanding `140.0 m -> 175.0 m` immediately whenever triggered while targets are active, holding `175.0 m` across all subsequent active threat frames without shrinking mid-approach, and resetting to `140.0 m` strictly upon All Clear (`targets.isEmpty()`) or disconnect (`connectionState != RadarConnectionState.CONNECTED`).
   2. *Vehicle Size Category Geometry (`REQ-TRK-073.2`)*: `RadarEdgeOverlay.kt` SHALL render target indicators according to `VehicleSizeCategory`:
      - `UNKNOWN_OR_LIGHT`: Compact circular dot (10.dp).
      - `CAR`: Standard circular marker (14.dp).
@@ -1599,11 +1599,17 @@
 • *Given* a completed ride with a vehicle pass recorded at 1.12m passing clearance and close-pass threshold set to 1.50m,
 • *When* `TrackOnMapScreen.kt` and `RadarTrafficSummaryCard.kt` render,
 • *Then* a close-pass hazard marker is positioned at the exact pass GPS coordinate, and the summary card displays 1 close pass (<1.5m, min 1.12m).
-• *Given* a legacy V1 or ANT+ radar without 2D telemetry,
-• *When* the overlay or summary renders,
-• *Then* targets render as standard centered circular dots up to 140m with zero regressions or layout distortion.
+• *Given* a legacy V1 or ANT+ radar without 2D telemetry where a target spawns at `160 m` (or `150 m`) and approaches across `140.0 m` down to `0 m`,
+• *When* `RadarEdgeOverlay` (edge rail or `FULL_SCREEN`) renders consecutive frames across `140.0 m` and subsequently clears (`targets.isEmpty()`),
+• *Then* the effective rail max range stays latched at `175.0 m` with monotonically decreasing `normalizedY` (zero backward jump) until All Clear or disconnect, and resets to `140.0 m` for the next V1 approach starting `<= 140 m`.
 
-**Invariants**: 100% V1 backward compatibility; zero SQLite database migrations; overlay rail touch pass-through preserved; 100% 9-language translation parity.
+**Requirement Archaeology & Chesterton's Fence Audit (`ATT-8726`)**:
+1. *Original Requirement ID & Target*: `REQ-TRK-073` (`REQ-TRK-073.1`) in `docs/requirements/req_tracking_cockpit_part2.md:1570-1607`, targeting `RadarEdgeOverlay.kt` and `RadarEdgeOverlayTest.kt`.
+2. *Historical Origin & Commit Trace*: Introduced in `ATT-5096` (`f2c2e15e`) and reused by `FULL_SCREEN` modes in `ATT-7537` (`3206a504`), `ATT-8733` (`22853065`), `ATT-8958` (`5e26c348`), and `ATT-8959` (`1b62150e`).
+3. *Root Reason for Existing Formulation*: `ATT-5096` scaled to `175.0 m` for RearVue 820 / distant targets while preserving `140.0 m` vertical resolution for legacy V1/ANT+ streams without specifying per-approach latching across the `140.0 m` boundary.
+4. *Preservation of Core Invariants*: Preserves stateless `resolveRailMaxRange(radarState)`, `140.0 m` resolution for normal V1/ANT+ approaches (`<= 140 m`) and post-All-Clear resets, 100% gesture pass-through, `REQ-TRK-073.2`–`.8` behavior, and zero DB/decoder/string regressions.
+
+**Invariants**: 100% V1 backward compatibility; zero SQLite database migrations; overlay rail touch pass-through preserved; zero Compose snapshot writes during composition; 100% 9-language translation parity.
 
 ### REQ-TRK-074: Duplicate Location Callback Filtering, Asymmetric Deadband Separation & Stationary Pinning Entry Hysteresis in `SpeedAndLocationDevice` [Verified]
 - **Target Release**: `V5.0.0`
@@ -2444,3 +2450,5 @@
 | `1.0.104` | 2026-11-22 | Interactive-PO (`ATT-9504`) | `ATT-9504` | Split tracking cockpit requirements into 3 parts (`part2` + `part3`) to keep all shards comfortably below 4,000 lines (`ATT-9504`). |
 | `1.0.105` | 2026-11-24 | Lane 2 Author (`ATT-8674`, `--as agent1`) | `ATT-8674` | Updated `REQ-CON-031.8` & `REQ-CON-047` (`.2`/`.3`) `[Verified]` for `Off (Radar Only)` top-left / `Smart Auto` top-right swap in `RadarLightModeGrid` (`[OFF, AUTO], [PELOTON, SOLID], [NIGHT_FLASH, DAY_FLASH]`; StVZO `[OFF, AUTO], [SOLID]`) and `RadarLightController.cycleNextMode()` (`OFF -> AUTO -> ...`). |
 | `1.0.108` | 2026-11-25 | Lane 3 Author (`ATT-8113`, `--as agent1`) | `ATT-8113` | Refined `REQ-FIL-017.5` `[Verified]` to expose the shared Post-Workout ERTS smoothing switch (`KEY_POST_WORKOUT_ERTS_SMOOTHING`, `editAndSync`) inside `EditDeviceDialog.kt` exclusively for `SPEED_AND_LOCATION_ATT_FUSED` and `ALTITUDE_AND_SLOPE_ATT_FUSED`, draft/Cancel/rotation-safe per `REQ-UI-2799.2` and bidirectionally synchronized with `AdvancedTuningScreen` / `SensorsGpsFilterSection`. |
+| `1.0.110` | 2026-11-24 | Lane 1 Author (`ATT-8726`, `--as agent1`) | `ATT-8726` | Refined `REQ-TRK-073.1` (`[Planned]`, with 4-field Chesterton's Fence Audit) to enforce monotonic per-approach `175.0 m` range latching across the `140.0 m` boundary on V1/ANT+ streams in `RadarEdgeOverlay` (edge rail & `FULL_SCREEN`), resetting to `140.0 m` strictly on All Clear or disconnect while preserving stateless `resolveRailMaxRange`. |
+| `1.0.110` | 2026-11-25 | Lane 1 Author (`ATT-8726`, `--as agent1`) | `ATT-8726` | Promoted `REQ-TRK-073` (`REQ-TRK-073.1`) to `[Verified]` following `72/72` PASS across `5` targeted unit/Compose/contract suites (`RadarEdgeOverlayTest 45/45`, `RadarTopDownVehicleMarkerTest 6/6`, `ArchitectureConformanceContractTest 11/11`, `SystemLiveTrackingRequirementsContractTest 4/4`, `SourceTextReadingAuditContractTest 6/6`), live `emulator-5554` Light/Dark smoke (`0` crashes), and SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-8726/`. |

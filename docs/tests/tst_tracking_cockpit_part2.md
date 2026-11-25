@@ -1,7 +1,7 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-TST-TRK-P2`  
-**Version**: 1.0.59  
+**Version**: 1.0.61  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -711,10 +711,12 @@
 ### TST-TRK-073: **Live 2D Lane-Offset & Vehicle Sizing Radar Edge Overlay Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-073` (`REQ-TRK-073.1`..`REQ-TRK-073.8`)
 - **Component**: `RadarEdgeOverlay.kt`, `RadarEdgeOverlayTest.kt`, `RadarSettingsSection.kt`, `WorkoutRepository.kt`, `TrackOnMapScreen.kt`, `FitFileWriter.java`
-- **Jira**: `ATT-5096`
+- **Jira**: `ATT-5096`, `ATT-8726`
 - **Test Description**:
-  1. *Dynamic 175m Rail Scaling & Sizing Kinematics Tests (`TST-TRK-073.1`, `RadarEdgeOverlayTest.kt`)*:
-     • Verify `RadarOverlayMath.resolveRailMaxRange()` returns 175.0m when targets exceed 140.0m or V2 telemetry is present, and 140.0m for legacy V1.
+  1. *Dynamic 175m Rail Scaling, Monotonic Range Latch & Sizing Kinematics Tests (`TST-TRK-073.1`, `RadarEdgeOverlayTest.kt`)*:
+     • Verify stateless `RadarOverlayMath.resolveRailMaxRange()` returns 175.0m when targets exceed 140.0m or V2 telemetry is present, and 140.0m for legacy V1 (`RadarEdgeOverlayTest.resolveRailMaxRange_returnsExpectedBoundaries`).
+     • Verify `RadarOverlayMath.resolveLatchedRailMaxRange()` holds `175.0 m` monotonically across V1/ANT+ frames crossing `160 m -> 141 m -> 140 m -> 135 m -> 5 m`, expands `140 -> 175` immediately on multi-target distant entry, preserves `175.0 m` when V2 target clears before V1 target, and resets strictly to `140.0 m` upon All Clear (`targets.isEmpty()`) or disconnect (`connectionState != CONNECTED`) (`RadarEdgeOverlayTest.resolveLatchedRailMaxRange_holds175mAcross140mAndResetsOnClearOrDisconnect`).
+     • Verify behavioral Robolectric Compose UI rendering of `RadarEdgeOverlay` across `RIGHT`/`LEFT` edge rail (`RadarRailTarget_1`), `FULL_SCREEN` `COMPACT_BADGE`, and `FULL_SCREEN` `TOP_DOWN_VEHICLES` (`RadarFullScreenMarker_1`) moves monotonically upward (`bounds.top` strictly decreasing) across `160 m -> 141 m -> 140 m -> 135 m -> 100 m` with zero downward jump, and resets to `140.0 m` scale after All Clear or `DISCONNECTED_ERROR` (`RadarEdgeOverlayTest.edgeRailAndFullScreen_v1TargetCrossing140m_movesMonotonicallyUpwardAndResetsOnClear`, `RadarEdgeOverlayTest.overlay_disconnectErrorMidApproach_resetsLatchedRangeTo140mOnReconnect`).
      • Verify `RadarOverlayMath.normalizeRadarRange()` correctly normalizes 175m range inputs to [0.0, 1.0].
      • Verify target indicator geometry and test tag resolution across `UNKNOWN_OR_LIGHT` (compact dot), `CAR` (standard circle), and `TRUCK_OR_BUS` (elongated pill).
   2. *Lateral Lane Offset Translation & Traffic Orientation Tests (`TST-TRK-073.2`, `RadarEdgeOverlayTest.kt`)*:
@@ -2468,3 +2470,5 @@
 | `1.0.57` | 2026-11-25 | Lane 2 Author (`ATT-8722`, `--as agent1`) | `ATT-8722` | Added `[Planned]` `TST-CON-063` (`.1`–`.3`, symmetric with `REQ-CON-063`) covering sparse `337`–`350` index-shift fix (`Runna`..`Cadence App`), `336`/`338`/`343`/`344` gap nulls, `151`–`153` & `330`–`335` & `5759` (`ActiGraph`), curated `1`–`329` overrides, full FIT SDK `stringMap` parity, unknown/negative/`INVALID` guards, and `ADR-001`/LoC contracts (`N/A - 0 string changes`). |
 | `1.0.58` | 2026-11-25 | Lane 2 Author (`ATT-8722`, `--as agent1`) | `ATT-8722` | Promoted `TST-CON-063` (`.1`–`.3`) to `[Verified]` with 5 verbatim `ManufacturerTest#*` citations (`59/59` PASS across 5 targeted suites: `ManufacturerTest 5/5`, `ANTBikeRadarDeviceTest 21/21`, `DevicesDatabaseManagerTest 17/17`, `JavaCoreMigrationStrategyContractTest 5/5`, `ArchitectureConformanceContractTest 11/11`; `0` compiler warnings; clean live `emulator-5554` smoke `0` crashes + `Rule 8.5` PNG inspected). |
 | `1.0.59` | 2026-11-25 | Lane 3 Author (`ATT-8113`, `--as agent1`) | `ATT-8113` | Refined `TST-FIL-017.5` `[Verified]` with `EditDeviceDialogErtsSmoothingTest` (`7/7 PASS`) and `41/41 PASS` across `8` targeted suites (`EditDeviceDialogDraftLocaleRotationTest 4/4`, `EditDeviceViewModelTest 7/7`, `EditDeviceDialogGuardsTest 4/4`, `EditDeviceDialogAltitudeGuardsTest 4/4`, `AdvancedTuningErtsContractTest 2/2`, `ArchitectureConformanceContractTest 11/11`, `AndroidViewModelReflectionContractTest 2/2`), live `emulator-5554` bidirectional sync verification + `3` `Rule 8.5` PNGs (`0` crashes), and SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-8113/`. |
+| `1.0.60` | 2026-11-24 | Lane 1 Author (`ATT-8726`, `--as agent1`) | `ATT-8726` | Refined `TST-TRK-073.1` (`[Planned]`, symmetric with `REQ-TRK-073.1`) adding pure `resolveLatchedRailMaxRange()` hysteresis/reset matrix and Robolectric Compose UI Y-monotonicity verification across `LEFT`/`RIGHT` rail and `FULL_SCREEN` (`COMPACT_BADGE` & `TOP_DOWN_VEHICLES`) (`N/A - 0 string changes`). |
+| `1.0.61` | 2026-11-25 | Lane 1 Author (`ATT-8726`, `--as agent1`) | `ATT-8726` | Promoted `TST-TRK-073` (`TST-TRK-073.1`) to `[Verified]` with verbatim method citations (`72/72` PASS across `5` targeted suites: `RadarEdgeOverlayTest 45/45` [`resolveRailMaxRange_returnsExpectedBoundaries`, `resolveLatchedRailMaxRange_holds175mAcross140mAndResetsOnClearOrDisconnect`, `edgeRailAndFullScreen_v1TargetCrossing140m_movesMonotonicallyUpwardAndResetsOnClear`, `overlay_disconnectErrorMidApproach_resetsLatchedRangeTo140mOnReconnect`], `RadarTopDownVehicleMarkerTest 6/6`, `ArchitectureConformanceContractTest 11/11`, `SystemLiveTrackingRequirementsContractTest 4/4`, `SourceTextReadingAuditContractTest 6/6`; live `emulator-5554` Light/Dark smoke `0` crashes + `Rule 8.5` PNGs audited; SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-8726/`). |

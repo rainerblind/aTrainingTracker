@@ -197,6 +197,31 @@ object RadarOverlayMath {
     }
 
     /**
+     * Resolves the monotonically latched maximum rail range in meters across active threat frames
+     * (REQ-TRK-073.1, ATT-8726):
+     * - Resets to [MAX_RADAR_RANGE_METERS] (`140.0f`) when disconnected (`connectionState != CONNECTED`)
+     *   or when all targets clear (`targets.isEmpty()`).
+     * - Expands immediately from `140.0f` to [MAX_RADAR_RANGE_V2_METERS] (`175.0f`) when any target
+     *   exceeds `140.0f` or carries V2 telemetry.
+     * - Holds `175.0f` across subsequent active threat frames so V1/ANT+ targets crossing `<= 140.0m`
+     *   never jump backward toward the bottom of the rail.
+     */
+    fun resolveLatchedRailMaxRange(
+        previousMaxRangeMeters: Float,
+        radarState: RadarState
+    ): Float {
+        if (radarState.connectionState != RadarConnectionState.CONNECTED || radarState.targets.isEmpty()) {
+            return MAX_RADAR_RANGE_METERS
+        }
+        val instantMaxRange = resolveRailMaxRange(radarState)
+        return if (previousMaxRangeMeters > MAX_RADAR_RANGE_METERS) {
+            MAX_RADAR_RANGE_V2_METERS
+        } else {
+            instantMaxRange
+        }
+    }
+
+    /**
      * Normalizes a target distance (0..maxRange) to a vertical coordinate fraction (0.0..1.0),
      * where 1.0 corresponds to max range (bottom of rail, farthest vehicle)
      * and 0.0 corresponds to 0m range (top of rail, closest vehicle / cyclist).
@@ -371,6 +396,12 @@ fun RadarEdgeOverlay(
         label = "radarRailAlpha"
     )
 
+    // Monotonic per-approach 140m/175m range latch shared across Edge Rail & Full-Screen modes (REQ-TRK-073.1, ATT-8726)
+    val rangeLatchSession = remember { RadarRangeLatchSession() }
+    val maxRangeMeters = remember(radarState) {
+        rangeLatchSession.resolve(radarState)
+    }
+
     if (edgeSide == RadarEdgeSide.FULL_SCREEN) {
         // FULL_SCREEN Mode (REQ-TRK-062.1a, REQ-TRK-062.3a, REQ-TRK-062.5b, REQ-TRK-089)
         // Per-target threat-level hysteresis prevents 8-Hz V1 boundary jitter from flashing red/orange.
@@ -390,6 +421,7 @@ fun RadarEdgeOverlay(
             if (hasActiveThreats) {
                 RadarFullScreenThreatOverlay(
                     radarState = fullScreenRadarState,
+                    maxRangeMeters = maxRangeMeters,
                     showLaneGuides = showLaneGuides,
                     trafficOrientation = trafficOrientation,
                     markerStyle = fullScreenMarkerStyle,
@@ -477,6 +509,7 @@ fun RadarEdgeOverlay(
             if (showRail && railAlpha > 0f) {
                 RadarVerticalRail(
                     radarState = radarState,
+                    maxRangeMeters = maxRangeMeters,
                     hasActiveThreats = hasActiveThreats,
                     isClear = isClear,
                     isDisconnectError = isDisconnectError,
@@ -494,6 +527,23 @@ fun RadarEdgeOverlay(
                 Spacer(modifier = Modifier.weight(1f))
             }
         }
+    }
+}
+
+/**
+ * Plain non-Compose session tracker applying [RadarOverlayMath.resolveLatchedRailMaxRange] across
+ * incoming [RadarState] frames so the rail scale never shrinks mid-approach (REQ-TRK-073.1, ATT-8726).
+ */
+private class RadarRangeLatchSession {
+    private var latchedMaxRangeMeters: Float = RadarOverlayMath.MAX_RADAR_RANGE_METERS
+
+    fun resolve(radarState: RadarState): Float {
+        val next = RadarOverlayMath.resolveLatchedRailMaxRange(
+            previousMaxRangeMeters = latchedMaxRangeMeters,
+            radarState = radarState
+        )
+        latchedMaxRangeMeters = next
+        return next
     }
 }
 
@@ -616,12 +666,12 @@ private fun RadarFullScreenLaneGuides(
 @Composable
 private fun RadarFullScreenThreatOverlay(
     radarState: RadarState,
+    maxRangeMeters: Float,
     showLaneGuides: Boolean,
     trafficOrientation: RadarTrafficOrientation,
     markerStyle: RadarFullScreenMarkerStyle = TuningPreferencesDefaults.RADAR_FULL_SCREEN_MARKER_STYLE,
     modifier: Modifier = Modifier
 ) {
-    val maxRangeMeters = RadarOverlayMath.resolveRailMaxRange(radarState)
     val isDarkSurface = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val guideColor = if (isDarkSurface) {
         TTColor.RadarFullScreenLaneGuideDark
@@ -942,6 +992,7 @@ private fun RadarStatusBadgePill(
 @Composable
 private fun RadarVerticalRail(
     radarState: RadarState,
+    maxRangeMeters: Float,
     hasActiveThreats: Boolean,
     isClear: Boolean,
     isDisconnectError: Boolean,
@@ -997,7 +1048,6 @@ private fun RadarVerticalRail(
         // Target dots inside usable travel height
         if (hasActiveThreats) {
             val contentWidth = if (has2DData) 28.dp else 22.dp
-            val maxRangeMeters = RadarOverlayMath.resolveRailMaxRange(radarState)
 
             BoxWithConstraints(
                 modifier = Modifier
@@ -1049,6 +1099,7 @@ private fun RadarVerticalRail(
                                         contentDescription = "$vehicleDesc, ${target.rangeMeters.roundToInt()}m"
                                     }
                                 }
+                                .testTag("RadarRailTarget_${target.targetId}")
                         )
                     }
                 }
