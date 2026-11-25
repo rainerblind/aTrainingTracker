@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.navigation.SecondaryTabbedHeadersContractTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-25T11:44:41.175Z" hostname="rainer-HP-EliteBook-850-G5" time="0.006">
+  <properties/>
+  <testcase name="testSupporterScreen_contextAwareNavigationContract" classname="com.atrainingtracker.trainingtracker.ui.navigation.SecondaryTabbedHeadersContractTest" time="0.0"/>
+  <testcase name="testSportTypesTabsScreen_headerNavigationContract" classname="com.atrainingtracker.trainingtracker.ui.navigation.SecondaryTabbedHeadersContractTest" time="0.001"/>
+  <testcase name="testTipsGuideScreen_contextAwareNavigationContract" classname="com.atrainingtracker.trainingtracker.ui.navigation.SecondaryTabbedHeadersContractTest" time="0.0"/>
+  <testcase name="testImportBackupTabsScreen_headerNavigationContract" classname="com.atrainingtracker.trainingtracker.ui.navigation.SecondaryTabbedHeadersContractTest" time="0.001"/>
+  <testcase name="testAdvancedTuningScreen_contextAwareNavigationContract" classname="com.atrainingtracker.trainingtracker.ui.navigation.SecondaryTabbedHeadersContractTest" time="0.001"/>
+  <testcase name="testDevicesTabbedScreen_headerNavigationContract" classname="com.atrainingtracker.trainingtracker.ui.navigation.SecondaryTabbedHeadersContractTest" time="0.001"/>
+  <testcase name="testZoneSettingsScreen_contextAwareNavigationContract" classname="com.atrainingtracker.trainingtracker.ui.navigation.SecondaryTabbedHeadersContractTest" time="0.001"/>
+  <testcase name="testEquipmentTabsScreen_headerNavigationContract" classname="com.atrainingtracker.trainingtracker.ui.navigation.SecondaryTabbedHeadersContractTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

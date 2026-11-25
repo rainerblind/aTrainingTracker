@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Sport-Specific Physiological Threshold Metric Labels (ATT-9628 / REQ-SET-135) -->
+    <!-- Sport-Specific Physiological Thresholds & Zones Editor (ATT-9628 / ATT-9627 / REQ-SET-135 / REQ-SET-136) -->
     <string name="athlete_profile_metric_hr_max_run">FCmax (Course)</string>
     <string name="athlete_profile_metric_hr_max_bike">FCmax (Vélo)</string>
     <string name="athlete_profile_metric_lthr_run">LTHR (Course)</string>
@@ -8,4 +8,31 @@
     <string name="athlete_profile_metric_lt1_hr_run">LT1 FC (Course)</string>
     <string name="athlete_profile_metric_lt1_hr_bike">LT1 FC (Vélo)</string>
     <string name="athlete_profile_metric_lt1_pwr_bike">LT1 Puissance (Vélo)</string>
+    <string name="zone_thresholds_card_title">Seuils physiologiques</string>
+    <string name="zone_thresholds_card_subtitle">Met à jour l\'historique sans écraser vos zones</string>
+    <string name="zone_thresholds_recalculate_cta">Recalculer les zones depuis les seuils</string>
+    <string name="zone_thresholds_open_cp_estimator">Estimateur CP et W\' en 2 points</string>
+    <string name="zone_thresholds_field_ftp">FTP</string>
+    <string name="zone_thresholds_field_cp">CP</string>
+    <string name="zone_thresholds_field_w_prime">W\'</string>
+    <string name="zone_thresholds_field_lt1_pwr">LT1 / AeT</string>
+    <string name="zone_thresholds_field_hr_max">FCmax</string>
+    <string name="zone_thresholds_field_hr_rest">FCrepos</string>
+    <string name="zone_thresholds_field_lthr">LTHR / LT2</string>
+    <string name="zone_thresholds_field_lt1_hr">LT1 / AeT</string>
+    <string name="zone_thresholds_error_range">Doit être %1$d–%2$d</string>
+    <string name="zone_thresholds_error_w_prime_range">W\' doit être 5,0–60,0 kJ</string>
+    <string name="zone_thresholds_error_cp_range">CP doit être %1$d–%2$d W</string>
+    <string name="zone_thresholds_error_lt1_pwr_range">LT1 doit être %1$d–%2$d W</string>
+    <string name="zone_thresholds_error_lt1_lt_ftp">LT1 doit être inférieur à FTP</string>
+    <string name="zone_thresholds_error_hr_order">Requis : FCrepos &lt; LT1 &lt; LTHR &lt; FCmax</string>
+    <string name="zone_calc_method_lthr">LTHR</string>
+    <string name="zone_calc_method_threshold_anchored">LT1 + LTHR</string>
+    <string name="zone_calc_lthr_label">FC au seuil lactique (LTHR)</string>
+    <string name="zone_calc_lt1_hr_label">FC au seuil aérobie (LT1)</string>
+    <string name="zone_calc_error_lthr_range">LTHR doit être %1$d–%2$d bpm</string>
+    <string name="zone_calc_error_lt1_hr_range">LT1 doit être %1$d–%2$d bpm</string>
+    <string name="zone_calc_error_lt1_lt_lthr">LT1 doit être inférieur à LTHR</string>
+    <string name="zone_calc_error_lthr_lt_hrmax">LTHR doit être inférieur à FCmax</string>
+    <string name="athlete_profile_edit_in_zones">Modifier dans Zones</string>
 </resources>

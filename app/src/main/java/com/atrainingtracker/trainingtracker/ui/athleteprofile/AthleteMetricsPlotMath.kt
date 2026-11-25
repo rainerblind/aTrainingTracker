@@ -40,7 +40,11 @@ enum class PlotMetricType {
     FTP,
     CP,
     W_PRIME,
-    POWER_TO_WEIGHT
+    POWER_TO_WEIGHT,
+    HR_MAX_RUN,
+    HR_MAX_BIKE,
+    LTHR_RUN,
+    LTHR_BIKE
 }
 
 /**
@@ -175,6 +179,30 @@ object AthleteMetricsPlotMath {
             PlotMetricType.W_PRIME -> {
                 entries
                     .filter { it.metricType == AthleteMetricType.W_PRIME_KJ }
+                    .sortedWith(compareBy<AthleteMetricEntry> { it.timestampMs }.thenBy { it.id })
+                    .map { MetricPlotPoint(it.timestampMs, it.value) }
+            }
+            PlotMetricType.HR_MAX_RUN -> {
+                entries
+                    .filter { it.metricType == AthleteMetricType.HR_MAX_RUN_BPM }
+                    .sortedWith(compareBy<AthleteMetricEntry> { it.timestampMs }.thenBy { it.id })
+                    .map { MetricPlotPoint(it.timestampMs, it.value) }
+            }
+            PlotMetricType.HR_MAX_BIKE -> {
+                entries
+                    .filter { it.metricType == AthleteMetricType.HR_MAX_BIKE_BPM }
+                    .sortedWith(compareBy<AthleteMetricEntry> { it.timestampMs }.thenBy { it.id })
+                    .map { MetricPlotPoint(it.timestampMs, it.value) }
+            }
+            PlotMetricType.LTHR_RUN -> {
+                entries
+                    .filter { it.metricType == AthleteMetricType.LTHR_RUN_BPM }
+                    .sortedWith(compareBy<AthleteMetricEntry> { it.timestampMs }.thenBy { it.id })
+                    .map { MetricPlotPoint(it.timestampMs, it.value) }
+            }
+            PlotMetricType.LTHR_BIKE -> {
+                entries
+                    .filter { it.metricType == AthleteMetricType.LTHR_BIKE_BPM }
                     .sortedWith(compareBy<AthleteMetricEntry> { it.timestampMs }.thenBy { it.id })
                     .map { MetricPlotPoint(it.timestampMs, it.value) }
             }

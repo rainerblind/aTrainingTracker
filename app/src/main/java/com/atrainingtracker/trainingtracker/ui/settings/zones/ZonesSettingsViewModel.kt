@@ -25,18 +25,25 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.atrainingtracker.trainingtracker.database.AthleteMetricType
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType
+import com.atrainingtracker.trainingtracker.settings.TuningConfig
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.settings.ZoneDisplayOptions
 import com.atrainingtracker.trainingtracker.settings.ZoneProfileState
 import com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepository
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
@@ -44,14 +51,16 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * ViewModel managing athletic training zone configuration, atomic single-transaction
  * persistence, and draft preservation across configuration changes via SavedStateHandle (REQ-UI-428).
- * Supports timestamped zone history persistence and backdating (REQ-SET-082.5).
+ * Supports timestamped zone history persistence and backdating (REQ-SET-082.5) and decoupled
+ * physiological threshold persistence (REQ-SET-136.2).
  */
 class ZonesSettingsViewModel @JvmOverloads constructor(
     application: Application,
     val savedStateHandle: SavedStateHandle = SavedStateHandle(),
     val dataStore: SettingsDataStore = SettingsDataStore.getInstance(application),
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-    val athleteMetricsRepository: AthleteMetricsRepository = AthleteMetricsRepository.getInstance(application)
+    val athleteMetricsRepository: AthleteMetricsRepository = AthleteMetricsRepository.getInstance(application),
+    private val tuningDataStoreOverride: TuningPreferencesDataStore? = null
 ) : AndroidViewModel(application) {
 
     private val _profiles = MutableStateFlow<List<ZoneProfileState>>(emptyList())
@@ -62,7 +71,19 @@ class ZonesSettingsViewModel @JvmOverloads constructor(
 
     val zoneHistoryFlow = athleteMetricsRepository.zoneHistoryFlow
 
+    val tuningConfigFlow: StateFlow<TuningConfig> by lazy {
+        val store = tuningDataStoreOverride ?: TuningPreferencesDataStore.getInstance(getApplication())
+        store.tuningConfigFlow.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = TuningConfig()
+        )
+    }
+
     private val saveJobs = ConcurrentHashMap<ZoneType, Job>()
+    private val thresholdSaveJobs = ConcurrentHashMap<AthleteMetricType, Job>()
+    private val pendingThresholdValues = ConcurrentHashMap<AthleteMetricType, Double>()
+    private val flushScope = CoroutineScope(SupervisorJob() + ioDispatcher)
 
     init {
         viewModelScope.launch(ioDispatcher) {
@@ -150,6 +171,106 @@ class ZonesSettingsViewModel @JvmOverloads constructor(
                 } catch (_: Throwable) {
                     // Graceful fallback for JVM unit tests where SQLite helper is unmocked
                 }
+            }
+        }
+    }
+
+    /**
+     * Persists a validated physiological threshold to [AthleteMetricsRepository] (SQLite + DataStore sync)
+     * without modifying or overwriting manual `Z1..Zn` zone cutoffs (`REQ-SET-136.2`).
+     */
+    fun savePhysiologicalThreshold(
+        metricType: AthleteMetricType,
+        value: Double,
+        debounceMs: Long = 350L
+    ) {
+        if (!metricType.isValidMetricValue(value)) return
+        pendingThresholdValues[metricType] = value
+        thresholdSaveJobs[metricType]?.cancel()
+        thresholdSaveJobs[metricType] = viewModelScope.launch(ioDispatcher) {
+            if (debounceMs > 0L) {
+                delay(debounceMs)
+            }
+            if (pendingThresholdValues.remove(metricType, value)) {
+                persistThresholdQuietly(metricType, value)
+            }
+        }
+    }
+
+    /**
+     * Immediately flushes all pending debounced threshold writes on a non-cancellable scope so
+     * opening the calculator dialog, switching tabs, or navigating Back never drops edits (`REQ-SET-136.2`).
+     *
+     * @return Snapshot map of threshold values drained and queued for immediate persistence.
+     */
+    fun flushPendingThresholdSaves(): Map<AthleteMetricType, Double> {
+        val drained = LinkedHashMap<AthleteMetricType, Double>()
+        for (key in pendingThresholdValues.keys.toList()) {
+            val value = pendingThresholdValues.remove(key) ?: continue
+            thresholdSaveJobs.remove(key)?.cancel()
+            drained[key] = value
+        }
+        if (drained.isNotEmpty()) {
+            flushScope.launch {
+                val ts = System.currentTimeMillis()
+                drained.forEach { (metricType, value) ->
+                    persistThresholdQuietly(metricType, value, ts)
+                }
+            }
+        }
+        return drained
+    }
+
+    private suspend fun persistThresholdQuietly(
+        metricType: AthleteMetricType,
+        value: Double,
+        timestampMs: Long = System.currentTimeMillis()
+    ) {
+        try {
+            athleteMetricsRepository.addEntry(metricType = metricType, value = value, timestampMs = timestampMs)
+        } catch (_: Throwable) {
+            // Graceful fallback for JVM unit tests where SQLite helper is unmocked
+        }
+    }
+
+    override fun onCleared() {
+        flushPendingThresholdSaves()
+        super.onCleared()
+    }
+
+    /**
+     * Immediately persists both estimated `CP` and `W'` from the 2-Point CP & W' Estimator without
+     * overwriting `Z1..Zn` zone cutoffs (`REQ-SET-136.1`, `REQ-SET-136.2`).
+     */
+    fun saveCpAndWPrimeEstimate(cpWatts: Int, wPrimeKj: Double) {
+        if (!AthleteMetricType.CP_WATTS.isValidMetricValue(cpWatts.toDouble())) return
+        if (!AthleteMetricType.W_PRIME_KJ.isValidMetricValue(wPrimeKj)) return
+        thresholdSaveJobs[AthleteMetricType.CP_WATTS]?.cancel()
+        thresholdSaveJobs[AthleteMetricType.W_PRIME_KJ]?.cancel()
+        viewModelScope.launch(ioDispatcher) {
+            val ts = System.currentTimeMillis()
+            try {
+                athleteMetricsRepository.addEntry(AthleteMetricType.CP_WATTS, cpWatts.toDouble(), ts)
+                athleteMetricsRepository.addEntry(AthleteMetricType.W_PRIME_KJ, wPrimeKj, ts)
+            } catch (_: Throwable) {
+                // Graceful fallback for JVM unit tests where SQLite helper is unmocked
+            }
+        }
+    }
+
+    /**
+     * Records a new `zone_history` snapshot after explicit recalculation from thresholds (`REQ-SET-136.3`).
+     */
+    fun saveRecalculatedZonesSnapshot(
+        zoneType: ZoneType,
+        boundaries: List<Int>,
+        timestampMs: Long = System.currentTimeMillis()
+    ) {
+        viewModelScope.launch(ioDispatcher) {
+            try {
+                athleteMetricsRepository.saveZoneSnapshot(zoneType, boundaries, timestampMs)
+            } catch (_: Throwable) {
+                // Graceful fallback for JVM unit tests where SQLite helper is unmocked
             }
         }
     }

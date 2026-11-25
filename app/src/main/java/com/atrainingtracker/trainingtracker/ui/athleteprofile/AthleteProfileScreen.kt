@@ -47,6 +47,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.platform.testTag
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Delete
@@ -118,6 +119,23 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
+ * Maps a [PlotMetricType] to its authoritative Zones settings tab index (`0` = HR Run,
+ * `1` = HR Bike, `2` = Power Bike) (`REQ-SET-136.4`, `TST-SET-136.4`).
+ */
+fun resolveZonesTabForPlotMetric(metric: PlotMetricType): Int = when (metric) {
+    PlotMetricType.FTP,
+    PlotMetricType.CP,
+    PlotMetricType.W_PRIME,
+    PlotMetricType.POWER_TO_WEIGHT -> 2
+    PlotMetricType.HR_MAX_BIKE,
+    PlotMetricType.LTHR_BIKE -> 1
+    PlotMetricType.WEIGHT,
+    PlotMetricType.HR_REST,
+    PlotMetricType.HR_MAX_RUN,
+    PlotMetricType.LTHR_RUN -> 0
+}
+
+/**
  * Stateful entry composable for the unified **Fitness & Physiology** hub (`REQ-UI-513.4`).
  */
 @Composable
@@ -126,6 +144,7 @@ fun AthleteProfileScreen(
     initialTab: Int = 0,
     onOpenDrawer: (() -> Unit)? = null,
     onNavigateToMorningHrv: (() -> Unit)? = null,
+    onNavigateToZones: ((Int) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -147,6 +166,7 @@ fun AthleteProfileScreen(
         onDeleteHrvReading = viewModel::deleteHrvReading,
         onOpenDrawer = onOpenDrawer,
         onNavigateToMorningHrv = onNavigateToMorningHrv,
+        onNavigateToZones = onNavigateToZones,
         initialTab = initialTab,
         modifier = modifier
     )
@@ -180,6 +200,7 @@ fun AthleteProfileContent(
     onDeleteHrvReading: (Long) -> Unit = {},
     onOpenDrawer: (() -> Unit)? = null,
     onNavigateToMorningHrv: (() -> Unit)? = null,
+    onNavigateToZones: ((Int) -> Unit)? = null,
     initialTab: Int = 0,
     modifier: Modifier = Modifier
 ) {
@@ -248,14 +269,9 @@ fun AthleteProfileContent(
                         if (pagerState.currentPage == bodyTabIndex) {
                             IconButton(
                                 onClick = {
-                                    val defaultMetric = when (uiState.selectedPlotMetric) {
-                                        PlotMetricType.WEIGHT -> AthleteMetricType.WEIGHT_KG
-                                        PlotMetricType.HR_REST -> AthleteMetricType.HR_REST_BPM
-                                        PlotMetricType.FTP, PlotMetricType.POWER_TO_WEIGHT -> AthleteMetricType.FTP_WATTS
-                                        PlotMetricType.CP -> AthleteMetricType.CP_WATTS
-                                        PlotMetricType.W_PRIME -> AthleteMetricType.W_PRIME_KJ
-                                    }
-                                    showAddDialogForMetric = defaultMetric
+                                    // Option 1 separation (REQ-SET-136.4): Body Weight stays directly editable here;
+                                    // physiological threshold creation lives authoritatively in Zones.
+                                    showAddDialogForMetric = AthleteMetricType.WEIGHT_KG
                                 }
                             ) {
                                 Icon(
@@ -457,7 +473,8 @@ fun AthleteProfileContent(
                                 dateText = hrRestDate,
                                 isSelected = uiState.selectedPlotMetric == PlotMetricType.HR_REST,
                                 onCardClick = { onSelectPlotMetric(PlotMetricType.HR_REST) },
-                                onAddClick = { showAddDialogForMetric = AthleteMetricType.HR_REST_BPM },
+                                onAddClick = null,
+                                onEditInZonesClick = onNavigateToZones?.let { nav -> { nav(0) } },
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -479,7 +496,8 @@ fun AthleteProfileContent(
                                 dateText = ftpDate,
                                 isSelected = uiState.selectedPlotMetric == PlotMetricType.FTP,
                                 onCardClick = { onSelectPlotMetric(PlotMetricType.FTP) },
-                                onAddClick = { showAddDialogForMetric = AthleteMetricType.FTP_WATTS },
+                                onAddClick = null,
+                                onEditInZonesClick = onNavigateToZones?.let { nav -> { nav(2) } },
                                 modifier = Modifier.weight(1f)
                             )
 
@@ -520,7 +538,8 @@ fun AthleteProfileContent(
                                     dateText = cpDate,
                                     isSelected = uiState.selectedPlotMetric == PlotMetricType.CP,
                                     onCardClick = { onSelectPlotMetric(PlotMetricType.CP) },
-                                    onAddClick = { showAddDialogForMetric = AthleteMetricType.CP_WATTS },
+                                    onAddClick = null,
+                                    onEditInZonesClick = onNavigateToZones?.let { nav -> { nav(2) } },
                                     modifier = Modifier.weight(1f)
                                 )
 
@@ -537,8 +556,92 @@ fun AthleteProfileContent(
                                     dateText = wPrimeDate,
                                     isSelected = uiState.selectedPlotMetric == PlotMetricType.W_PRIME,
                                     onCardClick = { onSelectPlotMetric(PlotMetricType.W_PRIME) },
-                                    onAddClick = { showAddDialogForMetric = AthleteMetricType.W_PRIME_KJ },
+                                    onAddClick = null,
+                                    onEditInZonesClick = onNavigateToZones?.let { nav -> { nav(2) } },
                                     modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+
+                        if (uiState.latestHrMaxRunEntry != null || uiState.latestHrMaxBikeEntry != null) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                MetricSummaryCard(
+                                    title = stringResource(R.string.athlete_profile_metric_hr_max_run),
+                                    valueText = uiState.latestHrMaxRunEntry?.let { "${AthleteMetricsPlotMath.formatHrRestValue(it.value)} bpm" }
+                                        ?: stringResource(R.string.athlete_weight_unconfigured),
+                                    dateText = uiState.latestHrMaxRunEntry?.let { AthleteMetricsPlotMath.formatMediumDate(it.timestampMs) } ?: "",
+                                    isSelected = uiState.selectedPlotMetric == PlotMetricType.HR_MAX_RUN,
+                                    onCardClick = { onSelectPlotMetric(PlotMetricType.HR_MAX_RUN) },
+                                    onAddClick = null,
+                                    onEditInZonesClick = onNavigateToZones?.let { nav -> { nav(0) } },
+                                    modifier = Modifier.weight(1f)
+                                )
+                                MetricSummaryCard(
+                                    title = stringResource(R.string.athlete_profile_metric_hr_max_bike),
+                                    valueText = uiState.latestHrMaxBikeEntry?.let { "${AthleteMetricsPlotMath.formatHrRestValue(it.value)} bpm" }
+                                        ?: stringResource(R.string.athlete_weight_unconfigured),
+                                    dateText = uiState.latestHrMaxBikeEntry?.let { AthleteMetricsPlotMath.formatMediumDate(it.timestampMs) } ?: "",
+                                    isSelected = uiState.selectedPlotMetric == PlotMetricType.HR_MAX_BIKE,
+                                    onCardClick = { onSelectPlotMetric(PlotMetricType.HR_MAX_BIKE) },
+                                    onAddClick = null,
+                                    onEditInZonesClick = onNavigateToZones?.let { nav -> { nav(1) } },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+
+                        if (uiState.latestLthrRunEntry != null || uiState.latestLthrBikeEntry != null) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                MetricSummaryCard(
+                                    title = stringResource(R.string.athlete_profile_metric_lthr_run),
+                                    valueText = uiState.latestLthrRunEntry?.let { "${AthleteMetricsPlotMath.formatHrRestValue(it.value)} bpm" }
+                                        ?: stringResource(R.string.athlete_weight_unconfigured),
+                                    dateText = uiState.latestLthrRunEntry?.let { AthleteMetricsPlotMath.formatMediumDate(it.timestampMs) } ?: "",
+                                    isSelected = uiState.selectedPlotMetric == PlotMetricType.LTHR_RUN,
+                                    onCardClick = { onSelectPlotMetric(PlotMetricType.LTHR_RUN) },
+                                    onAddClick = null,
+                                    onEditInZonesClick = onNavigateToZones?.let { nav -> { nav(0) } },
+                                    modifier = Modifier.weight(1f)
+                                )
+                                MetricSummaryCard(
+                                    title = stringResource(R.string.athlete_profile_metric_lthr_bike),
+                                    valueText = uiState.latestLthrBikeEntry?.let { "${AthleteMetricsPlotMath.formatHrRestValue(it.value)} bpm" }
+                                        ?: stringResource(R.string.athlete_weight_unconfigured),
+                                    dateText = uiState.latestLthrBikeEntry?.let { AthleteMetricsPlotMath.formatMediumDate(it.timestampMs) } ?: "",
+                                    isSelected = uiState.selectedPlotMetric == PlotMetricType.LTHR_BIKE,
+                                    onCardClick = { onSelectPlotMetric(PlotMetricType.LTHR_BIKE) },
+                                    onAddClick = null,
+                                    onEditInZonesClick = onNavigateToZones?.let { nav -> { nav(1) } },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+
+                        if (onNavigateToZones != null) {
+                            OutlinedButton(
+                                onClick = {
+                                    onNavigateToZones(resolveZonesTabForPlotMetric(uiState.selectedPlotMetric))
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("athlete_profile_edit_in_zones_cta")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = stringResource(R.string.athlete_profile_edit_in_zones),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
@@ -900,6 +1003,7 @@ private fun MetricSummaryCard(
     isSelected: Boolean,
     onCardClick: () -> Unit,
     onAddClick: (() -> Unit)?,
+    onEditInZonesClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val borderColor = if (isSelected) {
@@ -949,6 +1053,18 @@ private fun MetricSummaryCard(
                             contentDescription = stringResource(R.string.athlete_profile_add_entry),
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(18.dp)
+                        )
+                    }
+                } else if (onEditInZonesClick != null) {
+                    IconButton(
+                        onClick = onEditInZonesClick,
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                            contentDescription = stringResource(R.string.athlete_profile_edit_in_zones),
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }
@@ -1058,7 +1174,11 @@ fun AthleteMetricTimeSeriesChart(
             when (metricType) {
                 PlotMetricType.POWER_TO_WEIGHT -> 0.25
                 PlotMetricType.WEIGHT -> 2.0
-                PlotMetricType.HR_REST -> 3.0
+                PlotMetricType.HR_REST,
+                PlotMetricType.HR_MAX_RUN,
+                PlotMetricType.HR_MAX_BIKE,
+                PlotMetricType.LTHR_RUN,
+                PlotMetricType.LTHR_BIKE -> 3.0
                 PlotMetricType.FTP, PlotMetricType.CP -> 10.0
                 PlotMetricType.W_PRIME -> 2.0
             }
@@ -1093,7 +1213,13 @@ fun AthleteMetricTimeSeriesChart(
             val v = yMin + frac * yRange
             val label = when (metricType) {
                 PlotMetricType.WEIGHT, PlotMetricType.W_PRIME -> String.format(Locale.getDefault(), "%.1f", v)
-                PlotMetricType.HR_REST, PlotMetricType.FTP, PlotMetricType.CP -> v.roundToInt().toString()
+                PlotMetricType.HR_REST,
+                PlotMetricType.HR_MAX_RUN,
+                PlotMetricType.HR_MAX_BIKE,
+                PlotMetricType.LTHR_RUN,
+                PlotMetricType.LTHR_BIKE,
+                PlotMetricType.FTP,
+                PlotMetricType.CP -> v.roundToInt().toString()
                 PlotMetricType.POWER_TO_WEIGHT -> String.format(Locale.getDefault(), "%.2f", v)
             }
             drawContext.canvas.nativeCanvas.drawText(
@@ -1255,7 +1381,7 @@ fun AthleteMetricEntryDialog(
     onDismiss: () -> Unit,
     onSave: (AthleteMetricType, Double, Long) -> Unit
 ) {
-    var selectedMetric by remember(initialMetricType) { mutableStateOf(initialMetricType) }
+    val selectedMetric = initialMetricType
     var selectedTimestampMs by remember(initialTimestampMs) { mutableStateOf(initialTimestampMs) }
     var showDatePicker by remember { mutableStateOf(false) }
 
@@ -1338,29 +1464,12 @@ fun AthleteMetricEntryDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (!isEditMode) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        val metrics = buildList {
-                            add(AthleteMetricType.WEIGHT_KG to stringResource(R.string.athlete_profile_metric_weight))
-                            add(AthleteMetricType.HR_REST_BPM to stringResource(R.string.athlete_profile_metric_hr_rest))
-                            add(AthleteMetricType.FTP_WATTS to stringResource(R.string.athlete_profile_metric_ftp))
-                            if (enableCriticalPowerModel) {
-                                add(AthleteMetricType.CP_WATTS to stringResource(R.string.athlete_profile_metric_cp))
-                                add(AthleteMetricType.W_PRIME_KJ to stringResource(R.string.athlete_profile_metric_w_prime))
-                            }
-                        }
-                        metrics.forEach { (mType, label) ->
-                            CompactSelectorPill(
-                                label = label,
-                                selected = selectedMetric == mType,
-                                onClick = { selectedMetric = mType },
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
+                if (!isEditMode && selectedMetric == AthleteMetricType.WEIGHT_KG) {
+                    Text(
+                        text = stringResource(R.string.athlete_profile_metric_weight),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
 
                 OutlinedTextField(
@@ -1384,7 +1493,7 @@ fun AthleteMetricEntryDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                if (selectedMetric == AthleteMetricType.CP_WATTS || selectedMetric == AthleteMetricType.W_PRIME_KJ) {
+                if (enableCriticalPowerModel && (selectedMetric == AthleteMetricType.CP_WATTS || selectedMetric == AthleteMetricType.W_PRIME_KJ)) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(10.dp),

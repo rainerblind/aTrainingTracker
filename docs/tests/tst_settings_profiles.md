@@ -1,14 +1,14 @@
 # Living Test Specification: Settings, Profiles & Localization
 
 **Document ID**: `DOC-TST-SET`  
-**Version**: 1.0.56  
+**Version**: 1.0.58  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Tests**: 121
+**Total Tests**: 122
 
 ---
 
@@ -1830,6 +1830,21 @@
 
 ---
 
+### TST-SET-136: **Unified Expert-Gated Threshold Editor in Zones Tabs & Fitness Hub Separation Verification Suite (`ATT-9627`)** [Verified]
+- **Requirement(s)**: `REQ-SET-136`
+- **Component**: `PhysiologicalThresholdsCard.kt`, `ZonesSettingsViewModel.kt`, `ZoneSettingsScreen.kt`, `ZoneCalculatorDialog.kt`, `ZoneCalculationMath.kt`, `ZoneValidator.kt`, `AthleteMetricsPlotMath.kt`, `AthleteProfileViewModel.kt`, `AthleteProfileScreen.kt`
+- **Jira**: `ATT-9627`
+- **Priority**: High | **Type**: Functional | **Verification Method**: Unit, Integration
+- **Test Description**:
+  1. *Expert-Gated Field Visibility & 2-Point Estimator (`TST-SET-136.1`, `PhysiologicalThresholdsCardTest#resolveVisibleThresholdFields_respectsAllExpertSettingsFlags_TST_SET_136_1`, `PhysiologicalThresholdsCardTest#powerCard_hidesCpAndEstimatorWhenDisabled_andShowsImmediatelyWhenToggledOn_TST_SET_136_1`)*: Verify `resolveVisibleThresholdFields` and Compose rendering for `PWR_BIKE`, `HR_RUN`, and `HR_BIKE` across all Expert Settings toggle permutations, including hiding/showing `CP`, `W'`, and the 2-Point Estimator trigger.
+  2. *Decoupled Threshold Persistence & Cross-Field Invariants (`TST-SET-136.2`, `PhysiologicalThresholdsCardTest#hrAndPowerCards_validateInvariantsAndEmitValidEditsOnly_TST_SET_136_2`, `PhysiologicalThresholdsCardTest#zonesSettingsViewModel_savePhysiologicalThreshold_persistsWithoutOverwritingCustomZones_TST_SET_136_2`, `ZoneCalculationMathTest#zoneValidator_enforcesCrossFieldPhysiologicalInvariants_TST_SET_136_2`)*: Verify `ZoneValidator` enforces bounds and `HRrest < LT1 < LTHR < HRmax` / `LT1_W < FTP`; verify `ZonesSettingsViewModel.savePhysiologicalThreshold` persists to `AthleteMetricsRepository` without mutating custom `Z1..Zn` cutoffs.
+  3. *Upgraded 4-Model HR + Coggan Power Zone Recalculation & `zone_history` Snapshot (`TST-SET-136.3`, `ZoneCalculationMathTest#calculateLthrAnchoredHeartRateZones_validInputs_computesStrictAscendingFrielCutoffs_TST_SET_136_3`, `ZoneCalculationMathTest#calculateLthrAnchoredHeartRateZones_invalidInputs_throws_TST_SET_136_3`, `ZoneCalculatorDialogContractTest#hrLthrAndThresholdAnchoredModels_prefillValidateAndCalculateZones_TST_SET_136_3`)*: Verify `calculateLthrAnchoredHeartRateZones` monotonic cutoffs, `ZoneCalculatorStateHolder` across `MAX_HR`, `KARVONEN`, `LTHR`, `THRESHOLD_ANCHORED`, and `PWR_BIKE`, overwrite confirmation preservation, and `saveRecalculatedZonesSnapshot` recording `zone_history`.
+  4. *Fitness & Physiology Option 1 Separation & Direct Navigation (`TST-SET-136.4`, `AthleteProfileThresholdsSeparationTest#resolveZonesTabForPlotMetric_mapsEveryMetricToAuthoritativeZonesTab_TST_SET_136_4`, `AthleteProfileThresholdsSeparationTest#plotMath_filtersSportSpecificHrMaxAndLthrSeriesChronologically_TST_SET_136_4`, `AthleteProfileThresholdsSeparationTest#athleteProfileContent_keepsWeightEditable_andRoutesEditInZonesToMatchingTab_TST_SET_136_4`)*: Verify Body Weight remains directly editable (`+`), threshold summary cards omit duplicate `+` creation triggers and route **"Edit in Zones"** directly to `0` (`HR Run`), `1` (`HR Bike`), or `2` (`Power Bike`), `HRmax`/`LTHR` trends plot cleanly, and history backdating/edit/delete remain intact.
+  5. *9-Locale Parity & Visual/Contract Verification (`TST-SET-136.5`, `TranslationParityTest`, `ZonesSettingsHeaderContractTest`, `ZonesSettingsPreviewPillsContractTest`, `ZonesSettingsPreviewLayoutTest`, `PhysiologyModelsVisibilityContractTest`, `AthleteProfileContractAndLocalizationTest`, `ArchitectureConformanceContractTest`)*: Verify 9/9 locale parity in `strings_athlete_thresholds.xml`, zero contract regressions, and live `emulator-5554` visual verification (`Rule 8.5`).
+- **Verification Evidence**: Tier-1 targeted `:app:testDebugUnitTest --rerun` `101/101 PASS` (`0` fail, `0` err, `0` skip) across 14 suites (`PhysiologicalThresholdsCardTest` `4/4`, `AthleteProfileThresholdsSeparationTest` `3/3`, `ZoneCalculationMathTest` `17/17`, `ZoneCalculatorDialogContractTest` `6/6`, `ZonesSettingsHeaderContractTest` `3/3`, `ZonesSettingsPreviewPillsContractTest` `3/3`, `ZonesSettingsPreviewLayoutTest` `2/2`, `PhysiologyModelsVisibilityContractTest` `10/10`, `AthleteProfileContractAndLocalizationTest` `8/8`, `AthleteProfileTabFlowIsolationTest` `4/4`, `AthleteMetricsDtoAndMathTest` `11/11`, `AthleteMetricsRepositorySyncTest` `8/8`, `TranslationParityTest` `11/11`, `ArchitectureConformanceContractTest` `11/11`; `0` production compiler warnings); live `emulator-5554` (`Pixel_8_Android_15`) `installDebug` + live Fitness & Physiology -> **"Edit in Zones"** -> Training Zones (`Run HR` & `Bike Power`) verified (`CRASH_COUNT=0`, screenshots visually verified via `read_file`); evidence bundle `docs/engineering/test_evidence/tickets/ATT-9627/` and `docs/engineering/tickets/ATT-9627.md`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1888,3 +1903,5 @@
 | `1.0.53` | 2026-11-25 | Lane 2 Author (`ATT-8445`, `--as agent1`) | `ATT-8445` | Stage 6 Bounce 1/5 heal: added `testReconcileOrphanSportTypes_emitsSportTypesChangedStrictlyWhenInserted_TST_SET_134_1` verifying `reconcileOrphanSportTypes()` mutation-gated `sportTypesChanged` emission (`insertedCount > 0` vs `0`). |
 | `1.0.55` | 2026-11-25 | Lane 1 Author (`ATT-9628`, `--as agent1`) | `ATT-9628` | Added `TST-SET-135` (`[Planned]`, `.1`–`.5`, symmetric `REQ-SET-135`) covering 7 new `AthleteMetricType` bounds & unknown-token skip, `KEY_SPORT_HR_MAX_SEEDED` upgrade seeding, atomic `SettingsDataStore` + `SettingsSnapshot` sync & historical lookup, sport-specific `hrTSS` (with bit-for-bit 85% HRR fallback) & PMC resolution, Aftermath HRV threshold persistence, 9-locale `strings_athlete_thresholds.xml`, and `.attbackup` round-trip verification. |
 | `1.0.56` | 2026-11-25 | Lane 1 Author (`ATT-9628`, `--as agent1`) | `ATT-9628` | Promoted `TST-SET-135` to `[Verified]` with verbatim `TestClass#testMethod` citations (`149/149 PASS` across 20 targeted unit/Robolectric/contract suites, `0` new compiler warnings, live `emulator-5554` Athlete Profile verification `CRASH_COUNT=0`, evidence bundle `docs/engineering/test_evidence/tickets/ATT-9628/`). |
+| `1.0.57` | 2026-11-25 | Lane 1 Author (`ATT-9627`, `--as agent1`) | `ATT-9627` | Added `TST-SET-136` (`[Planned]`, `.1`–`.5`, symmetric `REQ-SET-136`) covering Expert-gated Zones threshold card visibility & 2-Point Estimator, decoupled threshold persistence & invariants, 4-model HR + Coggan Power recalculation & `zone_history` snapshots, Fitness & Physiology Option 1 separation & direct **"Edit in Zones"** navigation, and 9-locale/visual/contract verification. |
+| `1.0.58` | 2026-11-25 | Lane 1 Author (`ATT-9627`, `--as agent1`) | `ATT-9627` | Promoted `TST-SET-136` to `[Verified]` with verbatim `TestClass#testMethod` citations (`101/101 PASS` across 14 targeted suites, `0` production warnings, live `emulator-5554` verification & `Rule 8.5` visual inspection PASS, `CRASH_COUNT=0`, evidence bundle `docs/engineering/test_evidence/tickets/ATT-9627/`). |

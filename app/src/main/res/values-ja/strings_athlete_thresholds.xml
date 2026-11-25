@@ -1,11 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Sport-Specific Physiological Threshold Metric Labels (ATT-9628 / REQ-SET-135) -->
-    <string name="athlete_profile_metric_hr_max_run">最大心拍数 (ラン)</string>
-    <string name="athlete_profile_metric_hr_max_bike">最大心拍数 (バイク)</string>
+    <!-- Sport-Specific Physiological Thresholds & Zones Editor (ATT-9628 / ATT-9627 / REQ-SET-135 / REQ-SET-136) -->
+    <string name="athlete_profile_metric_hr_max_run">最大心拍 (ラン)</string>
+    <string name="athlete_profile_metric_hr_max_bike">最大心拍 (バイク)</string>
     <string name="athlete_profile_metric_lthr_run">LTHR (ラン)</string>
     <string name="athlete_profile_metric_lthr_bike">LTHR (バイク)</string>
     <string name="athlete_profile_metric_lt1_hr_run">LT1 心拍 (ラン)</string>
     <string name="athlete_profile_metric_lt1_hr_bike">LT1 心拍 (バイク)</string>
     <string name="athlete_profile_metric_lt1_pwr_bike">LT1 パワー (バイク)</string>
+    <string name="zone_thresholds_card_title">生理学的閾値</string>
+    <string name="zone_thresholds_card_subtitle">カスタムゾーンを上書きせず履歴のみ更新</string>
+    <string name="zone_thresholds_recalculate_cta">閾値からゾーンを再計算</string>
+    <string name="zone_thresholds_open_cp_estimator">2点法 CP &amp; W\' 推定ツール</string>
+    <string name="zone_thresholds_field_ftp">FTP</string>
+    <string name="zone_thresholds_field_cp">CP</string>
+    <string name="zone_thresholds_field_w_prime">W\'</string>
+    <string name="zone_thresholds_field_lt1_pwr">LT1 / AeT</string>
+    <string name="zone_thresholds_field_hr_max">最大心拍</string>
+    <string name="zone_thresholds_field_hr_rest">安静心拍</string>
+    <string name="zone_thresholds_field_lthr">LTHR / LT2</string>
+    <string name="zone_thresholds_field_lt1_hr">LT1 / AeT</string>
+    <string name="zone_thresholds_error_range">%1$d〜%2$d の範囲で入力</string>
+    <string name="zone_thresholds_error_w_prime_range">W\' は 5.0〜60.0 kJ の範囲で入力</string>
+    <string name="zone_thresholds_error_cp_range">CP は %1$d〜%2$d W の範囲で入力</string>
+    <string name="zone_thresholds_error_lt1_pwr_range">LT1 は %1$d〜%2$d W の範囲で入力</string>
+    <string name="zone_thresholds_error_lt1_lt_ftp">LT1 は FTP より小さくしてください</string>
+    <string name="zone_thresholds_error_hr_order">条件: 安静心拍 &lt; LT1 &lt; LTHR &lt; 最大心拍</string>
+    <string name="zone_calc_method_lthr">LTHR</string>
+    <string name="zone_calc_method_threshold_anchored">LT1 + LTHR</string>
+    <string name="zone_calc_lthr_label">乳酸性閾値心拍 (LTHR)</string>
+    <string name="zone_calc_lt1_hr_label">有酸素閾値心拍 (LT1)</string>
+    <string name="zone_calc_error_lthr_range">LTHR は %1$d〜%2$d bpm</string>
+    <string name="zone_calc_error_lt1_hr_range">LT1 は %1$d〜%2$d bpm</string>
+    <string name="zone_calc_error_lt1_lt_lthr">LT1 は LTHR より小さくしてください</string>
+    <string name="zone_calc_error_lthr_lt_hrmax">LTHR は最大心拍より小さくしてください</string>
+    <string name="athlete_profile_edit_in_zones">ゾーンで編集</string>
 </resources>

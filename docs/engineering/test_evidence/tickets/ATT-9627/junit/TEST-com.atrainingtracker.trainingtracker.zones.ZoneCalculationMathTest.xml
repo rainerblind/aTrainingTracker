@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.zones.ZoneCalculationMathTest" tests="17" skipped="0" failures="0" errors="0" timestamp="2026-11-25T11:44:50.944Z" hostname="rainer-HP-EliteBook-850-G5" time="0.016">
+  <properties/>
+  <testcase name="calculateCogganPowerZones_ftpAbove600W_throws" classname="com.atrainingtracker.trainingtracker.zones.ZoneCalculationMathTest" time="0.005"/>
+  <testcase name="calculateHeartRateZonesMax_190Bpm_returnsExactCutoffs" classname="com.atrainingtracker.trainingtracker.zones.ZoneCalculationMathTest" time="0.002"/>
+  <testcase name="calculateLthrAnchoredHeartRateZones_invalidInputs_throws_TST_SET_136_3" classname="com.atrainingtracker.trainingtracker.zones.ZoneCalculationMathTest" time="0.001"/>
+  <testcase name="calculateKarvonenHeartRateZones_hrMaxLessOrEqualHrRest_throws" classname="com.atrainingtracker.trainingtracker.zones.ZoneCalculationMathTest" time="0.0"/>
+  <testcase name="calculateCogganPowerZones_250W_returnsExactCutoffs" classname="com.atrainingtracker.trainingtracker.zones.ZoneCalculationMathTest" time="0.002"/>
+  <testcase name="zoneValidator_enforcesCrossFieldPhysiologicalInvariants_TST_SET_136_2" classname="com.atrainingtracker.trainingtracker.zones.ZoneCalculationMathTest" time="0.002"/>
+  <testcase name="calculateCogganPowerZones_ftpBelow50W_throws" classname="com.atrainingtracker.trainingtracker.zones.ZoneCalculationMathTest" time="0.0"/>
+  <testcase name="calculateKarvonenHeartRateZones_validBaselines_returnsCorrectThresholds" classname="com.atrainingtracker.trainingtracker.zones.ZoneCalculationMathTest" time="0.0"/>
+  <testcase name="calculateHeartRateZonesMax_below80Bpm_throws" classname="com.atrainingtracker.trainingtracker.zones.ZoneCalculationMathTest" time="0.001"/>
+  <testcase name="calculateHeartRateZonesMax_above240Bpm_throws" classname="com.atrainingtracker.trainingtracker.zones.ZoneCalculationMathTest" time="0.0"/>
+  <testcase name="calculateThresholdAnchoredHeartRateZones_withoutRestingHr_usesPercentageFallback" classname="com.atrainingtracker.trainingtracker.zones.ZoneCalculationMathTest" time="0.0"/>
+  <testcase name="calculateCogganPowerZones_maxFtp600W_withinPhysicalCeiling" classname="com.atrainingtracker.trainingtracker.zones.ZoneCalculationMathTest" time="0.0"/>
+  <testcase name="calculateKarvonenHeartRateZones_reserveBelow20Bpm_throws" classname="com.atrainingtracker.trainingtracker.zones.ZoneCalculationMathTest" time="0.001"/>
+  <testcase name="calculateLthrAnchoredHeartRateZones_validInputs_computesStrictAscendingFrielCutoffs_TST_SET_136_3" classname="com.atrainingtracker.trainingtracker.zones.ZoneCalculationMathTest" time="0.0"/>
+  <testcase name="calculateCogganPowerZones_minFtp50W_maintainsStrictMonotonicity" classname="com.atrainingtracker.trainingtracker.zones.ZoneCalculationMathTest" time="0.0"/>
+  <testcase name="calculateThresholdAnchoredHeartRateZones_invalidInputs_throws" classname="com.atrainingtracker.trainingtracker.zones.ZoneCalculationMathTest" time="0.001"/>
+  <testcase name="calculateThresholdAnchoredHeartRateZones_withRestingHr_calculatesStrictAscendingBoundaries" classname="com.atrainingtracker.trainingtracker.zones.ZoneCalculationMathTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

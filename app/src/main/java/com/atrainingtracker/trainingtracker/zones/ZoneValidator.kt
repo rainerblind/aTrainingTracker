@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.zones
 
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.database.AthleteMetricType
 
 /**
  * Result of physiological baseline and zone boundary validation.
@@ -119,6 +120,65 @@ object ZoneValidator {
             }
             if (hrMax - hrRest < ZoneCalculationMath.MIN_KARVONEN_RESERVE) {
                 return ValidationResult.Invalid(R.string.zone_calc_error_karvonen_delta)
+            }
+        }
+        return ValidationResult.Valid
+    }
+
+    /**
+     * Validates cycling power physiological thresholds against canonical [AthleteMetricType] bounds
+     * and the cross-field invariant (`LT1_W < FTP`) (`REQ-SET-136.2`).
+     */
+    fun validatePowerThresholds(
+        ftp: Int? = null,
+        cp: Int? = null,
+        wPrimeKj: Double? = null,
+        lt1Power: Int? = null
+    ): ValidationResult {
+        if (ftp != null && !AthleteMetricType.FTP_WATTS.isValidMetricValue(ftp.toDouble())) {
+            return ValidationResult.Invalid(R.string.zone_calc_error_ftp_range)
+        }
+        if (cp != null && !AthleteMetricType.CP_WATTS.isValidMetricValue(cp.toDouble())) {
+            return ValidationResult.Invalid(R.string.zone_thresholds_error_cp_range)
+        }
+        if (wPrimeKj != null && !AthleteMetricType.W_PRIME_KJ.isValidMetricValue(wPrimeKj)) {
+            return ValidationResult.Invalid(R.string.zone_thresholds_error_w_prime_range)
+        }
+        if (lt1Power != null && !AthleteMetricType.LT1_PWR_BIKE_WATTS.isValidMetricValue(lt1Power.toDouble())) {
+            return ValidationResult.Invalid(R.string.zone_thresholds_error_lt1_pwr_range)
+        }
+        if (lt1Power != null && ftp != null && lt1Power >= ftp) {
+            return ValidationResult.Invalid(R.string.zone_thresholds_error_lt1_lt_ftp)
+        }
+        return ValidationResult.Valid
+    }
+
+    /**
+     * Validates heart rate physiological thresholds against canonical [AthleteMetricType] bounds
+     * and strict ascending ordering (`HRrest < LT1 < LTHR < HRmax`) across all provided pairs (`REQ-SET-136.2`).
+     */
+    fun validateHeartRateThresholds(
+        hrMax: Int? = null,
+        hrRest: Int? = null,
+        lthr: Int? = null,
+        lt1Hr: Int? = null
+    ): ValidationResult {
+        if (hrMax != null && !AthleteMetricType.HR_MAX_RUN_BPM.isValidMetricValue(hrMax.toDouble())) {
+            return ValidationResult.Invalid(R.string.zone_calc_error_hr_max_range)
+        }
+        if (hrRest != null && !AthleteMetricType.HR_REST_BPM.isValidMetricValue(hrRest.toDouble())) {
+            return ValidationResult.Invalid(R.string.zone_calc_error_hr_rest_range)
+        }
+        if (lthr != null && !AthleteMetricType.LTHR_RUN_BPM.isValidMetricValue(lthr.toDouble())) {
+            return ValidationResult.Invalid(R.string.zone_calc_error_lthr_range)
+        }
+        if (lt1Hr != null && !AthleteMetricType.LT1_HR_RUN_BPM.isValidMetricValue(lt1Hr.toDouble())) {
+            return ValidationResult.Invalid(R.string.zone_calc_error_lt1_hr_range)
+        }
+        val ordered = listOfNotNull(hrRest, lt1Hr, lthr, hrMax)
+        for (i in 1 until ordered.size) {
+            if (ordered[i] <= ordered[i - 1]) {
+                return ValidationResult.Invalid(R.string.zone_thresholds_error_hr_order)
             }
         }
         return ValidationResult.Valid

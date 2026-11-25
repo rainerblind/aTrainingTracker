@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.zones.HrvDfaA1RangeSliderGestureTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-25T11:44:41.250Z" hostname="rainer-HP-EliteBook-850-G5" time="9.681">
+  <properties/>
+  <testcase name="testZoneSettingsScreen_tab3PreservesVerticalScrollAndOutsideSwipe" classname="com.atrainingtracker.trainingtracker.zones.HrvDfaA1RangeSliderGestureTest" time="5.942"/>
+  <testcase name="testCaptureLightAndDarkHrvGuidedTestCtaScreenshot_rule85" classname="com.atrainingtracker.trainingtracker.zones.HrvDfaA1RangeSliderGestureTest" time="0.951"/>
+  <testcase name="testLocalDragState_preventsSnapBackWhenDataStoreUpdatesLag" classname="com.atrainingtracker.trainingtracker.zones.HrvDfaA1RangeSliderGestureTest" time="0.197"/>
+  <testcase name="testCaptureLightAndDarkHrvSliderScreenshot_rule85" classname="com.atrainingtracker.trainingtracker.zones.HrvDfaA1RangeSliderGestureTest" time="0.471"/>
+  <testcase name="testHrvDfaA1SettingsContent_germanGuidedTestCtaRendersSingleLineAt360dp" classname="com.atrainingtracker.trainingtracker.zones.HrvDfaA1RangeSliderGestureTest" time="0.235"/>
+  <testcase name="testHrvDfaA1SettingsContent_omitsGaugeToggleAndRendersPreviewBar" classname="com.atrainingtracker.trainingtracker.zones.HrvDfaA1RangeSliderGestureTest" time="0.326"/>
+  <testcase name="testRightwardAndLeftwardSliderDrags_doNotTriggerHorizontalPagerTabSwitch" classname="com.atrainingtracker.trainingtracker.zones.HrvDfaA1RangeSliderGestureTest" time="0.479"/>
+  <testcase name="testCaptureLightAndDarkHrvZoneDisplayScreenshot_rule85" classname="com.atrainingtracker.trainingtracker.zones.HrvDfaA1RangeSliderGestureTest" time="0.694"/>
+  <testcase name="testHrvDfaA1SettingsContent_placesGuidedTestCtaBetweenGuidanceAndZoneControls" classname="com.atrainingtracker.trainingtracker.zones.HrvDfaA1RangeSliderGestureTest" time="0.195"/>
+  <testcase name="testHrvThresholdControlRow_withShowSliderTrueTogglesGestureIsolation" classname="com.atrainingtracker.trainingtracker.zones.HrvDfaA1RangeSliderGestureTest" time="0.19"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

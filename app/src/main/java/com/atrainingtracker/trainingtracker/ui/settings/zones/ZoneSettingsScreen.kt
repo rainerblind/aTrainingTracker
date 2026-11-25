@@ -127,12 +127,21 @@ fun ZoneSettingsScreen(
     val currentType = zoneTypes.getOrElse(pagerState.currentPage) { ZoneType.HR_RUN }
 
     var showCalculatorDialog by remember { mutableStateOf(false) }
+    var calculatorPendingThresholds by remember {
+        mutableStateOf<Map<com.atrainingtracker.trainingtracker.database.AthleteMetricType, Double>>(emptyMap())
+    }
     var showHistoryDialog by rememberSaveable { mutableStateOf(false) }
     val zoneHistoryMap by viewModel.zoneHistoryFlow.collectAsState()
     var bannerVisible by rememberSaveable { mutableStateOf(promptReason != null) }
     var isSliderGestureActive by remember { mutableStateOf(false) }
 
+    val openCalculatorWithFlush = {
+        calculatorPendingThresholds = viewModel.flushPendingThresholdSaves()
+        showCalculatorDialog = true
+    }
+
     LaunchedEffect(pagerState.currentPage) {
+        viewModel.flushPendingThresholdSaves()
         if (pagerState.currentPage != 3 && isSliderGestureActive) {
             isSliderGestureActive = false
         }
@@ -190,7 +199,7 @@ fun ZoneSettingsScreen(
                         ) {
                             if (pagerState.currentPage < 3) {
                                 IconButton(
-                                    onClick = { showCalculatorDialog = true }
+                                    onClick = openCalculatorWithFlush
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Calculate,
@@ -268,7 +277,12 @@ fun ZoneSettingsScreen(
                         ZoneProfileTabContent(
                             zoneType = pageZoneType,
                             showCalculatorDialog = showCalculatorDialog && pagerState.currentPage == page,
-                            onDismissCalculatorDialog = { showCalculatorDialog = false },
+                            onDismissCalculatorDialog = {
+                                showCalculatorDialog = false
+                                calculatorPendingThresholds = emptyMap()
+                            },
+                            onOpenCalculatorDialog = openCalculatorWithFlush,
+                            calculatorThresholdOverrides = calculatorPendingThresholds,
                             viewModel = viewModel
                         )
                     }
@@ -317,7 +331,8 @@ fun SettingsScreenContent(
     onUpdateZone4Max: (Int) -> Unit,
     onUpdateZone5Max: (Int) -> Unit = {},
     onUpdateZone6Max: (Int) -> Unit = {},
-    onUpdateDisplayOptions: (ZoneDisplayOptions) -> Unit = {}
+    onUpdateDisplayOptions: (ZoneDisplayOptions) -> Unit = {},
+    thresholdsSection: (@Composable () -> Unit)? = null
 ) {
     // Load Colors from resources
     val zone1Color = colorResource(id = R.color.zone_1)
@@ -337,6 +352,11 @@ fun SettingsScreenContent(
             .verticalScroll(scrollState),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        if (thresholdsSection != null) {
+            thresholdsSection()
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
         // Zone 1
         ZoneRow(
             zoneLabel = stringResource(R.string.zone_1_label),
@@ -583,6 +603,8 @@ fun ZoneProfileTabContent(
     zoneType: ZoneType,
     showCalculatorDialog: Boolean,
     onDismissCalculatorDialog: () -> Unit,
+    onOpenCalculatorDialog: () -> Unit = {},
+    calculatorThresholdOverrides: Map<com.atrainingtracker.trainingtracker.database.AthleteMetricType, Double> = emptyMap(),
     viewModel: ZonesSettingsViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -590,10 +612,14 @@ fun ZoneProfileTabContent(
     val scope = rememberCoroutineScope()
 
     val allProfiles by viewModel.allProfiles.collectAsState()
+    val tuningConfig by viewModel.tuningConfigFlow.collectAsState()
     val currentProfile = allProfiles.find { it.type == zoneType }
 
     val isCustomized by dataStore.isZoneCustomizedFlow(zoneType).collectAsState(initial = false)
     val storedFtp by dataStore.ftpFlow.collectAsState(initial = null)
+    val storedCp by dataStore.cpWattsFlow.collectAsState(initial = null)
+    val storedWPrime by dataStore.wPrimeKjFlow.collectAsState(initial = null)
+    val storedLt1PwrBike by dataStore.lt1PwrBikeFlow.collectAsState(initial = null)
     val storedHrMaxRun by dataStore.hrMaxRunFlow.collectAsState(initial = null)
     val storedHrMaxBike by dataStore.hrMaxBikeFlow.collectAsState(initial = null)
     val storedHrMaxLegacy by dataStore.hrMaxFlow.collectAsState(initial = null)
@@ -603,7 +629,37 @@ fun ZoneProfileTabContent(
         ZoneType.PWR_BIKE -> storedHrMaxLegacy
     }
     val storedHrRest by dataStore.hrRestFlow.collectAsState(initial = null)
+    val storedLthrRun by dataStore.lthrRunFlow.collectAsState(initial = null)
+    val storedLthrBike by dataStore.lthrBikeFlow.collectAsState(initial = null)
+    val storedLthr = when (zoneType) {
+        ZoneType.HR_RUN -> storedLthrRun
+        ZoneType.HR_BIKE -> storedLthrBike
+        ZoneType.PWR_BIKE -> null
+    }
+    val storedLt1HrRun by dataStore.lt1HrRunFlow.collectAsState(initial = null)
+    val storedLt1HrBike by dataStore.lt1HrBikeFlow.collectAsState(initial = null)
+    val storedLt1Hr = when (zoneType) {
+        ZoneType.HR_RUN -> storedLt1HrRun
+        ZoneType.HR_BIKE -> storedLt1HrBike
+        ZoneType.PWR_BIKE -> null
+    }
     val storedHrMethod by dataStore.hrCalcMethodFlow.collectAsState(initial = null)
+
+    val thresholdValues = remember(
+        storedFtp, storedCp, storedWPrime, storedLt1PwrBike,
+        storedHrMax, storedHrRest, storedLthr, storedLt1Hr
+    ) {
+        ZoneThresholdsValues(
+            ftp = storedFtp,
+            cp = storedCp,
+            wPrimeKj = storedWPrime,
+            lt1PwrBike = storedLt1PwrBike,
+            hrMax = storedHrMax,
+            hrRest = storedHrRest,
+            lthr = storedLthr,
+            lt1Hr = storedLt1Hr
+        )
+    }
 
     if (currentProfile == null) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -625,19 +681,57 @@ fun ZoneProfileTabContent(
             onUpdateZone4Max = { new -> viewModel.updateThreshold(zoneType, 4, new) },
             onUpdateZone5Max = { new -> viewModel.updateThreshold(zoneType, 5, new) },
             onUpdateZone6Max = { new -> viewModel.updateThreshold(zoneType, 6, new) },
-            onUpdateDisplayOptions = { newOptions -> viewModel.updateDisplayOptions(zoneType, newOptions) }
+            onUpdateDisplayOptions = { newOptions -> viewModel.updateDisplayOptions(zoneType, newOptions) },
+            thresholdsSection = {
+                PhysiologicalThresholdsCard(
+                    zoneType = zoneType,
+                    tuningConfig = tuningConfig,
+                    values = thresholdValues,
+                    onSaveThreshold = { metricType, value ->
+                        viewModel.savePhysiologicalThreshold(metricType, value)
+                    },
+                    onSaveCpAndWPrime = { cp, wPrime ->
+                        viewModel.saveCpAndWPrimeEstimate(cp, wPrime)
+                    },
+                    onOpenRecalculateDialog = onOpenCalculatorDialog
+                )
+            }
         )
     }
 
     if (showCalculatorDialog) {
-        val holder = remember(zoneType, isCustomized, storedFtp, storedHrMax, storedHrRest, storedHrMethod) {
+        // Key remember strictly on zoneType (NOT live DataStore flows) so opening the dialog
+        // snapshots latest + freshly flushed thresholds once and never resets mid-edit or mid-save.
+        val holder = remember(zoneType) {
+            val hrMaxKey = if (zoneType == ZoneType.HR_RUN) {
+                com.atrainingtracker.trainingtracker.database.AthleteMetricType.HR_MAX_RUN_BPM
+            } else {
+                com.atrainingtracker.trainingtracker.database.AthleteMetricType.HR_MAX_BIKE_BPM
+            }
+            val lthrKey = if (zoneType == ZoneType.HR_RUN) {
+                com.atrainingtracker.trainingtracker.database.AthleteMetricType.LTHR_RUN_BPM
+            } else {
+                com.atrainingtracker.trainingtracker.database.AthleteMetricType.LTHR_BIKE_BPM
+            }
+            val lt1Key = if (zoneType == ZoneType.HR_RUN) {
+                com.atrainingtracker.trainingtracker.database.AthleteMetricType.LT1_HR_RUN_BPM
+            } else {
+                com.atrainingtracker.trainingtracker.database.AthleteMetricType.LT1_HR_BIKE_BPM
+            }
             ZoneCalculatorStateHolder(
                 zoneType = zoneType,
                 initialCustomized = isCustomized,
-                initialFtp = storedFtp,
-                initialHrMax = storedHrMax,
-                initialHrRest = storedHrRest,
-                initialHrMethod = if (storedHrMethod == "MAX_HR") HrMethod.MAX_HR else HrMethod.KARVONEN
+                initialFtp = calculatorThresholdOverrides[com.atrainingtracker.trainingtracker.database.AthleteMetricType.FTP_WATTS]?.let { Math.round(it).toInt() } ?: storedFtp,
+                initialHrMax = calculatorThresholdOverrides[hrMaxKey]?.let { Math.round(it).toInt() } ?: storedHrMax,
+                initialHrRest = calculatorThresholdOverrides[com.atrainingtracker.trainingtracker.database.AthleteMetricType.HR_REST_BPM]?.let { Math.round(it).toInt() } ?: storedHrRest,
+                initialLthr = calculatorThresholdOverrides[lthrKey]?.let { Math.round(it).toInt() } ?: storedLthr,
+                initialLt1Hr = calculatorThresholdOverrides[lt1Key]?.let { Math.round(it).toInt() } ?: storedLt1Hr,
+                initialHrMethod = when (storedHrMethod) {
+                    "MAX_HR" -> HrMethod.MAX_HR
+                    "LTHR" -> HrMethod.LTHR
+                    "HRVT_ANCHORS" -> HrMethod.THRESHOLD_ANCHORED
+                    else -> HrMethod.KARVONEN
+                }
             )
         }
         ZoneCalculatorDialog(
@@ -654,6 +748,7 @@ fun ZoneProfileTabContent(
                                 value = ftp.toDouble()
                             )
                         dataStore.saveCalculatedPowerZones(ftp, cutoffs)
+                        viewModel.saveRecalculatedZonesSnapshot(ZoneType.PWR_BIKE, cutoffs)
                         withContext(Dispatchers.Main) {
                             holder.onSaveCompleted()
                             onDismissCalculatorDialog()
@@ -664,6 +759,24 @@ fun ZoneProfileTabContent(
                             holder.onSaveFailed()
                         }
                     }
+                }
+            },
+            onSaveHeartRateThresholds = { lthr, lt1Hr ->
+                val lthrMetric = if (zoneType == ZoneType.HR_RUN) {
+                    com.atrainingtracker.trainingtracker.database.AthleteMetricType.LTHR_RUN_BPM
+                } else {
+                    com.atrainingtracker.trainingtracker.database.AthleteMetricType.LTHR_BIKE_BPM
+                }
+                val lt1Metric = if (zoneType == ZoneType.HR_RUN) {
+                    com.atrainingtracker.trainingtracker.database.AthleteMetricType.LT1_HR_RUN_BPM
+                } else {
+                    com.atrainingtracker.trainingtracker.database.AthleteMetricType.LT1_HR_BIKE_BPM
+                }
+                if (lthr != null && lthrMetric.isValidMetricValue(lthr.toDouble())) {
+                    viewModel.savePhysiologicalThreshold(lthrMetric, lthr.toDouble(), debounceMs = 0L)
+                }
+                if (lt1Hr != null && lt1Metric.isValidMetricValue(lt1Hr.toDouble())) {
+                    viewModel.savePhysiologicalThreshold(lt1Metric, lt1Hr.toDouble(), debounceMs = 0L)
                 }
             },
             onSaveHeartRate = { zType, hrMax, hrRest, method, cutoffs ->
@@ -693,6 +806,7 @@ fun ZoneProfileTabContent(
                             )
                         }
                         dataStore.saveCalculatedHeartRateZones(zType, hrMax, hrRest, method, cutoffs)
+                        viewModel.saveRecalculatedZonesSnapshot(zType, cutoffs)
                         withContext(Dispatchers.Main) {
                             holder.onSaveCompleted()
                             onDismissCalculatorDialog()

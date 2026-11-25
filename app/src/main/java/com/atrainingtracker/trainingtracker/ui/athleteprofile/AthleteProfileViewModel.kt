@@ -87,9 +87,21 @@ fun resolveFitnessHubTabs(
  */
 fun resolveVisiblePlotMetrics(enableCriticalPowerModel: Boolean): List<PlotMetricType> =
     if (enableCriticalPowerModel) {
-        PlotMetricType.entries
+        listOf(
+            PlotMetricType.WEIGHT,
+            PlotMetricType.HR_REST,
+            PlotMetricType.FTP,
+            PlotMetricType.CP,
+            PlotMetricType.W_PRIME,
+            PlotMetricType.POWER_TO_WEIGHT
+        )
     } else {
-        PlotMetricType.entries.filter { it != PlotMetricType.CP && it != PlotMetricType.W_PRIME }
+        listOf(
+            PlotMetricType.WEIGHT,
+            PlotMetricType.HR_REST,
+            PlotMetricType.FTP,
+            PlotMetricType.POWER_TO_WEIGHT
+        )
     }
 
 /**
@@ -206,6 +218,10 @@ data class AthleteProfileUiState(
     val latestFtpEntry: AthleteMetricEntry? = null,
     val latestCpEntry: AthleteMetricEntry? = null,
     val latestWPrimeEntry: AthleteMetricEntry? = null,
+    val latestHrMaxRunEntry: AthleteMetricEntry? = null,
+    val latestHrMaxBikeEntry: AthleteMetricEntry? = null,
+    val latestLthrRunEntry: AthleteMetricEntry? = null,
+    val latestLthrBikeEntry: AthleteMetricEntry? = null,
     val currentPowerToWeight: Double? = null,
     val latestPowerToWeightTimestampMs: Long? = null,
     val selectedPlotMetric: PlotMetricType = PlotMetricType.WEIGHT,
@@ -242,6 +258,10 @@ data class AthleteBodyTabUiState(
     val latestFtpEntry: AthleteMetricEntry? = null,
     val latestCpEntry: AthleteMetricEntry? = null,
     val latestWPrimeEntry: AthleteMetricEntry? = null,
+    val latestHrMaxRunEntry: AthleteMetricEntry? = null,
+    val latestHrMaxBikeEntry: AthleteMetricEntry? = null,
+    val latestLthrRunEntry: AthleteMetricEntry? = null,
+    val latestLthrBikeEntry: AthleteMetricEntry? = null,
     val currentPowerToWeight: Double? = null,
     val latestPowerToWeightTimestampMs: Long? = null,
     val selectedPlotMetric: PlotMetricType = PlotMetricType.WEIGHT,
@@ -366,6 +386,10 @@ class AthleteProfileViewModel @JvmOverloads constructor(
         val latestFtp = entries.firstOrNull { it.metricType == AthleteMetricType.FTP_WATTS }
         val latestCp = entries.firstOrNull { it.metricType == AthleteMetricType.CP_WATTS }
         val latestWPrime = entries.firstOrNull { it.metricType == AthleteMetricType.W_PRIME_KJ }
+        val latestHrMaxRun = entries.firstOrNull { it.metricType == AthleteMetricType.HR_MAX_RUN_BPM }
+        val latestHrMaxBike = entries.firstOrNull { it.metricType == AthleteMetricType.HR_MAX_BIKE_BPM }
+        val latestLthrRun = entries.firstOrNull { it.metricType == AthleteMetricType.LTHR_RUN_BPM }
+        val latestLthrBike = entries.firstOrNull { it.metricType == AthleteMetricType.LTHR_BIKE_BPM }
 
         val currentWPerKg = AthleteMetricsPlotMath.computeCurrentPowerToWeight(
             latestFtpWatts = latestFtp?.value,
@@ -405,6 +429,10 @@ class AthleteProfileViewModel @JvmOverloads constructor(
             latestFtpEntry = latestFtp,
             latestCpEntry = latestCp,
             latestWPrimeEntry = latestWPrime,
+            latestHrMaxRunEntry = latestHrMaxRun,
+            latestHrMaxBikeEntry = latestHrMaxBike,
+            latestLthrRunEntry = latestLthrRun,
+            latestLthrBikeEntry = latestLthrBike,
             currentPowerToWeight = currentWPerKg,
             latestPowerToWeightTimestampMs = latestWPerKgTs,
             selectedPlotMetric = plotMetric,
@@ -552,6 +580,10 @@ class AthleteProfileViewModel @JvmOverloads constructor(
             latestFtpEntry = body.latestFtpEntry,
             latestCpEntry = body.latestCpEntry,
             latestWPrimeEntry = body.latestWPrimeEntry,
+            latestHrMaxRunEntry = body.latestHrMaxRunEntry,
+            latestHrMaxBikeEntry = body.latestHrMaxBikeEntry,
+            latestLthrRunEntry = body.latestLthrRunEntry,
+            latestLthrBikeEntry = body.latestLthrBikeEntry,
             currentPowerToWeight = body.currentPowerToWeight,
             latestPowerToWeightTimestampMs = body.latestPowerToWeightTimestampMs,
             selectedPlotMetric = body.selectedPlotMetric,

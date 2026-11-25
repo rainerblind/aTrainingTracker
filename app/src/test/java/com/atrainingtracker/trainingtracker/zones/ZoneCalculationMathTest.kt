@@ -238,6 +238,14 @@ class ZoneCalculationMathTest {
             assertTrue(e.message?.contains("strictly greater than HRVT2") == true)
         }
 
+        // adjacent hrvt2 - hrvt1 == 1 must throw so z2 < z3 < z4 stays strictly monotonic (ATT-9627)
+        try {
+            ZoneCalculationMath.calculateThresholdAnchoredHeartRateZones(hrvt1 = 170, hrvt2 = 171, hrMax = 185)
+            fail("Expected IllegalArgumentException for hrvt2 - hrvt1 < 2")
+        } catch (e: IllegalArgumentException) {
+            assertTrue(e.message?.contains("strictly greater than HRVT1") == true)
+        }
+
         // out of bounds hrvt1
         try {
             ZoneCalculationMath.calculateThresholdAnchoredHeartRateZones(hrvt1 = 50, hrvt2 = 160)
@@ -245,5 +253,48 @@ class ZoneCalculationMathTest {
         } catch (e: IllegalArgumentException) {
             assertTrue(e.message?.contains("HRVT1") == true)
         }
+    }
+
+    @Test
+    fun calculateLthrAnchoredHeartRateZones_validInputs_computesStrictAscendingFrielCutoffs_TST_SET_136_3() {
+        val t = ZoneCalculationMath.calculateLthrAnchoredHeartRateZones(lthr = 170, hrMax = 192, hrRest = 50)
+        assertEquals(138, t.z1Max)
+        assertEquals(151, t.z2Max)
+        assertEquals(158, t.z3Max)
+        assertEquals(170, t.z4Max)
+        assertTrue(t.z1Max < t.z2Max && t.z2Max < t.z3Max && t.z3Max < t.z4Max && t.z4Max < 192)
+    }
+
+    @Test
+    fun calculateLthrAnchoredHeartRateZones_invalidInputs_throws_TST_SET_136_3() {
+        try {
+            ZoneCalculationMath.calculateLthrAnchoredHeartRateZones(lthr = 180, hrMax = 180)
+            fail("Expected IllegalArgumentException when hrMax <= lthr")
+        } catch (e: IllegalArgumentException) {
+            assertTrue(e.message?.contains("strictly greater than LTHR") == true)
+        }
+        try {
+            ZoneCalculationMath.calculateLthrAnchoredHeartRateZones(lthr = 70)
+            fail("Expected IllegalArgumentException when lthr < MIN_LTHR")
+        } catch (e: IllegalArgumentException) {
+            assertTrue(e.message?.contains("LTHR") == true)
+        }
+    }
+
+    @Test
+    fun zoneValidator_enforcesCrossFieldPhysiologicalInvariants_TST_SET_136_2() {
+        assertEquals(ValidationResult.Valid, ZoneValidator.validatePowerThresholds(ftp = 280, cp = 270, wPrimeKj = 18.5, lt1Power = 210))
+        // Canonical AthleteMetricType bounds: CP up to 1000W, W' in [5.0, 60.0] kJ, LT1_W in [30, 500] W
+        assertEquals(ValidationResult.Valid, ZoneValidator.validatePowerThresholds(ftp = 550, cp = 850, wPrimeKj = 5.0, lt1Power = 500))
+        assertTrue(ZoneValidator.validatePowerThresholds(cp = 1001) is ValidationResult.Invalid)
+        assertTrue(ZoneValidator.validatePowerThresholds(wPrimeKj = 4.9) is ValidationResult.Invalid)
+        assertTrue(ZoneValidator.validatePowerThresholds(lt1Power = 501) is ValidationResult.Invalid)
+        assertTrue(ZoneValidator.validatePowerThresholds(ftp = 280, lt1Power = 280) is ValidationResult.Invalid)
+        assertTrue(ZoneValidator.validatePowerThresholds(ftp = 280, lt1Power = 295) is ValidationResult.Invalid)
+
+        assertEquals(ValidationResult.Valid, ZoneValidator.validateHeartRateThresholds(hrMax = 192, hrRest = 50, lthr = 172, lt1Hr = 148))
+        assertTrue(ZoneValidator.validateHeartRateThresholds(hrMax = 192, hrRest = 50, lthr = 172, lt1Hr = 172) is ValidationResult.Invalid)
+        assertTrue(ZoneValidator.validateHeartRateThresholds(hrMax = 170, hrRest = 50, lthr = 172, lt1Hr = 148) is ValidationResult.Invalid)
+        assertTrue(ZoneValidator.validateHeartRateThresholds(hrMax = 192, hrRest = 150, lthr = 172, lt1Hr = 148) is ValidationResult.Invalid)
     }
 }

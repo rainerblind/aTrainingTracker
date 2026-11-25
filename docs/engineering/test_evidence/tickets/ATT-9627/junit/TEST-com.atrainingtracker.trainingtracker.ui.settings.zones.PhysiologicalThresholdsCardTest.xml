@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.settings.zones.PhysiologicalThresholdsCardTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-25T11:44:16.694Z" hostname="rainer-HP-EliteBook-850-G5" time="8.442">
+  <properties/>
+  <testcase name="crossFieldRecovery_andUnifiedWPrimeBounds_flushBothRecoveredFieldsWithoutSavingErrors_TST_SET_136_2" classname="com.atrainingtracker.trainingtracker.ui.settings.zones.PhysiologicalThresholdsCardTest" time="1.624"/>
+  <testcase name="zonesSettingsViewModel_savePhysiologicalThreshold_persistsWithoutOverwritingCustomZones_TST_SET_136_2" classname="com.atrainingtracker.trainingtracker.ui.settings.zones.PhysiologicalThresholdsCardTest" time="3.872"/>
+  <testcase name="resolveVisibleThresholdFields_respectsAllExpertSettingsFlags_TST_SET_136_1" classname="com.atrainingtracker.trainingtracker.ui.settings.zones.PhysiologicalThresholdsCardTest" time="0.14"/>
+  <testcase name="zonesSettingsViewModel_flushesPendingDebouncedThresholdsOnCleared_TST_SET_136_2" classname="com.atrainingtracker.trainingtracker.ui.settings.zones.PhysiologicalThresholdsCardTest" time="0.126"/>
+  <testcase name="zoneCalculatorDialog_overwriteConfirmation_preservesLthrAndThresholdAnchoredMethods_TST_SET_136_3" classname="com.atrainingtracker.trainingtracker.ui.settings.zones.PhysiologicalThresholdsCardTest" time="0.969"/>
+  <testcase name="powerCard_hidesCpAndEstimatorWhenDisabled_andShowsImmediatelyWhenToggledOn_TST_SET_136_1" classname="com.atrainingtracker.trainingtracker.ui.settings.zones.PhysiologicalThresholdsCardTest" time="0.972"/>
+  <testcase name="hrAndPowerCards_validateInvariantsAndEmitValidEditsOnly_TST_SET_136_2" classname="com.atrainingtracker.trainingtracker.ui.settings.zones.PhysiologicalThresholdsCardTest" time="0.738"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

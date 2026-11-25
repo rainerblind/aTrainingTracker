@@ -1,14 +1,14 @@
 # Living Requirements: Settings, Profiles & Localization
 
 **Document ID**: `DOC-REQ-SET`  
-**Version**: 1.0.56  
+**Version**: 1.0.58  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Requirements**: 132
+**Total Requirements**: 133
 
 ---
 
@@ -3201,6 +3201,33 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 ---
 
+### REQ-SET-136: Unified Expert-Gated Physiological Threshold Editor in Zones Tabs & Fitness Hub Separation (`ATT-9627`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-SET-136`
+- **System Requirement(s)**: `Derived (SW-only)` — Compose UI workflow and validation over existing `AthleteMetricsRepository` and `TuningPreferencesDataStore` (`REQ-SET-135`, `REQ-UI-373`, `REQ-UI-391`, `REQ-UI-399`, `REQ-UI-403`) without hardware, HAL, SQLite schema, or cloud API changes.
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `PhysiologicalThresholdsCard.kt`, `ZonesSettingsViewModel.kt`, `ZoneSettingsScreen.kt`, `ZoneCalculatorDialog.kt`, `ZoneCalculationMath.kt`, `ZoneValidator.kt`, `AthleteMetricsPlotMath.kt`, `AthleteProfileViewModel.kt`, `AthleteProfileScreen.kt`, `ATrainingTrackerApp.kt`
+- **Localization Parity**: `9/9` locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) in `strings_athlete_thresholds.xml` (`Rule 9.4`).
+- **Rationale**: Making the **Zones** tabs the single authoritative Expert-gated editor for HR and Power physiological thresholds eliminates scattered editing dialogs, prevents accidental silent overwrites of custom `Z1..Zn` cutoffs, and lets **Fitness & Physiology** focus cleanly on Body metrics and longitudinal trend inspection.
+- **Description**:
+  1. *Expert-Gated Physiological Thresholds Card in Zones Tabs (`REQ-SET-136.1`)*: `ZoneSettingsScreen` (`HR Run`, `HR Bike`, `Power Bike`) SHALL render `PhysiologicalThresholdsCard` gated strictly by `TuningPreferencesDataStore` flags: `Power (Bike)` exposes `FTP` (`enableCogganPowerMetrics`), `CP` + `W'` + embedded 2-Point CP & W' Estimator (`enableCriticalPowerModel`), and `LT1 (W)` (`enableAerobicEfficiencyModel`); `HR (Run)` and `HR (Bike)` always expose sport-specific `HRmax` and global synchronized `HRrest`, plus sport-specific `LTHR` (`enablePmcModel || enableAerobicEfficiencyModel`) and `LT1 (bpm)` (`enableAerobicEfficiencyModel`).
+  2. *Decoupled Validated Threshold Persistence (`REQ-SET-136.2`)*: Editing any threshold in `PhysiologicalThresholdsCard` SHALL enforce bounds and cross-field physiological invariants (`HRrest < LT1 < LTHR < HRmax`, `LT1_W < FTP`) and persist via `ZonesSettingsViewModel` -> `AthleteMetricsRepository.addEntry()` (debounced) without silently modifying or overwriting `Z1..Zn` zone cutoffs.
+  3. *Upgraded "Recalculate Zones from Thresholds" Sheet (`REQ-SET-136.3`)*: `ZoneCalculatorDialog` SHALL pre-fill from the active tab's thresholds and support Power Coggan 7-Zone (`FTP`) plus 4 HR models (`% of HRmax`, `Karvonen`, `LTHR-anchored` via `ZoneCalculationMath.calculateLthrAnchoredHeartRateZones`, and `Threshold-anchored LT1+LTHR` via `ZoneCalculationMath.calculateThresholdAnchoredHeartRateZones`), preserving overwrite confirmation when custom zones exist and recording a `zone_history` snapshot on apply.
+  4. *Fitness & Physiology Clean Separation — Option 1 (`REQ-SET-136.4`)*: `AthleteProfileScreen` SHALL keep Body Weight directly editable, preserve all historical trend charts (`Weight`, `HRrest`, `FTP`, `W/kg`, `CP`, `W'`, `HRmax`, `LTHR`) and history entry backdating/editing/deletion, and replace duplicate threshold `+` creation editors with a clear **"Edit in Zones"** CTA navigating directly to the matching Zones tab (`HR Run` = `0`, `HR Bike` = `1`, `Power Bike` = `2`).
+  5. *9-Language Localization Parity & Contract Preservation (`REQ-SET-136.5`)*: All new threshold labels, validation errors, recalculation model names, and navigation CTAs SHALL achieve 9/9 locale parity in `strings_athlete_thresholds.xml` while keeping `ZoneSettingsScreen.kt`, `AthleteProfileScreen.kt`, and `SettingsDataStore.kt` within LoC ceilings and preserving all existing Zones/Profile contract tests.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `enableCriticalPowerModel` is OFF in Expert Settings, *When* the user opens `Zones -> Power (Bike)`, *Then* `CP`, `W'`, and the 2-Point Estimator are hidden; toggling it ON displays them immediately.
+• *Given* custom Power `Z1..Z6` cutoffs exist and the user edits `FTP` from `270 W` to `280 W` in `Zones -> Power (Bike)`, *When* the edit persists, *Then* `FTP_WATTS = 280` is saved to `AthleteMetrics.db` and `SettingsDataStore` while custom `Z1..Z6` cutoffs remain unchanged until explicit recalculation confirmation.
+• *Given* `HRmax (Run) = 192` and `HRmax (Bike) = 184`, *When* switching between `HR (Run)` and `HR (Bike)`, *Then* each tab displays/persists its own sport-specific `HRmax` while `HRrest` stays synchronized globally.
+• *Given* the user opens `Fitness & Physiology -> Body & Thresholds`, *When* inspecting threshold cards/trends, *Then* Body Weight remains directly editable, trends & history remain accessible, and tapping **"Edit in Zones"** opens the corresponding Zones tab directly.
+
+**Invariants**: Zero SQLite schema changes (`DB_VERSION = 2`); zero silent `Z1..Zn` overwrite on threshold edit; `HRrest < LT1 < LTHR < HRmax` & `LT1_W < FTP`; zero `FilterChip(` in `ZoneSettingsScreen.kt`; `9/9` locale parity.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -3259,3 +3286,5 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 | `1.0.53` | 2026-11-25 | Lane 2 Author (`ATT-8445`, `--as agent1`) | `ATT-8445` | Stage 6 Bounce 1/5 heal: grounded `REQ-SET-134.1` against authentic `SportTypeReconciliationHelper.reconcileOrphanSportTypes()` (`insertedCount > 0`) and `claimPlaceholder()` (`Rule 8.7`) and wired `notifySportTypesChanged()` in `reconcileOrphanSportTypes()`. |
 | `1.0.55` | 2026-11-25 | Lane 1 Author (`ATT-9628`, `--as agent1`) | `ATT-9628` | Added `REQ-SET-135` (`[Planned]`, `.1`–`.5`, `Derived (SW-only)`) for 7 sport-specific `AthleteMetricType` threshold entries, independent `KEY_SPORT_HR_MAX_SEEDED` legacy `KEY_HR_MAX` seeding, atomic `SettingsDataStore` + `SettingsSnapshot` sync & `getEffectiveThresholdsAt()`, sport-specific historical `hrTSS`/PMC integration with bit-for-bit 85% HRR fallback, Aftermath HRV threshold persistence, 9-locale `strings_athlete_thresholds.xml`, and `.attbackup` round-trip/forward-compatibility parity. |
 | `1.0.56` | 2026-11-25 | Lane 1 Author (`ATT-9628`, `--as agent1`) | `ATT-9628` | Promoted `REQ-SET-135` to `[Verified]` following Stage 4/5 construction & verification (`149/149 PASS` across 20 targeted unit/Robolectric/contract suites, `0` new compiler warnings, `SettingsDataStore.kt` `1,386/1,500` LoC, `AthleteProfileScreen.kt` `1,626/1,975` LoC, `WorkoutSummariesDatabaseManager.java` `3,105/3,148` LoC, `AthleteMetrics.db` `DB_VERSION = 2` unchanged, 9/9 locale `TranslationParityTest` `11/11`, live `emulator-5554` Athlete Profile verification `CRASH_COUNT=0`, and `docs/engineering/walkthroughs/ATT-9628_walkthrough.md`). |
+| `1.0.57` | 2026-11-25 | Lane 1 Author (`ATT-9627`, `--as agent1`) | `ATT-9627` | Added `REQ-SET-136` (`[Planned]`, `.1`–`.5`, `Derived (SW-only)`) for Unified Expert-Gated Physiological Threshold Editor in Zones Tabs (`PhysiologicalThresholdsCard`, decoupled persistence, 4-model HR + Coggan Power recalculation with `zone_history` snapshots, Option 1 Fitness & Physiology separation with direct **"Edit in Zones"** navigation, and 9-locale parity). |
+| `1.0.58` | 2026-11-25 | Lane 1 Author (`ATT-9627`, `--as agent1`) | `ATT-9627` | Promoted `REQ-SET-136` to `[Verified]` following construction & verification (`101/101 PASS` across 14 targeted unit/Compose/contract/localization suites, `0` production warnings, `ZoneSettingsScreen.kt` `793`, `PhysiologicalThresholdsCard.kt` `609`, `AthleteProfileScreen.kt` `1,735/1,975`, `SettingsDataStore.kt` `1,386/1,500` LoC, live `emulator-5554` verification & `Rule 8.5` visual inspection PASS, `CRASH_COUNT=0`). |
