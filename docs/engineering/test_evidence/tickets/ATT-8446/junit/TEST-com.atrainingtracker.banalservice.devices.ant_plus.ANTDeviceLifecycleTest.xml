@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.ant_plus.ANTDeviceLifecycleTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-25T01:11:29.499Z" hostname="rainer-HP-EliteBook-850-G5" time="3.655">
+  <properties/>
+  <testcase name="testDeadDeviceStateTriggersReleaseAccessAndNullifiesHandle" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTDeviceLifecycleTest" time="1.241"/>
+  <testcase name="testStartSearchingReleasesExistingHandleBeforeRequestingNew" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTDeviceLifecycleTest" time="1.176"/>
+  <testcase name="testShutDownReleasesHandleAndNullifies" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTDeviceLifecycleTest" time="1.238"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

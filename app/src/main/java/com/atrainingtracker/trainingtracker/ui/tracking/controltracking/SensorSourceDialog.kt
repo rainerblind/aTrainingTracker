@@ -556,11 +556,12 @@ internal fun normalizeManufacturerForCapabilityCheck(
 }
 
 /**
- * Sorts disconnected devices for [SensorSourceDialog] (`REQ-UI-268.5`, `REQ-UI-2804.3`, `REQ-CON-057.3`).
+ * Sorts disconnected devices for [SensorSourceDialog] (`REQ-UI-268.5`, `REQ-UI-2804.3`, `REQ-CON-057.3`, `REQ-CON-064.2`).
  * For [SensorType.HR], orders by `(modalityTier [ECG < ANT+ < Optical PPG < Other],
  * deviceName, deviceId)` using persisted protocol and capability metadata.
  * For [DeviceType.HRM] candidates on Polar Live-IMU sensor types (`CADENCE`, `STRIDES`,
- * `VERTICAL_OSCILLATION`, `GROUND_CONTACT_TIME`), filters via [HrmSensorCapabilityHelper].
+ * `VERTICAL_OSCILLATION`, `GROUND_CONTACT_TIME`), requires `isPaired`, `polarLiveImuEnabled`,
+ * Android 13+, and hardware support via [HrmSensorCapabilityHelper].
  * Non-HR sensor types preserve [MySensorManager.getPriorityRank] ordering.
  */
 internal fun sortNotConnectedDevices(
@@ -568,18 +569,25 @@ internal fun sortNotConnectedDevices(
     activeDeviceIds: Set<Long>,
     potentialTypes: Set<DeviceType>,
     sensorType: SensorType,
-    context: android.content.Context? = null
+    context: android.content.Context? = null,
+    sdkInt: Int = android.os.Build.VERSION.SDK_INT
 ): List<DeviceUiData> {
+    val requiresLiveImu = HrmSensorCapabilityHelper.requiresPolarLiveImu(sensorType)
     val filtered = allDevices.filter { device ->
         potentialTypes.contains(device.deviceType) &&
             !activeDeviceIds.contains(device.id) &&
-            (device.deviceType != DeviceType.HRM || HrmSensorCapabilityHelper.isSensorSupported(
-                context = context,
-                sensorType = sensorType,
-                protocol = device.protocol,
-                deviceName = device.deviceName,
-                manufacturer = normalizeManufacturerForCapabilityCheck(device.manufacturer, context),
-                btAddress = device.btAddress
+            (device.deviceType != DeviceType.HRM || (
+                (!requiresLiveImu || device.isPaired) &&
+                    HrmSensorCapabilityHelper.isSensorSupported(
+                        context = context,
+                        sensorType = sensorType,
+                        protocol = device.protocol,
+                        deviceName = device.deviceName,
+                        manufacturer = normalizeManufacturerForCapabilityCheck(device.manufacturer, context),
+                        btAddress = device.btAddress,
+                        polarLiveImuEnabled = device.polarLiveImuEnabled,
+                        sdkInt = sdkInt
+                    )
             ))
     }
     if (sensorType == SensorType.HR) {

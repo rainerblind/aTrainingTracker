@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 3 of 3)
 
 **Document ID**: `DOC-REQ-TRK-P3`  
-**Version**: 1.0.56  
+**Version**: 1.0.59  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part3`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 60
+**Total Requirements**: 61
 
 ---
 
@@ -1954,6 +1954,33 @@
 
 ---
 
+### REQ-CON-064: Polar Live-IMU Opt-In & Android 13+ Gating for `SensorSourceDialog` and `DevicesDatabaseManager` (`ATT-8446`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-CON-064`
+- **System Requirement(s)**: `SYSREQ-TRK-001` — Refines capability-gated Polar Live-IMU HRM source listing across `HrmSensorCapabilityHelper`, `SensorSourceDialog`, and `DevicesDatabaseManager` (`REQ-CON-057`, `REQ-SET-112`, `REQ-FIL-029`).
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `HrmSensorCapabilityHelper.kt`, `SensorSourceDialog.kt`, `DevicesDatabaseManager.java`
+- **Localization Parity**: `N/A - 0 string changes`
+- **Rationale**: `REQ-CON-057` (`ATT-8991`) added `DeviceType.HRM` to `CADENCE` and `STRIDES` and wired `HrmSensorCapabilityHelper.isSensorSupported(...)`, but omitted the persisted `polarLiveImuEnabled` opt-in check (`DevicesDbHelper.POLAR_LIVE_IMU_ENABLED == 1`, default `0` in `Devices.db`) and Android 13+ (`Build.VERSION_CODES.TIRAMISU`) OS check, while `SensorSourceDialog.sortNotConnectedDevices()` did not enforce `device.isPaired` on `DeviceType.HRM` Live-IMU candidates (`ATT-8446`).
+- **Description**:
+  1. *Opt-In & Android 13+ Gating in `HrmSensorCapabilityHelper` (`REQ-CON-064.1`)*: `HrmSensorCapabilityHelper.isSensorSupported(context, sensorType, protocol, deviceName, manufacturer, btAddress, polarLiveImuEnabled = false, sdkInt = Build.VERSION.SDK_INT)` (`@JvmOverloads`) and `requiresPolarLiveImu(sensorType)` SHALL require `protocol == Protocol.BLUETOOTH_LE && polarLiveImuEnabled && (sdkInt == 0 || sdkInt >= Build.VERSION_CODES.TIRAMISU)` in addition to Polar H10 (`CADENCE`, `STRIDES`, `VERTICAL_OSCILLATION`, `GROUND_CONTACT_TIME`) or Polar Verity Sense/OH1 (`CADENCE`, `STRIDES`) hardware capability (`REQ-CON-057.2`), while keeping `HR`, `RR_INTERVAL`, and `HRV_*` unconditionally supported (`REQ-HRV-050.1`).
+  2. *`SensorSourceDialog` Paired + Opt-In Filtering & Priority Ordering (`REQ-CON-064.2`)*: `SensorSourceDialog.sortNotConnectedDevices()` SHALL pass `polarLiveImuEnabled = device.polarLiveImuEnabled` and `sdkInt` to `HrmSensorCapabilityHelper.isSensorSupported(...)` and enforce `device.isPaired == true` for `DeviceType.HRM` whenever `HrmSensorCapabilityHelper.requiresPolarLiveImu(sensorType)` is `true`, so paired opted-in BLE Polar H10/Verity Sense sensors appear under "Nicht verbundene Sensoren" in `MySensorManager` `CADENCE_PRIORITY`/`STRIDES_PRIORITY` order (`RUN_SPEED < BIKE_CADENCE < BIKE_SPEED_AND_CADENCE < BIKE_POWER < HRM < SPEED_AND_LOCATION_ATT_FUSED`) while non-opted-in (`polarLiveImuEnabled == false`), unpaired, ANT+, non-Polar/H9, and Android `< 13` HRMs are excluded.
+  3. *`DevicesDatabaseManager` Opt-In Parity & Architectural Boundaries (`REQ-CON-064.3`)*: `DevicesDatabaseManager.getDeviceIdAndNameLists(SensorType)` SHALL extract `DevicesDbHelper.POLAR_LIVE_IMU_ENABLED == 1` via safe `>= 0` cursor column-index lookup (`false` when missing/`NULL`) and pass it to `HrmSensorCapabilityHelper.isSensorSupported(...)`, keeping `DevicesDatabaseManager.java <= 1,671` LoC, `SensorSourceDialog.kt <= 1,500` LoC, `EditDeviceDialog.kt` untouched (`0` edits), and `0` `strings*.xml` edits (`N/A - 0 string changes`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* paired BLE Polar H10 and BLE Polar Verity Sense devices with `polarLiveImuEnabled == true` vs `false` on API `34` (Android 14) and API `31` (Android 12), plus an unpaired BLE Polar H10, ANT+ Polar H10, and generic BLE HRM, *When* `SensorSourceDialog` renders `CADENCE` (`STRIDES`), *Then* ONLY paired BLE Polar H10 and Verity Sense with `polarLiveImuEnabled == true` on Android 13+ appear under "Nicht verbundene Sensoren" sorted by `CADENCE_PRIORITY` (`STRIDES_PRIORITY`).
+• *Given* identical devices queried via `DevicesDatabaseManager.getDeviceIdAndNameLists()`, *When* `sensorType` is `CADENCE`/`STRIDES`/`VO`/`GCT` vs `HR`/`HRV_RMSSD`, *Then* only `POLAR_LIVE_IMU_ENABLED == 1` eligible Polar devices appear for Live-IMU metrics while all HRM rows appear for `HR`/`HRV_RMSSD`.
+
+**Chesterton's Fence (`REQ-PRO-022`)**:
+1. *Original Requirement ID & Target*: Net-new `REQ-CON-064` refining `REQ-CON-057` (`ATT-8991`), `REQ-SET-112` (`ATT-8016`), `REQ-CON-049` (`ATT-8949`), `REQ-FIL-029` (`CADENCE_PRIORITY`), and `REQ-HRV-050.1`.
+2. *Historical Origin & Commit Trace*: `ATT-8016` added `POLAR_LIVE_IMU_ENABLED` opt-in persistence (default `0`); `ATT-8991` (`REQ-CON-057`) grounded HRM Live-IMU capability in Polar H10/Verity hardware metadata but left opt-in and API 33+ checks unenforced.
+3. *Root Reason for Existing Formulation*: Polar Live-IMU streaming (`ATT-8016`) is opt-in and Android 13+ gated (`DeviceManager.polarLiveImuChanged()`); surfacing disabled or API `< 33` HRMs in `SensorSourceDialog` misleads athletes into selecting sensors that will never emit cadence.
+4. *Preservation of Core Invariants*: All `HR`/`RR_INTERVAL`/`HRV_*` source listings (`REQ-HRV-050.1`), `MySensorManager` priority ranks (`CADENCE_PRIORITY`/`STRIDES_PRIORITY`), `BikePowerSensorsHelper` gating, `EditDeviceDialog.kt` (lane-isolated for `ATT-166`), and `DevicesDatabaseManager.java <= 1,671` LoC remain 100% preserved.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2119,3 +2146,5 @@
 | `1.0.53` | 2026-11-24 | Lane 2 Author (`ATT-8723`, `--as agent1`) | `ATT-8723` | Promoted `REQ-CON-062` (`.1`–`.3`) to `[Verified]` following Gate 3 (`ATT-9689`) PASS, Stage 4 implementation (`BleDisReconnectBackfillHelper.kt` `182/1,500`, `MyBTLEDevice.java` `1,498/1,500`, `BTLEHeartRateDevice.java` `583/1,500`, `DevicesDatabaseManager.java` untouched `1,665/1,671`, `BTLERadarDevice.java` untouched `1,333/1,500`), `178/178` PASS across `12` targeted unit & contract suites (`0` new production warnings, `0` string edits), clean live `emulator-5554` smoke (`0` crashes, `Rule 8.5` PNG verified), and `docs/engineering/walkthroughs/ATT-8723_walkthrough.md`. |
 | `1.0.55` | 2026-11-25 | Lane 2 Author (`ATT-8722`, `--as agent1`) | `ATT-8722` | Added `[Planned]` `REQ-CON-063` (`.1`–`.3`, linked to `SYSREQ-TRK-001`, refining `REQ-CON-001`) for `com.garmin.fit.Manufacturer` + sparse pure-Java `Map<Integer, String>` lookup with `Locale.ROOT` token formatting and `337`–`350` index-shift elimination (`N/A - 0 string changes`). |
 | `1.0.56` | 2026-11-25 | Lane 2 Author (`ATT-8722`, `--as agent1`) | `ATT-8722` | Promoted `REQ-CON-063` (`.1`–`.3`) to `[Verified]` following Stage 4 implementation (`Manufacturer.java`, `ManufacturerTest.kt`, `0` new warnings, `0` UI/string edits), `59/59` targeted unit & contract tests PASS across 5 suites, clean live `emulator-5554` smoke (`0` crashes, `Rule 8.5` PNG inspected), and `docs/engineering/tickets/ATT-8722.md`. |
+| `1.0.57` | 2026-11-25 | Lane 2 Author (`ATT-8446`, `--as agent1`) | `ATT-8446` | Added `[Planned]` `REQ-CON-064` (`.1`–`.3`, linked to `SYSREQ-TRK-001`, refining `REQ-CON-057`/`REQ-SET-112`) for `polarLiveImuEnabled` opt-in, `isPaired`, and Android 13+ (`TIRAMISU`) gating in `HrmSensorCapabilityHelper`, `SensorSourceDialog`, and `DevicesDatabaseManager` (`N/A - 0 string changes`). |
+| `1.0.58` | 2026-11-25 | Lane 2 Author (`ATT-8446`, `--as agent1`) | `ATT-8446` | Promoted `REQ-CON-064` (`.1`–`.3`) to `[Verified]` following Stage 4 implementation (`HrmSensorCapabilityHelper.kt` `121/1,500`, `SensorSourceDialog.kt` `609/1,500`, `DevicesDatabaseManager.java` `1,667/1,671`, `0` edits to `EditDeviceDialog.kt`, `0` new warnings, `0` string edits), `117/117` targeted unit/Compose/contract tests PASS across 14 suites, live `emulator-5554` `CADENCE` `SensorSourceDialog` smoke (`0` crashes, `3` `Rule 8.5` PNGs inspected), and `docs/engineering/tickets/ATT-8446.md`. |

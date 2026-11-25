@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-TST-TRK-P2`  
-**Version**: 1.0.61  
+**Version**: 1.0.63  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 110
+**Total Tests**: 111
 
 ---
 
@@ -2288,6 +2288,23 @@
 
 ---
 
+### TST-CON-064: **Polar Live-IMU Opt-In, Pairing & Android 13+ Gating in `SensorSourceDialog` and `DevicesDatabaseManager` (`ATT-8446`)** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-CON-064` (`REQ-CON-064.1`–`REQ-CON-064.3`)
+- **Component**: `HrmSensorCapabilityHelper.kt`, `SensorSourceDialog.kt`, `DevicesDatabaseManager.java`
+- **Jira**: `ATT-8446` | **Priority**: High | **Type**: Functional | **Verification Method**: Unit, Integration
+- **Verified Test Methods**: `HrmSensorCapabilityHelperTest#testPolarLiveImuOptInAndAndroid13PlusGating_TST_CON_064_1`, `SensorSourceDialogPriorityTest#testNotConnectedDevices_gatesPolarLiveImuOptInPairedAndCadencePriority_TST_CON_064_2`, `SensorSourceDialogContractTest#testComposeRender_cadencePolarLiveImuOptInAndPriority_TST_CON_064_2`, `SensorSourceDialogContractTest#testComposeRender_cadenceApi31SuppressesPolarLiveImuHrms_TST_CON_064_2`, `DevicesDatabaseManagerTest#testGetDeviceIdAndNameLists_requiresPolarLiveImuOptIn_TST_CON_064_3`, `DevicesDatabaseManagerTest#testGetDeviceIdAndNameLists_capabilityGatesPolarHrmAndExcludesBikePowerFromSlope_TST_CON_057_3`
+- **Test Description**:
+  1. *Opt-In & Android 13+ Capability Matrix (`TST-CON-064.1` — `HrmSensorCapabilityHelperTest.kt`)*:
+     • Verify `HrmSensorCapabilityHelper.isSensorSupported()` returns `true` for BLE Polar H10 (`CADENCE`, `STRIDES`, `VERTICAL_OSCILLATION`, `GROUND_CONTACT_TIME`) and Verity Sense (`CADENCE`, `STRIDES`) strictly when `polarLiveImuEnabled == true` AND `(sdkInt == 0 || sdkInt >= TIRAMISU)`, returns `false` when `polarLiveImuEnabled == false` or `sdkInt <= 32` (`S_V2`), and returns `true` for `HR`, `RR_INTERVAL`, and `HRV_*` regardless of opt-in or SDK version.
+  2. *`SensorSourceDialog` Paired + Opt-In Filtering, Priority Ordering & Behavioral Compose UI (`TST-CON-064.2` — `SensorSourceDialogPriorityTest.kt`, `SensorSourceDialogContractTest.kt`)*:
+     • Verify `SensorSourceDialog.sortNotConnectedDevices()` excludes `polarLiveImuEnabled == false`, `!isPaired`, ANT+, non-Polar BLE, and `sdkInt = 32` HRMs for `CADENCE`/`STRIDES`/`VO`/`GCT`, while sorting opted-in paired H10/Verity alongside `RUN_SPEED`, `BIKE_POWER`, and `SPEED_AND_LOCATION_ATT_FUSED` in strict `CADENCE_PRIORITY`/`STRIDES_PRIORITY` order.
+     • Verify behavioral Robolectric `createComposeRule()` `SensorSourceDialog` UI rendering shows opted-in paired BLE H10/Verity under "Nicht verbundene Sensoren" on API 34 while excluding disabled (`polarLiveImuEnabled = false`), unpaired, ANT+, and generic BLE HRMs, and suppresses all Live-IMU HRM rows on API 31 (`@Config(sdk = [31])`); capture and inspect `Rule 8.5` PNG screenshot.
+  3. *`DevicesDatabaseManager` DB Opt-In Parity & Architectural Boundaries (`TST-CON-064.3` — `DevicesDatabaseManagerTest.kt`, `ArchitectureConformanceContractTest.kt`, `SourceTextReadingAuditContractTest.kt`)*:
+     • Verify `DevicesDatabaseManager.getDeviceIdAndNameLists()` requires `POLAR_LIVE_IMU_ENABLED == 1` for Live-IMU queries (`CADENCE`/`STRIDES`/`VO`/`GCT`), safely excludes HRMs when the column is `0` or absent, preserves `HR`/`HRV_RMSSD` listing for all HRMs, and satisfies LoC/import ceilings (`DevicesDatabaseManager.java <= 1,671`, `SensorSourceDialog.kt <= 1,500`, `EditDeviceDialog.kt` untouched, `N/A - 0 string changes`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2472,3 +2489,5 @@
 | `1.0.59` | 2026-11-25 | Lane 3 Author (`ATT-8113`, `--as agent1`) | `ATT-8113` | Refined `TST-FIL-017.5` `[Verified]` with `EditDeviceDialogErtsSmoothingTest` (`7/7 PASS`) and `41/41 PASS` across `8` targeted suites (`EditDeviceDialogDraftLocaleRotationTest 4/4`, `EditDeviceViewModelTest 7/7`, `EditDeviceDialogGuardsTest 4/4`, `EditDeviceDialogAltitudeGuardsTest 4/4`, `AdvancedTuningErtsContractTest 2/2`, `ArchitectureConformanceContractTest 11/11`, `AndroidViewModelReflectionContractTest 2/2`), live `emulator-5554` bidirectional sync verification + `3` `Rule 8.5` PNGs (`0` crashes), and SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-8113/`. |
 | `1.0.60` | 2026-11-24 | Lane 1 Author (`ATT-8726`, `--as agent1`) | `ATT-8726` | Refined `TST-TRK-073.1` (`[Planned]`, symmetric with `REQ-TRK-073.1`) adding pure `resolveLatchedRailMaxRange()` hysteresis/reset matrix and Robolectric Compose UI Y-monotonicity verification across `LEFT`/`RIGHT` rail and `FULL_SCREEN` (`COMPACT_BADGE` & `TOP_DOWN_VEHICLES`) (`N/A - 0 string changes`). |
 | `1.0.61` | 2026-11-25 | Lane 1 Author (`ATT-8726`, `--as agent1`) | `ATT-8726` | Promoted `TST-TRK-073` (`TST-TRK-073.1`) to `[Verified]` with verbatim method citations (`72/72` PASS across `5` targeted suites: `RadarEdgeOverlayTest 45/45` [`resolveRailMaxRange_returnsExpectedBoundaries`, `resolveLatchedRailMaxRange_holds175mAcross140mAndResetsOnClearOrDisconnect`, `edgeRailAndFullScreen_v1TargetCrossing140m_movesMonotonicallyUpwardAndResetsOnClear`, `overlay_disconnectErrorMidApproach_resetsLatchedRangeTo140mOnReconnect`], `RadarTopDownVehicleMarkerTest 6/6`, `ArchitectureConformanceContractTest 11/11`, `SystemLiveTrackingRequirementsContractTest 4/4`, `SourceTextReadingAuditContractTest 6/6`; live `emulator-5554` Light/Dark smoke `0` crashes + `Rule 8.5` PNGs audited; SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-8726/`). |
+| `1.0.62` | 2026-11-25 | Lane 2 Author (`ATT-8446`, `--as agent1`) | `ATT-8446` | Added `[Planned]` `TST-CON-064` (`.1`–`.3`, symmetric with `REQ-CON-064`) covering `HrmSensorCapabilityHelper` `polarLiveImuEnabled` + Android 13+ matrix, `SensorSourceDialog` paired/opt-in/`CADENCE_PRIORITY` behavioral Compose & API 31 vs 34 tests, `DevicesDatabaseManager` `POLAR_LIVE_IMU_ENABLED` DB gating, and LoC/governance contracts (`N/A - 0 string changes`). |
+| `1.0.63` | 2026-11-25 | Lane 2 Author (`ATT-8446`, `--as agent1`) | `ATT-8446` | Promoted `TST-CON-064` (`.1`–`.3`) to `[Verified]` with 6 verbatim `TestClass#testMethod` citations (`117/117` PASS across 14 targeted suites: `HrmSensorCapabilityHelperTest 5/5`, `DeviceTypeSensorMappingTest 3/3`, `DevicesDatabaseManagerTest 18/18`, `SensorSourceDialogPriorityTest 8/8`, `SensorSourceDialogContractTest 15/15`, `MySensorManagerPriorityTest 8/8`, `MySensorManagerCadenceArbitrationTest 3/3`, `EditSensorFieldViewModelTest 28/28`, `ArchitectureConformanceContractTest 11/11`, `InterfaceSignatureDriftContractTest 3/3`, `SourceTextReadingAuditContractTest 6/6`, `SystemLiveTrackingRequirementsContractTest 4/4`, `ComposeSafePainterContractTest 2/2`, `SensorSourceColorContractTest 3/3`; `0` new warnings; live `emulator-5554` `CADENCE` `SensorSourceDialog` smoke `0` crashes + `3` `Rule 8.5` PNGs inspected). |

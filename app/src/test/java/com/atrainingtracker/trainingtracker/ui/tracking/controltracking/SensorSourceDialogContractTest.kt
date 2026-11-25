@@ -90,7 +90,9 @@ class SensorSourceDialogContractTest {
         protocol: Protocol = Protocol.SMARTPHONE,
         manufacturer: String = "TestManufacturer",
         btAddress: String? = null,
-        hrModality: HrModality? = null
+        hrModality: HrModality? = null,
+        isPaired: Boolean = true,
+        polarLiveImuEnabled: Boolean = false
     ): DeviceUiData {
         return DeviceUiData(
             id = id,
@@ -99,7 +101,7 @@ class SensorSourceDialogContractTest {
             lastSeen = null,
             manufacturer = manufacturer,
             deviceName = name,
-            isPaired = true,
+            isPaired = isPaired,
             linkedEquipment = emptyList(),
             availableEquipment = emptyList(),
             powerFeaturesFlags = null,
@@ -116,7 +118,8 @@ class SensorSourceDialogContractTest {
             allValues = null,
             isNewlyDiscovered = false,
             btAddress = btAddress,
-            hrModality = hrModality
+            hrModality = hrModality,
+            polarLiveImuEnabled = polarLiveImuEnabled
         )
     }
 
@@ -419,14 +422,19 @@ class SensorSourceDialogContractTest {
         PolarOfflineCapabilityStore.recordSdkDeviceType(null, h10Mac, PolarOfflineCapabilityStore.PolarDeviceType.H10)
         PolarOfflineCapabilityStore.recordSdkDeviceType(null, verityMac, PolarOfflineCapabilityStore.PolarDeviceType.VERITY_SENSE)
 
-        val h10Device = createDevice(1L, "Polar H10 Chest", DeviceType.HRM, Protocol.BLUETOOTH_LE, "Polar", btAddress = h10Mac)
-        val verityDevice = createDevice(2L, "Verity Armband", DeviceType.HRM, Protocol.BLUETOOTH_LE, "", btAddress = verityMac)
+        val h10Device = createDevice(
+            1L, "Polar H10 Chest", DeviceType.HRM, Protocol.BLUETOOTH_LE, "Polar",
+            btAddress = h10Mac, polarLiveImuEnabled = true
+        )
+        val verityDevice = createDevice(
+            2L, "Verity Armband", DeviceType.HRM, Protocol.BLUETOOTH_LE, "",
+            btAddress = verityMac, polarLiveImuEnabled = true
+        )
         val antH10 = createDevice(3L, "Polar H10 ANT+", DeviceType.HRM, Protocol.ANT_PLUS, "Polar")
         val genericBleHrm = createDevice(4L, "Generic BLE Strap", DeviceType.HRM, Protocol.BLUETOOTH_LE, "Wahoo", btAddress = "11:22:33:44:55:66")
         val allDevices = listOf(h10Device, verityDevice, antH10, genericBleHrm)
 
-        var activeSensorType = SensorType.CADENCE
-        val sensorState = androidx.compose.runtime.mutableStateOf(activeSensorType)
+        val sensorState = androidx.compose.runtime.mutableStateOf(SensorType.CADENCE)
 
         composeTestRule.setContent {
             ATrainingTrackerTheme {
@@ -454,5 +462,138 @@ class SensorSourceDialogContractTest {
         composeTestRule.onNodeWithText("Verity Armband", useUnmergedTree = true).assertDoesNotExist()
         composeTestRule.onNodeWithText("Polar H10 ANT+", useUnmergedTree = true).assertDoesNotExist()
         composeTestRule.onNodeWithText("Generic BLE Strap", useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    // TST-CON-064.2: Behavioral Compose UI test verifying opt-in, pairing, and CADENCE_PRIORITY ordering + screenshot
+    @Test
+    fun testComposeRender_cadencePolarLiveImuOptInAndPriority_TST_CON_064_2() {
+        val h10MacOn = "A0:9E:1A:81:81:81"
+        val h10MacOff = "A0:9E:1A:82:82:82"
+        val h10MacUnpaired = "A0:9E:1A:83:83:83"
+        val verityMacOn = "A0:9E:1A:84:84:84"
+        PolarOfflineCapabilityStore.recordSdkDeviceType(null, h10MacOn, PolarOfflineCapabilityStore.PolarDeviceType.H10)
+        PolarOfflineCapabilityStore.recordSdkDeviceType(null, h10MacOff, PolarOfflineCapabilityStore.PolarDeviceType.H10)
+        PolarOfflineCapabilityStore.recordSdkDeviceType(null, h10MacUnpaired, PolarOfflineCapabilityStore.PolarDeviceType.H10)
+        PolarOfflineCapabilityStore.recordSdkDeviceType(null, verityMacOn, PolarOfflineCapabilityStore.PolarDeviceType.VERITY_SENSE)
+
+        val strydFootpod = createDevice(1L, "Stryd Footpod", DeviceType.RUN_SPEED, Protocol.BLUETOOTH_LE, "Stryd")
+        val assiomaPower = createDevice(2L, "Assioma Duo", DeviceType.BIKE_POWER, Protocol.ANT_PLUS, "Favero")
+        val h10Enabled = createDevice(
+            3L, "Polar H10 Live-IMU", DeviceType.HRM, Protocol.BLUETOOTH_LE, "Polar Electro Oy",
+            btAddress = h10MacOn, isPaired = true, polarLiveImuEnabled = true
+        )
+        val verityEnabled = createDevice(
+            4L, "Verity Sense Live-IMU", DeviceType.HRM, Protocol.BLUETOOTH_LE, "Polar Electro Oy",
+            btAddress = verityMacOn, isPaired = true, polarLiveImuEnabled = true
+        )
+        val h10Disabled = createDevice(
+            5L, "Polar H10 Disabled", DeviceType.HRM, Protocol.BLUETOOTH_LE, "Polar",
+            btAddress = h10MacOff, isPaired = true, polarLiveImuEnabled = false
+        )
+        val h10Unpaired = createDevice(
+            6L, "Polar H10 Unpaired", DeviceType.HRM, Protocol.BLUETOOTH_LE, "Polar",
+            btAddress = h10MacUnpaired, isPaired = false, polarLiveImuEnabled = true
+        )
+        val antH10 = createDevice(
+            7L, "Polar H10 ANT+", DeviceType.HRM, Protocol.ANT_PLUS, "Polar",
+            isPaired = true, polarLiveImuEnabled = true
+        )
+        val attFused = createDevice(
+            8L, "Phone Fused", DeviceType.SPEED_AND_LOCATION_ATT_FUSED, Protocol.SMARTPHONE, "Google"
+        )
+
+        val allDevices = listOf(
+            attFused, h10Disabled, h10Unpaired, antH10, verityEnabled, h10Enabled, assiomaPower, strydFootpod
+        )
+
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                Surface(
+                    color = MaterialTheme.colorScheme.surface,
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    SensorSourceDialog(
+                        sensorType = SensorType.CADENCE,
+                        sourceDevice = null,
+                        allTelemetry = emptyList(),
+                        allDevices = allDevices,
+                        onDeviceClick = {},
+                        onDismiss = {}
+                    )
+                }
+            }
+        }
+
+        // Only paired opted-in BLE H10 & Verity appear alongside RUN_SPEED, BIKE_POWER, and ATT_FUSED
+        composeTestRule.onNodeWithText("Stryd Footpod", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithText("Assioma Duo", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithText("Polar H10 Live-IMU", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithText("Verity Sense Live-IMU", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithText("Polar H10 Disabled", useUnmergedTree = true).assertDoesNotExist()
+        composeTestRule.onNodeWithText("Polar H10 Unpaired", useUnmergedTree = true).assertDoesNotExist()
+        composeTestRule.onNodeWithText("Polar H10 ANT+", useUnmergedTree = true).assertDoesNotExist()
+
+        fun yPos(label: String): Float = composeTestRule
+            .onNodeWithText(label, useUnmergedTree = true)
+            .fetchSemanticsNode()
+            .boundsInRoot
+            .top
+
+        // CADENCE_PRIORITY: RUN_SPEED < BIKE_POWER < HRM [Polar H10 Live-IMU < Verity Sense Live-IMU] < ATT_FUSED
+        assertTrue(yPos("Stryd Footpod") < yPos("Assioma Duo"))
+        assertTrue(yPos("Assioma Duo") < yPos("Polar H10 Live-IMU"))
+        assertTrue(yPos("Polar H10 Live-IMU") < yPos("Verity Sense Live-IMU"))
+        assertTrue(yPos("Verity Sense Live-IMU") < yPos("Phone Fused"))
+
+        val bmp = composeTestRule.onNodeWithTag("sensor_source_dialog_content")
+            .captureToImage()
+            .asAndroidBitmap()
+        val repoRoot = listOf(File("."), File("..")).firstOrNull { File(it, "docs/engineering").exists() } ?: File(".")
+        val outFile = File(
+            repoRoot,
+            "docs/engineering/walkthroughs/img/ATT-8446_sensor_source_cadence_compose.png"
+        )
+        outFile.parentFile?.mkdirs()
+        FileOutputStream(outFile).use { out ->
+            bmp.compress(Bitmap.CompressFormat.PNG, 100, out)
+        }
+        assertTrue("Screenshot must exist", outFile.exists())
+    }
+
+    // TST-CON-064.2: Android 12 (API 31 < TIRAMISU) suppresses opted-in Polar Live-IMU HRMs for CADENCE
+    @Test
+    @Config(sdk = [31], application = android.app.Application::class)
+    fun testComposeRender_cadenceApi31SuppressesPolarLiveImuHrms_TST_CON_064_2() {
+        val h10MacOn = "A0:9E:1A:85:85:85"
+        val verityMacOn = "A0:9E:1A:86:86:86"
+        PolarOfflineCapabilityStore.recordSdkDeviceType(null, h10MacOn, PolarOfflineCapabilityStore.PolarDeviceType.H10)
+        PolarOfflineCapabilityStore.recordSdkDeviceType(null, verityMacOn, PolarOfflineCapabilityStore.PolarDeviceType.VERITY_SENSE)
+
+        val h10Enabled = createDevice(
+            1L, "Polar H10 Live-IMU", DeviceType.HRM, Protocol.BLUETOOTH_LE, "Polar",
+            btAddress = h10MacOn, isPaired = true, polarLiveImuEnabled = true
+        )
+        val verityEnabled = createDevice(
+            2L, "Verity Sense Live-IMU", DeviceType.HRM, Protocol.BLUETOOTH_LE, "Polar",
+            btAddress = verityMacOn, isPaired = true, polarLiveImuEnabled = true
+        )
+        val assiomaPower = createDevice(3L, "Assioma Duo", DeviceType.BIKE_POWER, Protocol.ANT_PLUS, "Favero")
+
+        composeTestRule.setContent {
+            ATrainingTrackerTheme {
+                SensorSourceDialog(
+                    sensorType = SensorType.CADENCE,
+                    sourceDevice = null,
+                    allTelemetry = emptyList(),
+                    allDevices = listOf(h10Enabled, verityEnabled, assiomaPower),
+                    onDeviceClick = {},
+                    onDismiss = {}
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("Assioma Duo", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithText("Polar H10 Live-IMU", useUnmergedTree = true).assertDoesNotExist()
+        composeTestRule.onNodeWithText("Verity Sense Live-IMU", useUnmergedTree = true).assertDoesNotExist()
     }
 }

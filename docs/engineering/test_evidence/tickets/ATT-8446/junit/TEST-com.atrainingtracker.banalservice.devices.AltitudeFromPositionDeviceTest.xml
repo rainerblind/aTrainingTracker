@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.AltitudeFromPositionDeviceTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-25T01:08:09.898Z" hostname="rainer-HP-EliteBook-850-G5" time="16.377">
+  <properties/>
+  <testcase name="locationCacheMiss_queriesElevationServiceAndCachesResult" classname="com.atrainingtracker.banalservice.devices.AltitudeFromPositionDeviceTest" time="2.135"/>
+  <testcase name="triggerBackgroundSeedingAsync_seedsRoutesAndSegments" classname="com.atrainingtracker.banalservice.devices.AltitudeFromPositionDeviceTest" time="1.682"/>
+  <testcase name="knownLocationsDecoupling_zeroInteractionWithKnownLocationsDb" classname="com.atrainingtracker.banalservice.devices.AltitudeFromPositionDeviceTest" time="1.657"/>
+  <testcase name="locationCacheHit_corruptZeroSeedDoesNotEmitZeroAndUpgradesOnDemFetch" classname="com.atrainingtracker.banalservice.devices.AltitudeFromPositionDeviceTest" time="1.543"/>
+  <testcase name="locationCacheHit_neighborSeedUpgradesNeighborCellOnDemResolution" classname="com.atrainingtracker.banalservice.devices.AltitudeFromPositionDeviceTest" time="1.557"/>
+  <testcase name="inFlightDemQuery_suppressesDuplicateAsyncRequests" classname="com.atrainingtracker.banalservice.devices.AltitudeFromPositionDeviceTest" time="1.718"/>
+  <testcase name="locationCacheHit_resolvesElevationFromCacheWithoutNetwork" classname="com.atrainingtracker.banalservice.devices.AltitudeFromPositionDeviceTest" time="1.424"/>
+  <testcase name="initialization_registersAltitudeSensorAndMetadata" classname="com.atrainingtracker.banalservice.devices.AltitudeFromPositionDeviceTest" time="1.465"/>
+  <testcase name="duplicateCoordinates_suppressesRedundantQueries" classname="com.atrainingtracker.banalservice.devices.AltitudeFromPositionDeviceTest" time="1.639"/>
+  <testcase name="locationCacheHit_seededNonDemAltitudeEmitsImmediatelyAndRefinesViaDemQuery" classname="com.atrainingtracker.banalservice.devices.AltitudeFromPositionDeviceTest" time="1.557"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

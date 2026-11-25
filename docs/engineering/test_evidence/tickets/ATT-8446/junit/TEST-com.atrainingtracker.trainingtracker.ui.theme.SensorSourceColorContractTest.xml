@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.theme.SensorSourceColorContractTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-25T01:20:11.477Z" hostname="rainer-HP-EliteBook-850-G5" time="0.098">
+  <properties/>
+  <testcase name="testSensorSourceTokens_meetWcagContrastRequirements" classname="com.atrainingtracker.trainingtracker.ui.theme.SensorSourceColorContractTest" time="0.097"/>
+  <testcase name="testSensorSourceTokens_haveAdequateChromaticSeparation" classname="com.atrainingtracker.trainingtracker.ui.theme.SensorSourceColorContractTest" time="0.0"/>
+  <testcase name="testSensorSourceTokens_haveExactMaterialGreenValues" classname="com.atrainingtracker.trainingtracker.ui.theme.SensorSourceColorContractTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

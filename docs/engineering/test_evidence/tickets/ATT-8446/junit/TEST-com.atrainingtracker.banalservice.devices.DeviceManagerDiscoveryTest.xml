@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.DeviceManagerDiscoveryTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-25T01:08:36.584Z" hostname="rainer-HP-EliteBook-850-G5" time="14.452">
+  <properties/>
+  <testcase name="testBtDiscovery_newDevice_autoPairsAndNotifies" classname="com.atrainingtracker.banalservice.devices.DeviceManagerDiscoveryTest" time="3.786"/>
+  <testcase name="testActiveWorkout_autoPairingImmunity_suppressesImmediatePairingChanged" classname="com.atrainingtracker.banalservice.devices.DeviceManagerDiscoveryTest" time="2.564"/>
+  <testcase name="testAntDiscovery_newDevice_autoPairsAndNotifies" classname="com.atrainingtracker.banalservice.devices.DeviceManagerDiscoveryTest" time="2.742"/>
+  <testcase name="testDbInsertionFailure_resilience_skipsNewlyFoundAndNotifications" classname="com.atrainingtracker.banalservice.devices.DeviceManagerDiscoveryTest" time="2.472"/>
+  <testcase name="testManualUnpair_overridesAutoPairPostWorkoutSearch" classname="com.atrainingtracker.banalservice.devices.DeviceManagerDiscoveryTest" time="2.888"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Exception in thread "DefaultDispatcher-worker-5 @coroutine#20" java.lang.NullPointerException: Cannot invoke "String.isEmpty()" because "parent.path" is null
+	at java.base/java.io.File.<init>(File.java:375)
+	at androidx.datastore.DataStoreFile.dataStoreFile(DataStoreFile.android.kt:35)
+	at androidx.datastore.preferences.PreferenceDataStoreFile.preferencesDataStoreFile(PreferenceDataStoreFile.android.kt:37)
+	at androidx.datastore.preferences.PreferenceDataStoreSingletonDelegate.getValue$lambda$0$0(PreferenceDataStoreDelegate.android.kt:106)
+	at androidx.datastore.preferences.core.PreferenceDataStoreFactory.create$lambda$0(PreferenceDataStoreFactory.jvmAndroid.kt:63)
+	at androidx.datastore.core.FileStorage.createConnection(FileStorage.kt:48)
+	at androidx.datastore.core.DataStoreImpl.storageConnectionDelegate$lambda$0(DataStoreImpl.kt:196)
+	at kotlin.SynchronizedLazyImpl.getValue(LazyJVM.kt:86)
+	at androidx.datastore.core.DataStoreImpl.getStorageConnection$datastore_core(DataStoreImpl.kt:197)
+	at androidx.datastore.core.DataStoreImpl.coordinator_delegate$lambda$0(DataStoreImpl.kt:198)
+	at kotlin.SynchronizedLazyImpl.getValue(LazyJVM.kt:86)
+	at androidx.datastore.core.DataStoreImpl.getCoordinator(DataStoreImpl.kt:198)
+	at androidx.datastore.core.DataStoreImpl.readAndInitOrPropagateAndThrowFailure(DataStoreImpl.kt:284)
+	at androidx.datastore.core.DataStoreImpl.access$readAndInitOrPropagateAndThrowFailure(DataStoreImpl.kt:46)
+	at androidx.datastore.core.DataStoreImpl$readState$2.invokeSuspend(DataStoreImpl.kt:232)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:124)
+	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:89)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:586)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:798)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:717)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:704)
+	Suppressed: kotlinx.coroutines.internal.DiagnosticCoroutineContextException: [CoroutineId(20), "coroutine#20":StandaloneCoroutine{Cancelling}@61741b02, Dispatchers.Default]
+Exception in thread "DefaultDispatcher-worker-6 @coroutine#21" java.lang.NullPointerException: Cannot invoke "String.isEmpty()" because "parent.path" is null
+	at java.base/java.io.File.<init>(File.java:375)
+	at androidx.datastore.DataStoreFile.dataStoreFile(DataStoreFile.android.kt:35)
+	at androidx.datastore.preferences.PreferenceDataStoreFile.preferencesDataStoreFile(PreferenceDataStoreFile.android.kt:37)
+	at androidx.datastore.preferences.PreferenceDataStoreSingletonDelegate.getValue$lambda$0$0(PreferenceDataStoreDelegate.android.kt:106)
+	at androidx.datastore.preferences.core.PreferenceDataStoreFactory.create$lambda$0(PreferenceDataStoreFactory.jvmAndroid.kt:63)
+	at androidx.datastore.core.FileStorage.createConnection(FileStorage.kt:48)
+	at androidx.datastore.core.DataStoreImpl.storageConnectionDelegate$lambda$0(DataStoreImpl.kt:196)
+	at kotlin.SynchronizedLazyImpl.getValue(LazyJVM.kt:86)
+	at androidx.datastore.core.DataStoreImpl.getStorageConnection$datastore_core(DataStoreImpl.kt:197)
+	at androidx.datastore.core.DataStoreImpl.coordinator_delegate$lambda$0(DataStoreImpl.kt:198)
+	at kotlin.SynchronizedLazyImpl.getValue(LazyJVM.kt:86)
+	at androidx.datastore.core.DataStoreImpl.getCoordinator(DataStoreImpl.kt:198)
+	at androidx.datastore.core.DataStoreImpl.readAndInitOrPropagateAndThrowFailure(DataStoreImpl.kt:284)
+	at androidx.datastore.core.DataStoreImpl.access$readAndInitOrPropagateAndThrowFailure(DataStoreImpl.kt:46)
+	at androidx.datastore.core.DataStoreImpl$readState$2.invokeSuspend(DataStoreImpl.kt:232)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:124)
+	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:89)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:586)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:798)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:717)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:704)
+	Suppressed: java.lang.NullPointerException: Cannot invoke "String.isEmpty()" because "parent.path" is null
+		... 23 more
+	Suppressed: java.lang.NullPointerException: Cannot invoke "String.isEmpty()" because "parent.path" is null
+		... 23 more
+	Suppressed: kotlinx.coroutines.internal.DiagnosticCoroutineContextException: [CoroutineId(21), "coroutine#21":StandaloneCoroutine{Cancelling}@7af8566b, Dispatchers.Default]
+]]></system-err>
+</testsuite>

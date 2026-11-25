@@ -71,11 +71,16 @@ class HrmSensorCapabilityHelperTest {
         for (sensor in cadenceMetrics + runningDynamicsMetrics + coreHrAndHrvMetrics) {
             assertTrue(
                 "Renamed hardware-confirmed BLE Polar H10 must support $sensor",
-                HrmSensorCapabilityHelper.isSensorSupported(null, sensor, Protocol.BLUETOOTH_LE, "Brustgurt", "", h10Mac)
+                HrmSensorCapabilityHelper.isSensorSupported(
+                    null, sensor, Protocol.BLUETOOTH_LE, "Brustgurt", "", h10Mac, polarLiveImuEnabled = true
+                )
             )
             assertTrue(
                 "Legacy-named un-reconnected BLE Polar H10 must support $sensor",
-                HrmSensorCapabilityHelper.isSensorSupported(null, sensor, Protocol.BLUETOOTH_LE, "Polar H10 1A2B3C4D", "Polar", "A0:9E:1A:00:00:01")
+                HrmSensorCapabilityHelper.isSensorSupported(
+                    null, sensor, Protocol.BLUETOOTH_LE, "Polar H10 1A2B3C4D", "Polar", "A0:9E:1A:00:00:01",
+                    polarLiveImuEnabled = true
+                )
             )
         }
     }
@@ -95,29 +100,43 @@ class HrmSensorCapabilityHelperTest {
         for (sensor in cadenceMetrics + coreHrAndHrvMetrics) {
             assertTrue(
                 "Renamed hardware Verity Sense must support $sensor",
-                HrmSensorCapabilityHelper.isSensorSupported(null, sensor, Protocol.BLUETOOTH_LE, "Armband", "", verityMac)
+                HrmSensorCapabilityHelper.isSensorSupported(
+                    null, sensor, Protocol.BLUETOOTH_LE, "Armband", "", verityMac, polarLiveImuEnabled = true
+                )
             )
             assertTrue(
                 "Legacy offline_rec_ Verity Sense must support $sensor",
-                HrmSensorCapabilityHelper.isSensorSupported(null, sensor, Protocol.BLUETOOTH_LE, "Optical", "", legacyOfflineMac)
+                HrmSensorCapabilityHelper.isSensorSupported(
+                    null, sensor, Protocol.BLUETOOTH_LE, "Optical", "", legacyOfflineMac, polarLiveImuEnabled = true
+                )
             )
             assertTrue(
                 "Legacy-named Verity Sense must support $sensor",
-                HrmSensorCapabilityHelper.isSensorSupported(null, sensor, Protocol.BLUETOOTH_LE, "Polar Sense 24825632", "Polar", "A0:9E:1A:00:00:02")
+                HrmSensorCapabilityHelper.isSensorSupported(
+                    null, sensor, Protocol.BLUETOOTH_LE, "Polar Sense 24825632", "Polar", "A0:9E:1A:00:00:02",
+                    polarLiveImuEnabled = true
+                )
             )
         }
         for (sensor in runningDynamicsMetrics) {
             assertFalse(
                 "Hardware Verity Sense must NOT support $sensor",
-                HrmSensorCapabilityHelper.isSensorSupported(null, sensor, Protocol.BLUETOOTH_LE, "Armband", "", verityMac)
+                HrmSensorCapabilityHelper.isSensorSupported(
+                    null, sensor, Protocol.BLUETOOTH_LE, "Armband", "", verityMac, polarLiveImuEnabled = true
+                )
             )
             assertFalse(
                 "Legacy offline_rec_ Verity Sense must NOT support $sensor",
-                HrmSensorCapabilityHelper.isSensorSupported(null, sensor, Protocol.BLUETOOTH_LE, "Optical", "", legacyOfflineMac)
+                HrmSensorCapabilityHelper.isSensorSupported(
+                    null, sensor, Protocol.BLUETOOTH_LE, "Optical", "", legacyOfflineMac, polarLiveImuEnabled = true
+                )
             )
             assertFalse(
                 "Legacy-named Verity Sense must NOT support $sensor",
-                HrmSensorCapabilityHelper.isSensorSupported(null, sensor, Protocol.BLUETOOTH_LE, "Polar Sense 24825632", "Polar", "A0:9E:1A:00:00:02")
+                HrmSensorCapabilityHelper.isSensorSupported(
+                    null, sensor, Protocol.BLUETOOTH_LE, "Polar Sense 24825632", "Polar", "A0:9E:1A:00:00:02",
+                    polarLiveImuEnabled = true
+                )
             )
         }
     }
@@ -180,7 +199,8 @@ class HrmSensorCapabilityHelperTest {
                 Protocol.BLUETOOTH_LE,
                 "Polar H10 1A2B3C4D",
                 "Polar",
-                "A0:9E:1A:77:88:99"
+                "A0:9E:1A:77:88:99",
+                polarLiveImuEnabled = true
             )
         )
         assertTrue(
@@ -191,8 +211,93 @@ class HrmSensorCapabilityHelperTest {
                 Protocol.BLUETOOTH_LE,
                 "Polar Sense 24825632",
                 "Polar",
-                "A0:9E:1A:77:88:98"
+                "A0:9E:1A:77:88:98",
+                polarLiveImuEnabled = true
             )
         )
+    }
+
+    // TST-CON-064.1: polarLiveImuEnabled opt-in and Android 13+ (TIRAMISU) gating on Live-IMU metrics
+    @Test
+    fun testPolarLiveImuOptInAndAndroid13PlusGating_TST_CON_064_1() {
+        val h10Mac = "A0:9E:1A:10:10:10"
+        val verityMac = "A0:9E:1A:20:20:20"
+        PolarOfflineCapabilityStore.recordSdkDeviceType(null, h10Mac, PolarOfflineCapabilityStore.PolarDeviceType.H10)
+        PolarOfflineCapabilityStore.recordSdkDeviceType(null, verityMac, PolarOfflineCapabilityStore.PolarDeviceType.VERITY_SENSE)
+
+        // Default polarLiveImuEnabled = false must reject all Live-IMU metrics even for H10 & Verity Sense
+        for (sensor in cadenceMetrics + runningDynamicsMetrics) {
+            assertTrue(HrmSensorCapabilityHelper.requiresPolarLiveImu(sensor))
+            assertFalse(
+                "H10 without opt-in must NOT support $sensor",
+                HrmSensorCapabilityHelper.isSensorSupported(null, sensor, Protocol.BLUETOOTH_LE, "Polar H10", "Polar", h10Mac)
+            )
+            assertFalse(
+                "Verity without opt-in must NOT support $sensor",
+                HrmSensorCapabilityHelper.isSensorSupported(null, sensor, Protocol.BLUETOOTH_LE, "Verity Sense", "Polar", verityMac)
+            )
+            // Opted-in on Android 12L (API 32) or Android 8 (API 26) must also be rejected
+            assertFalse(
+                "Opted-in H10 on API 32 (< TIRAMISU) must NOT support $sensor",
+                HrmSensorCapabilityHelper.isSensorSupported(
+                    null, sensor, Protocol.BLUETOOTH_LE, "Polar H10", "Polar", h10Mac,
+                    polarLiveImuEnabled = true, sdkInt = android.os.Build.VERSION_CODES.S_V2
+                )
+            )
+            assertFalse(
+                "Opted-in Verity on API 26 (< TIRAMISU) must NOT support $sensor",
+                HrmSensorCapabilityHelper.isSensorSupported(
+                    null, sensor, Protocol.BLUETOOTH_LE, "Verity Sense", "Polar", verityMac,
+                    polarLiveImuEnabled = true, sdkInt = android.os.Build.VERSION_CODES.O
+                )
+            )
+        }
+
+        // Opted-in on Android 13+ (API 33 & API 35) allows H10 (all 4) & Verity (CADENCE/STRIDES only)
+        for (api in listOf(android.os.Build.VERSION_CODES.TIRAMISU, 35)) {
+            for (sensor in cadenceMetrics) {
+                assertTrue(
+                    "Opted-in H10 on API $api must support $sensor",
+                    HrmSensorCapabilityHelper.isSensorSupported(
+                        null, sensor, Protocol.BLUETOOTH_LE, "Polar H10", "Polar", h10Mac,
+                        polarLiveImuEnabled = true, sdkInt = api
+                    )
+                )
+                assertTrue(
+                    "Opted-in Verity on API $api must support $sensor",
+                    HrmSensorCapabilityHelper.isSensorSupported(
+                        null, sensor, Protocol.BLUETOOTH_LE, "Verity Sense", "Polar", verityMac,
+                        polarLiveImuEnabled = true, sdkInt = api
+                    )
+                )
+            }
+            for (sensor in runningDynamicsMetrics) {
+                assertTrue(
+                    "Opted-in H10 on API $api must support $sensor",
+                    HrmSensorCapabilityHelper.isSensorSupported(
+                        null, sensor, Protocol.BLUETOOTH_LE, "Polar H10", "Polar", h10Mac,
+                        polarLiveImuEnabled = true, sdkInt = api
+                    )
+                )
+                assertFalse(
+                    "Opted-in Verity on API $api must NOT support $sensor",
+                    HrmSensorCapabilityHelper.isSensorSupported(
+                        null, sensor, Protocol.BLUETOOTH_LE, "Verity Sense", "Polar", verityMac,
+                        polarLiveImuEnabled = true, sdkInt = api
+                    )
+                )
+            }
+        }
+
+        // HR / RR_INTERVAL / HRV_* never require opt-in or Android 13+
+        for (sensor in coreHrAndHrvMetrics) {
+            assertFalse(HrmSensorCapabilityHelper.requiresPolarLiveImu(sensor))
+            assertTrue(
+                HrmSensorCapabilityHelper.isSensorSupported(
+                    null, sensor, Protocol.BLUETOOTH_LE, "Polar H10", "Polar", h10Mac,
+                    polarLiveImuEnabled = false, sdkInt = android.os.Build.VERSION_CODES.O
+                )
+            )
+        }
     }
 }

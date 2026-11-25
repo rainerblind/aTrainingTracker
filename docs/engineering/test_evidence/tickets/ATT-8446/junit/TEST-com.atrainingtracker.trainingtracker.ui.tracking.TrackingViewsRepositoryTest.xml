@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepositoryTest" tests="15" skipped="0" failures="0" errors="0" timestamp="2026-11-25T01:16:55.060Z" hostname="rainer-HP-EliteBook-850-G5" time="22.349">
+  <properties/>
+  <testcase name="fetchSensorFieldConfigs_mapsColWeightSymmetrically" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepositoryTest" time="1.835"/>
+  <testcase name="updateShowLiveClimbs_delegatesToViewsDbManager" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepositoryTest" time="1.458"/>
+  <testcase name="deleteSectionDivider_delegatesToViewsDbManager" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepositoryTest" time="1.422"/>
+  <testcase name="fetchSensorFieldConfigs_handlesNullEnumValuesWithoutCrashing" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepositoryTest" time="1.522"/>
+  <testcase name="testTrackingViewsRepository_dtoMappingAndShowBikeBellUpdate" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepositoryTest" time="1.525"/>
+  <testcase name="mutateViewConfig_incrementsTriggerAndPreservesReturnValuesForMoveAndCopy" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepositoryTest" time="1.559"/>
+  <testcase name="fetchSensorFieldConfigs_handlesInvalidEnumValuesGracefully" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepositoryTest" time="1.45"/>
+  <testcase name="getSectionDividersFlow_mapsDataCorrectly" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepositoryTest" time="1.459"/>
+  <testcase name="updateShowNavigationHints_delegatesToViewsDbManager" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepositoryTest" time="1.437"/>
+  <testcase name="fetchSingleSensorFieldConfig_handlesNullEnumValues" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepositoryTest" time="1.443"/>
+  <testcase name="testInsertAndUpdateSensorFieldConfig_delegatesGraphColor" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepositoryTest" time="1.502"/>
+  <testcase name="moveTabView_delegatesToViewsDbManagerAndReturnsIndex" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepositoryTest" time="1.478"/>
+  <testcase name="fetchTrackingViewInfo_mapsLiveClimbsAndNavigationHintsCorrectly" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepositoryTest" time="1.443"/>
+  <testcase name="setSectionDivider_delegatesToViewsDbManager" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepositoryTest" time="1.416"/>
+  <testcase name="trackingViewInfo_defaultsShowLiveClimbsAndNavigationHintsToTrue" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepositoryTest" time="1.4"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

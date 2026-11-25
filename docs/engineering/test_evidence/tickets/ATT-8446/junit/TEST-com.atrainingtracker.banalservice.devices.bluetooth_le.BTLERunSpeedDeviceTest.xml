@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERunSpeedDeviceTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-25T01:12:53.398Z" hostname="rainer-HP-EliteBook-850-G5" time="4.664">
+  <properties/>
+  <testcase name="testUnregisterSensors_resetsSpeedAndTimestamp" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERunSpeedDeviceTest" time="0.952"/>
+  <testcase name="testDistanceCalculator_packetTimeoutGating_suppressesStaleSpeedAccumulation" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERunSpeedDeviceTest" time="0.916"/>
+  <testcase name="testFieldShadowing_noShadowAddressOrTotalDistance" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERunSpeedDeviceTest" time="0.934"/>
+  <testcase name="testMeasurementCharacteristicUpdate_recordsTimestampAndSpeed" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERunSpeedDeviceTest" time="0.966"/>
+  <testcase name="testShutDown_cancelsHandleAndShutsDownScheduler" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERunSpeedDeviceTest" time="0.895"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

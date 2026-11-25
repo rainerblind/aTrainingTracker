@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogContractTest" tests="15" skipped="0" failures="0" errors="0" timestamp="2026-11-25T01:21:48.664Z" hostname="rainer-HP-EliteBook-850-G5" time="19.765">
+  <properties/>
+  <testcase name="testSensorSourceDialog_sourceFileContainsBikeRadarTitleAndScalarOmission" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogContractTest" time="0.163"/>
+  <testcase name="testSensorSourceDialog_hasZeroReferencesToRouteTokens" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogContractTest" time="0.154"/>
+  <testcase name="testSensorSourceDialog_altitudeCalibrationWithDisconnected_rendersSingleDivider" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogContractTest" time="0.821"/>
+  <testcase name="testSensorSourceDialog_sourceWithBackupsAndDisconnected_rendersDividersBetweenSections" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogContractTest" time="0.301"/>
+  <testcase name="testSensorSourceDialog_hrOrdersActiveBackupsAndNotConnectedByHealthAndModality" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogContractTest" time="0.366"/>
+  <testcase name="testSensorSourceDialog_disconnectedOnly_rendersZeroDividers" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogContractTest" time="0.328"/>
+  <testcase name="testComposeRender_cadenceAndVerticalOscillationCapabilityFilterHrms_TST_CON_057_3" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogContractTest" time="0.3"/>
+  <testcase name="testSourceFileExists" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogContractTest" time="0.151"/>
+  <testcase name="testSensorSourceDialog_forRadarThreatCount_mapsDeviceTypeBikeRadar" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogContractTest" time="0.164"/>
+  <testcase name="testCaptureSensorSourceDialogScreenshot" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogContractTest" time="0.355"/>
+  <testcase name="testSensorSourceDialog_usesDedicatedSensorSourceTokens" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogContractTest" time="0.116"/>
+  <testcase name="testComposeRender_cadencePolarLiveImuOptInAndPriority_TST_CON_064_2" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogContractTest" time="0.351"/>
+  <testcase name="testDeviceIdentityBlock_forwardsIsConnectedToDeviceStatusRow" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogContractTest" time="0.109"/>
+  <testcase name="testComposeRender_cadenceApi31SuppressesPolarLiveImuHrms_TST_CON_064_2" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogContractTest" time="15.892"/>
+  <testcase name="testSensorSourceDialog_passesIsConnectedTrueForActiveSensors" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogContractTest" time="0.192"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

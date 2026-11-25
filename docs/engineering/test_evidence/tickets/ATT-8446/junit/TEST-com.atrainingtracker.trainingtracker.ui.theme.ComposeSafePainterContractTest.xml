@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.theme.ComposeSafePainterContractTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-25T01:16:55.046Z" hostname="rainer-HP-EliteBook-850-G5" time="0.005">
+  <properties/>
+  <testcase name="testAllTargetComposeComponents_existAndUseSafePainterResource" classname="com.atrainingtracker.trainingtracker.ui.theme.ComposeSafePainterContractTest" time="0.003"/>
+  <testcase name="testAllTargetComposeComponents_supplySemanticFallbackVector" classname="com.atrainingtracker.trainingtracker.ui.theme.ComposeSafePainterContractTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

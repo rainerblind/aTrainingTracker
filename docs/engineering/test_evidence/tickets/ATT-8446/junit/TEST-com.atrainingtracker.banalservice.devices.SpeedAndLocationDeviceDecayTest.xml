@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDecayTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-11-25T01:09:32.140Z" hostname="rainer-HP-EliteBook-850-G5" time="24.928">
+  <properties/>
+  <testcase name="testPaceNullification_neverEmitsInfinityOrNaN" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDecayTest" time="2.199"/>
+  <testcase name="testLocationUnavailable_decaysSpeedImmediately" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDecayTest" time="1.794"/>
+  <testcase name="testDecoupledSpeedRecovery_afterWatchdogDecay_doesNotAverageWithDecayedSpeed" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDecayTest" time="1.712"/>
+  <testcase name="testMultiSecondCadence_7to8Seconds_doesNotTriggerWatchdogOrSawtoothDecay" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDecayTest" time="1.755"/>
+  <testcase name="testOnAccumulatorsReset_clearsSpeedPaceAndWatchdog" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDecayTest" time="1.69"/>
+  <testcase name="testFallbackBearing_whenBearingMissing_calculatesFromLocationDifference" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDecayTest" time="1.784"/>
+  <testcase name="testFreshLocationFix_cancelsDecayAndResumesActiveSpeed" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDecayTest" time="1.701"/>
+  <testcase name="testDecayTicks_doNotAccumulatePhantomDistance" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDecayTest" time="1.674"/>
+  <testcase name="testShutDown_cancelsWatchdogCallbacks" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDecayTest" time="1.7"/>
+  <testcase name="testContinuousFixes_calculateSmoothedSpeedAndPace" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDecayTest" time="1.974"/>
+  <testcase name="testMultiSecondInterval_3000msOrGreater_bypassesSmoothing" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDecayTest" time="1.718"/>
+  <testcase name="testInactivityTimeout_triggersProgressiveExponentialDecay" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDecayTest" time="1.753"/>
+  <testcase name="testFallbackSpeed_whenSpeedMissing_calculatesFromLocationDifference" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDecayTest" time="1.762"/>
+  <testcase name="testInitialState_speedIsZeroAndPaceIsNull" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceDecayTest" time="1.71"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

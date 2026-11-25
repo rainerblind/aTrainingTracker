@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.HrmSensorCapabilityHelperTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-25T01:10:02.018Z" hostname="rainer-HP-EliteBook-850-G5" time="0.086">
+  <properties/>
+  <testcase name="testNullSensorTypeAndThrowingContext_resilientFallback_TST_CON_057_2" classname="com.atrainingtracker.banalservice.devices.HrmSensorCapabilityHelperTest" time="0.078"/>
+  <testcase name="testPolarLiveImuOptInAndAndroid13PlusGating_TST_CON_064_1" classname="com.atrainingtracker.banalservice.devices.HrmSensorCapabilityHelperTest" time="0.004"/>
+  <testcase name="testBlePolarH10_supportsCadenceStridesVoGctAndHrHrv_TST_CON_057_2" classname="com.atrainingtracker.banalservice.devices.HrmSensorCapabilityHelperTest" time="0.0"/>
+  <testcase name="testAntPlusAndNonPolarOrSpoofedHrms_excludedFromLiveImuButKeptForHrHrv_TST_CON_057_2" classname="com.atrainingtracker.banalservice.devices.HrmSensorCapabilityHelperTest" time="0.003"/>
+  <testcase name="testBlePolarVeritySense_supportsCadenceAndStridesOnlyNotVoOrGct_TST_CON_057_2" classname="com.atrainingtracker.banalservice.devices.HrmSensorCapabilityHelperTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
