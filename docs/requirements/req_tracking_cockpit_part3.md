@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 3 of 3)
 
 **Document ID**: `DOC-REQ-TRK-P3`  
-**Version**: 1.0.54  
+**Version**: 1.0.56  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part3`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 59
+**Total Requirements**: 60
 
 ---
 
@@ -1926,6 +1926,32 @@
 • *Given* a failed `0x2A29` read (`status != GATT_SUCCESS`), NUL-only `"\u0000"`, or stale/paused/shut-down GATT handle, *When* `onCharacteristicRead` fires, *Then* `setManufacturerName` is not called and `mGattQueue` advances cleanly.
 • *Given* a Polar HRM (`hasPmd || hasPftp`) with empty, partial, or populated `PolarOfflineCapabilityStore`, *When* `BTLEHeartRateDevice.configureServices(gatt)` runs, *Then* only missing `0x2A24`/`0x2A25` characteristics are enqueued before HR CCCD, and populated `polarDeviceId` hydrates `PolarOfflineGattCoordinator` aliases with `0` GATT reads.
 
+### REQ-CON-063: FIT SDK-Backed `Manufacturer` Lookup with Sparse Map Overrides & Index-Shift Elimination (`ATT-8722`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-CON-063`
+- **System Requirement(s)**: `SYSREQ-TRK-001` — Refines ANT+/FIT manufacturer ID-to-name resolution (`Manufacturer.java`, `REQ-CON-001`) using `com.garmin.fit.Manufacturer` and sparse overrides.
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `app/src/main/java/com/atrainingtracker/banalservice/devices/Manufacturer.java`
+- **Localization Parity**: `N/A - 0 string changes`
+- **Rationale**: `Manufacturer.java` previously maintained a flat 347-element `String[] manufacturerString` array indexed directly by `manID`. Omitted FIT Profile IDs (`336`, `338`, `343`, `344`) shifted every subsequent entry from `337` (`Runna`) through `350` (`Cadence App`) off by 1–4 slots (e.g., `getName(337)` returned `"Zepp"` and `getName(350)` returned `null`), while forcing manual array padding despite `com.garmin:fit:21.141.0` (`com.garmin.fit.Manufacturer`) already providing a 223-entry `Map<Integer, String>` (`ATT-8722`, refining `REQ-CON-001`).
+- **Description**:
+  1. *FIT SDK Lookup with Sparse Pure-Java Override/Extension Map (`REQ-CON-063.1`)*: `Manufacturer.getName(int manID)` SHALL replace the flat `manufacturerString` array with a sparse unmodifiable `Map<Integer, String>` (`MANUFACTURER_OVERRIDES`) consulted prior to `com.garmin.fit.Manufacturer.getStringFromValue(manID)`. `MANUFACTURER_OVERRIDES` SHALL preserve curated display names for existing FIT IDs (`2..323`, e.g. `"Garmin"`, `"SRM"`, `"Saris / CycleOps"`, `"4iiiis"`, `"o-synce"`, `"FSA"`, `"Lishun Electric & Communication"`, and `5759` `ACTIGRAPHCORP` -> `"ActiGraph"`) and accurately map sparse ANT+/FIT IDs missing from `com.garmin:fit:21.141.0` (`151`–`153`, `330`–`335`, `337` `"Runna"`, `339` `"Zepp"`, `340` `"Peloton"`, `341` `"Carv"`, `342` `"Tissot"`, `345` `"Real Velo"`, `346` `"Wetech"`, `347` `"Jespr"`, `348` `"Huawei"`, `349` `"Gotoes"`, `350` `"Cadence App"`).
+  2. *Display-Name Formatter & Null-Safe Unknown ID Handling (`REQ-CON-063.2`)*: For IDs present in `com.garmin.fit.Manufacturer` without a `MANUFACTURER_OVERRIDES` entry, `Manufacturer.formatFitToken(String)` SHALL strip any leading `_` prefix and convert underscore-delimited SCREAMING_SNAKE_CASE tokens (e.g., `WAHOO_FITNESS`) into Title Case using `Locale.ROOT` (`"Wahoo Fitness"`). For `manID <= 0`, unmapped gap IDs (`74`, `75`, `336`, `338`, `343`, `344`), `com.garmin.fit.Manufacturer.INVALID` (`65535`), and unknown IDs where `getStringFromValue(manID)` returns `""` or `null`, `getName(manID)` SHALL return `null` so `DeviceManager`, `ANTBikeRadarDevice`, and `DeviceData` (`R.string.devices_unknown_manufacturer`) avoid persisting hardcoded `"Unknown"` strings.
+  3. *ADR-001 & Plain-JVM Compatibility (`REQ-CON-063.3`)*: `Manufacturer.java` SHALL remain a Java class (`ADR-001` `Keep`) using pure-Java `Collections.unmodifiableMap(HashMap)` (`minSdk 26` and plain-JVM safe without Robolectric).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* sparse ANT+ manufacturer IDs `335`, `337`, `339`, `341`, `345`, `350`, and `5759`, *When* `Manufacturer.getName(manID)` is invoked, *Then* it returns `"Cycloptim"`, `"Runna"`, `"Zepp"`, `"Carv"`, `"Real Velo"`, `"Cadence App"`, and `"ActiGraph"` with zero index drift.
+• *Given* curated FIT IDs (`1`, `2`, `6`, `9`, `32`, `51`, `69`, `283`, `320`) and every ID in `com.garmin.fit.Manufacturer`, *When* `Manufacturer.getName(manID)` is invoked, *Then* every mapped FIT SDK ID resolves to a non-blank formatted display string matching curated overrides (`"Garmin"`, `"SRM"`, `"Saris / CycleOps"`, `"Wahoo Fitness"`, `"4iiiis"`, `"Stages Cycling"`, `"FSA"`, `"Lishun Electric & Communication"`).
+• *Given* negative, zero, gap, or unassigned IDs (`-1`, `0`, `74`, `75`, `336`, `338`, `343`, `344`, `65535`, `99999`), *When* `Manufacturer.getName(manID)` is invoked, *Then* it returns `null` without throwing.
+
+**Chesterton's Fence (`REQ-PRO-022`)**:
+1. *Original Requirement ID & Target*: Net-new `REQ-CON-063` refining `REQ-CON-001` (`BANALService` / `ant_plus/` manufacturer resolution in `Manufacturer.java`).
+2. *Historical Origin & Commit Trace*: `8f5fe2fe` ("Feature: Updating the ANT+ Manufacturer list.") manually appended entries onto `manufacturerString[]`, skipping `336`/`338`/`343`/`344` and shifting `337..350`.
+3. *Root Reason for Existing Formulation*: Flat array predated `com.garmin:fit` lookup integration and manually mapped curated brand capitalization/punctuation (`SRM`, `4iiiis`, `o-synce`, `FSA`) alongside newer ANT+ IDs.
+4. *Preservation of Core Invariants*: All curated brand display names (`1..335`), `getName(int)` public signature, `ADR-001` Java classification, and `null` handling in `DeviceManager`/`ANTBikeRadarDevice`/`DeviceData` remain preserved.
+
 ---
 
 ## Change History
@@ -2091,3 +2117,5 @@
 | `1.0.51` | 2026-11-24 | Lane 1 Author (`ATT-8731`, `--as agent1`) | `ATT-8731` | Stage 6 Bounce 1/5 heal & rebase onto `sprint/2026-11-24_02_Spät` (`27436048` / `Devices.db` v15): scoped `RadarV2BondingSnackbarEffect` (`93` LoC) dismissal strictly to owned `RadarV2BondingSnackbarVisuals`, enforced `BLE == CONNECTED` guard in `RadarStateRepository.setV2BondingRequired(true, ...)` (`398/1,500`) + `mBondSessionActive`/`mBondDeviceShutDown` concurrent-disconnect/shutdown double-check under `mBondReceiverLock` in `BTLERadarDevice.java` (`1,480/1,500`), short-circuited `BOND_BONDING -> BONDING_INITIATED` in `RadarBluetoothBondingHelper.kt` (`158`), verified `261/261` PASS across `24` suites (`0` new Kotlin warnings) + clean `emulator-5554` `Devices.db` v15 smoke (`0` crashes). |
 | `1.0.52` | 2026-11-24 | Lane 2 Author (`ATT-8723`, `--as agent1`) | `ATT-8723` | Added `[Planned]` `REQ-CON-062` (`.1`–`.3`, linked to `SYSREQ-TRK-001`) for universal post-`configureServices` `MyBTLEDevice` `0x2A29` reconnect backfill via `BleDisReconnectBackfillHelper.kt`, non-blocking `mHandler`-dispatched sanitized persistence, deduplicated Polar `0x2A24`/`0x2A25` reads with cold-start alias hydration, and monolith LoC compliance (`N/A - 0 string changes`). |
 | `1.0.53` | 2026-11-24 | Lane 2 Author (`ATT-8723`, `--as agent1`) | `ATT-8723` | Promoted `REQ-CON-062` (`.1`–`.3`) to `[Verified]` following Gate 3 (`ATT-9689`) PASS, Stage 4 implementation (`BleDisReconnectBackfillHelper.kt` `182/1,500`, `MyBTLEDevice.java` `1,498/1,500`, `BTLEHeartRateDevice.java` `583/1,500`, `DevicesDatabaseManager.java` untouched `1,665/1,671`, `BTLERadarDevice.java` untouched `1,333/1,500`), `178/178` PASS across `12` targeted unit & contract suites (`0` new production warnings, `0` string edits), clean live `emulator-5554` smoke (`0` crashes, `Rule 8.5` PNG verified), and `docs/engineering/walkthroughs/ATT-8723_walkthrough.md`. |
+| `1.0.55` | 2026-11-25 | Lane 2 Author (`ATT-8722`, `--as agent1`) | `ATT-8722` | Added `[Planned]` `REQ-CON-063` (`.1`–`.3`, linked to `SYSREQ-TRK-001`, refining `REQ-CON-001`) for `com.garmin.fit.Manufacturer` + sparse pure-Java `Map<Integer, String>` lookup with `Locale.ROOT` token formatting and `337`–`350` index-shift elimination (`N/A - 0 string changes`). |
+| `1.0.56` | 2026-11-25 | Lane 2 Author (`ATT-8722`, `--as agent1`) | `ATT-8722` | Promoted `REQ-CON-063` (`.1`–`.3`) to `[Verified]` following Stage 4 implementation (`Manufacturer.java`, `ManufacturerTest.kt`, `0` new warnings, `0` UI/string edits), `59/59` targeted unit & contract tests PASS across 5 suites, clean live `emulator-5554` smoke (`0` crashes, `Rule 8.5` PNG inspected), and `docs/engineering/tickets/ATT-8722.md`. |

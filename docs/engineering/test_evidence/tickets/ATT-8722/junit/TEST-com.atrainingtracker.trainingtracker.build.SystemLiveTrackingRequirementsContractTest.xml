@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.build.SystemLiveTrackingRequirementsContractTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-24T23:49:53.199Z" hostname="rainer-HP-EliteBook-850-G5" time="0.673">
+  <properties/>
+  <testcase name="testSysreqLiveTracking_codeGroundingParity" classname="com.atrainingtracker.trainingtracker.build.SystemLiveTrackingRequirementsContractTest" time="0.002"/>
+  <testcase name="testSysreqLiveTracking_allRequirementsHaveMandatorySections" classname="com.atrainingtracker.trainingtracker.build.SystemLiveTrackingRequirementsContractTest" time="0.008"/>
+  <testcase name="testSysreqLiveTracking_fileExistsAndContainsAllRequirements" classname="com.atrainingtracker.trainingtracker.build.SystemLiveTrackingRequirementsContractTest" time="0.002"/>
+  <testcase name="testSysreqLiveTracking_allReferencedCodeFilesExistOnDisk" classname="com.atrainingtracker.trainingtracker.build.SystemLiveTrackingRequirementsContractTest" time="0.661"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

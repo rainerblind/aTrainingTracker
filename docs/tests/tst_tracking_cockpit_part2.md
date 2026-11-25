@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-TST-TRK-P2`  
-**Version**: 1.0.56  
+**Version**: 1.0.58  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 109
+**Total Tests**: 110
 
 ---
 
@@ -2268,6 +2268,21 @@
      • Verify Polar HRM (`hasPmd || hasPftp`) enqueues both `0x2A24` & `0x2A25` before HR CCCD when store is empty, only the missing characteristic when partially populated, and `0` Polar DIS reads when both are clean while still hydrating `PolarOfflineGattCoordinator.matchesDeviceIdentifier(polarId, mac) == true` after `PolarOfflineGattCoordinator.resetForTesting()`.
      • Verify non-Polar HRMs enqueue `0` Polar DIS reads (`REQ-CON-049.2`), `BTLERadarDevice` per-connect `0x2A24` registration stays intact with `0` duplicates, and `MyBTLEDevice.java <= 1,500`, `DevicesDatabaseManager.java <= 1,671`, and `my_btle_device.md` SWE.3 parity hold (`Localization Parity: N/A - 0 string changes`).
 
+### TST-CON-063: **FIT SDK-Backed `Manufacturer` Lookup, Sparse Overrides & Index-Shift Verification Suite (`ATT-8722`)** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-CON-063` (`REQ-CON-063.1`–`REQ-CON-063.3`)
+- **Component**: `app/src/main/java/com/atrainingtracker/banalservice/devices/Manufacturer.java`
+- **Jira**: `ATT-8722` | **Priority**: Medium | **Type**: Functional | **Verification Method**: Unit
+- **Verified Test Methods**: `ManufacturerTest#testGetName_sparse337To350AndExtensions_noIndexShift_tstCon063_1`, `ManufacturerTest#testGetName_curatedOverridesAndFitSdkDisplayNames_tstCon063_2`, `ManufacturerTest#testGetName_everyFitSdkConstantResolvesToCleanDisplayName_tstCon063_2`, `ManufacturerTest#testFormatFitToken_normalizesUnderscoresLeadingPrefixAndBlank_tstCon063_2`, `ManufacturerTest#testGetName_unknownNegativeAndInvalidIdsReturnNull_tstCon063_3`
+- **Test Description**:
+  1. *Sparse 337–350 Index-Shift & Extension Verification (`TST-CON-063.1` — `ManufacturerTest.kt`)*:
+     • Verify exact non-shifted mappings for `330`–`335` (`"EO Swimbetter"`..`"Cycloptim"`), `337` (`"Runna"`), `339` (`"Zepp"`), `340` (`"Peloton"`), `341` (`"Carv"`), `342` (`"Tissot"`), `345` (`"Real Velo"`), `346` (`"Wetech"`), `347` (`"Jespr"`), `348` (`"Huawei"`), `349` (`"Gotoes"`), `350` (`"Cadence App"`), `151`–`153` (`"Abawo"`, `"Bafang"`, `"Luhong Technology"`), and `5759` (`"ActiGraph"`).
+     • Verify omitted gap IDs (`336`, `338`, `343`, `344`) return `null`.
+  2. *Curated Overrides, Formatter & Complete FIT SDK Mapping Parity (`TST-CON-063.2` — `ManufacturerTest.kt`)*:
+     • Verify curated brand overrides across `1`–`329` (`1` `"Garmin"`, `2` `"Garmin"`, `6` `"SRM"`, `8` `"iBike"`, `9` `"Saris / CycleOps"`, `21` `"A & D Medical"`, `28` `"Peaksware (TrainingPeaks)"`, `32` `"Wahoo Fitness"`, `38` `"o-synce"`, `40` `"Concept 2"`, `51` `"4iiiis"`, `69` `"Stages Cycling"`, `95` `"Stryd"`, `123` `"Polar Electro"`, `263` `"Favero Electronics"`, `283` `"FSA"`, `320` `"Lishun Electric & Communication"`, `329` `"Absolute Cycling"`), `formatFitToken()` edge cases (leading `_`, multi-word snake case, `null`/blank), and reflective parity asserting every entry in `com.garmin.fit.Manufacturer` resolves to a non-blank display name.
+  3. *Unknown/Negative/`INVALID` Guards & Governance Contracts (`TST-CON-063.3` — `ManufacturerTest.kt`, `JavaCoreMigrationStrategyContractTest.kt`, `ArchitectureConformanceContractTest.kt`)*:
+     • Verify `-1`, `Int.MIN_VALUE`, `0`, `74`, `75`, `351`, `com.garmin.fit.Manufacturer.INVALID` (`65535`), and `Int.MAX_VALUE` return `null` without exceptions; verify `ADR-001` Java class count and monolith LoC ceilings remain intact (`N/A - 0 string changes`).
+
 ---
 
 ## Change History
@@ -2449,3 +2464,5 @@
 | `1.0.53` | 2026-11-24 | Lane 1 Author (`ATT-8731`, `--as agent1`) | `ATT-8731` | Stage 6 Bounce 1/5 heal (`15` verbatim `TST-CON-061` methods, `261/261` PASS across `24` targeted suites incl. `+4` Bounce 1 regressions: `BTLERadarDeviceTest 68/68`, `RadarStateRepositoryTest 10/10`, `RadarBluetoothBondingHelperTest 4/4`, `EditDeviceDialogRadarBondingTest 5/5` covering owned-`RadarV2BondingSnackbarVisuals` dismissal, `BLE == CONNECTED` guard, concurrent `unregisterSensors()`/`shutDown()` mid-`configureServices()` race, and `BOND_BONDING` short-circuit; live `emulator-5554` `Devices.db` v15 smoke `0` crashes; refreshed SHA-256 bundle `docs/engineering/test_evidence/tickets/ATT-8731/`). |
 | `1.0.54` | 2026-11-24 | Lane 2 Author (`ATT-8723`, `--as agent1`) | `ATT-8723` | Added `[Planned]` `TST-CON-062` (`.1`–`.3`, symmetric with `REQ-CON-062`) covering universal `MyBTLEDevice` post-`configureServices` `0x2A29` reconnect backfill, non-blocking sanitized `mHandler` persistence + stale/failure guards, deduplicated Polar `0x2A24`/`0x2A25` reads with cold-start alias hydration, and monolith/SWE.3 contracts (`N/A - 0 string changes`). |
 | `1.0.55` | 2026-11-24 | Lane 2 Author (`ATT-8723`, `--as agent1`) | `ATT-8723` | Promoted `TST-CON-062` (`.1`–`.3`) to `[Verified]` with verbatim method citations (`178/178` PASS across `12` targeted suites: `BleDisReconnectBackfillHelperTest 4/4`, `BleDisStringSanitizerTest 3/3`, `MyBTLEDeviceQueueTest 9/9`, `MyBTLEDeviceLifecycleTest 16/16`, `BTLEHeartRateDeviceTest 20/20`, `BTLERadarDeviceTest 64/64`, `BTSearchForNewDevicesEngineTest 22/22`, `PolarOfflineCapabilityStoreTest 8/8`, `PolarOfflineGattCoordinatorCoexistenceTest 14/14`, `ArchitectureConformanceContractTest 11/11`, `DetailedDesignParityContractTest 3/3`, `SystemLiveTrackingRequirementsContractTest 4/4`; clean live `emulator-5554` smoke `0` crashes + `Rule 8.5` PNG verified; SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-8723/`). |
+| `1.0.57` | 2026-11-25 | Lane 2 Author (`ATT-8722`, `--as agent1`) | `ATT-8722` | Added `[Planned]` `TST-CON-063` (`.1`–`.3`, symmetric with `REQ-CON-063`) covering sparse `337`–`350` index-shift fix (`Runna`..`Cadence App`), `336`/`338`/`343`/`344` gap nulls, `151`–`153` & `330`–`335` & `5759` (`ActiGraph`), curated `1`–`329` overrides, full FIT SDK `stringMap` parity, unknown/negative/`INVALID` guards, and `ADR-001`/LoC contracts (`N/A - 0 string changes`). |
+| `1.0.58` | 2026-11-25 | Lane 2 Author (`ATT-8722`, `--as agent1`) | `ATT-8722` | Promoted `TST-CON-063` (`.1`–`.3`) to `[Verified]` with 5 verbatim `ManufacturerTest#*` citations (`59/59` PASS across 5 targeted suites: `ManufacturerTest 5/5`, `ANTBikeRadarDeviceTest 21/21`, `DevicesDatabaseManagerTest 17/17`, `JavaCoreMigrationStrategyContractTest 5/5`, `ArchitectureConformanceContractTest 11/11`; `0` compiler warnings; clean live `emulator-5554` smoke `0` crashes + `Rule 8.5` PNG inspected). |

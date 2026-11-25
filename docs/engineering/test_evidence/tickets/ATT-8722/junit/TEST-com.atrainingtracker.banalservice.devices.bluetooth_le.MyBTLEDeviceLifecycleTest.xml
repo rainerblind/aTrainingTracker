@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceLifecycleTest" tests="16" skipped="0" failures="0" errors="0" timestamp="2026-11-24T23:49:23.643Z" hostname="rainer-HP-EliteBook-850-G5" time="23.118">
+  <properties/>
+  <testcase name="testDisconnectFromGatt_clearsQueue_andNullifiesGattUnderLock" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceLifecycleTest" time="1.42"/>
+  <testcase name="testStartSearching_onApi23Plus_connectsGattWithTransportLe" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceLifecycleTest" time="1.404"/>
+  <testcase name="testDelayedBatteryRunnable_cancelledOnDisconnection_doesNotExecute" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceLifecycleTest" time="1.384"/>
+  <testcase name="testStartSearching_whenPermissionDenied_doesNotCallConnectGatt" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceLifecycleTest" time="1.399"/>
+  <testcase name="testShutDown_cleansUpAllCallbacksAndGatt" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceLifecycleTest" time="1.63"/>
+  <testcase name="testResumeGattOperations_whileBackgroundReconnecting_preservesNonBlockingState" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceLifecycleTest" time="1.388"/>
+  <testcase name="testPauseGattOperations_synchronouslyReleasesGattUnregistersSensorsAndReconfiguresOnReconnect_TST_TRK_093_4" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceLifecycleTest" time="1.459"/>
+  <testcase name="testReadNextCharacteristic_toctouRaceConditionSimulation_doesNotThrowNpe" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceLifecycleTest" time="1.376"/>
+  <testcase name="testOnConnectionStateChange_afterShutDown_immediatelyClosesLateGattCallback_TST_CON_054_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceLifecycleTest" time="1.455"/>
+  <testcase name="testReadNextCharacteristic_whenPermissionDenied_returnsEarlyWithoutCallingGatt" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceLifecycleTest" time="1.37"/>
+  <testcase name="testDisconnectFromGatt_whenOnHandlerLooper_closesSynchronouslyWithoutPosting_TST_CON_054_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceLifecycleTest" time="1.461"/>
+  <testcase name="testDisconnectFromGatt_whenPostReturnsFalse_stillDisconnectsClosesAndRunsCallback_TST_CON_054_1" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceLifecycleTest" time="1.291"/>
+  <testcase name="testOnConnectionStateChange_connected_guardsDiscoverServicesWhenGattNull" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceLifecycleTest" time="1.357"/>
+  <testcase name="testReadNextCharacteristic_whenQueueEmpty_andGattIsNull_doesNotThrowNpe" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceLifecycleTest" time="1.356"/>
+  <testcase name="testPauseGattOperations_blocksQueuedConnectScanTimeoutServicesDiscoveredAndCallbackToctou_TST_TRK_093_4" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceLifecycleTest" time="2.013"/>
+  <testcase name="testReadNextCharacteristic_whenGattIsNull_doesNotThrowNpe" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDeviceLifecycleTest" time="1.353"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
