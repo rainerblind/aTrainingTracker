@@ -1,14 +1,14 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit (Part 2 of 2)
 
 **Document ID**: `DOC-TST-TRK-P2`  
-**Version**: 1.0.63  
+**Version**: 1.0.65  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part2`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 111
+**Total Tests**: 112
 
 ---
 
@@ -2305,6 +2305,21 @@
 
 ---
 
+### TST-FIL-046: **Resolved Walking `SportType` Propagation, Sustained Unclassified Walking Dwell & Cycling-Stop Suppression Suite (`ATT-9695`)** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-FIL-046` (`REQ-FIL-046.1`–`REQ-FIL-046.3`)
+- **Component**: `BANALService.java`, `TrackerService.java`, `SmartphoneImuCadenceEstimator.kt`, `KinematicSportTypeDiscriminator.kt`, `SpeedAndLocationDevice_ATTFused.kt`, `OfflineTelemetryReplayHarness.kt`
+- **Jira**: `ATT-9695` | **Priority**: High | **Type**: Functional | **Verification Method**: Unit, Integration
+- **Test Description**:
+  1. *Tier-4 Resolved `BSportType` Precedence, Reset, `TrackerService` Propagation & Cycling Carriage Speed Floor (`TST-FIL-046.1` — `BANALServiceSportInferenceTest#tier4ResolvedBSportType_precedenceIsolationResetAndFallback_tstFil046_1`, `TrackerServiceStateMachineCharacterisationTest#testOnSearchingFinished_propagatesResolvedWalkingBSportTypeToBanalService_TST_FIL_046_1`, `KinematicSportTypeDiscriminatorTest#walkingSpeedBikePocketFlicker_neverLatchesBike_whileCyclingSpeedStillLatches_tstFil046_1`)*:
+     • Verify `BANALService.setResolvedBSportType(RUN)` activates `getEffectiveBSportType()` / `getEffectiveActiveBSportType() == RUN` while `getBSportType()` and `getAuthoritativeBSportType()` stay `UNKNOWN` (`REQ-FIL-030.2`/`.3` preserved), verify strict precedence `Tier 1 User (incl. explicit OTHER) > Tier 1.5 Multisport > Tier 2 Hardware > Tier 3 Kinematic > Tier 4 Resolved` plus null-instance `cDeviceManager` fallback, verify `RESET_ACCUMULATORS_INTENT` & `onDestroy()` clear `mResolvedBSportType`, verify `TrackerService.onSearchingFinished()` propagates resolved `BSportType.RUN`, and verify `KinematicSportTypeDiscriminator` `MIN_BIKE_CARRIAGE_VOTE_SPEED_MPS = 1.8` blocks walking-speed `BIKE_FRONT_POCKET` false latches while preserving `>= 2.0 m/s` cycling climbs.
+  2. *Sustained Unclassified Walking Dwell & Cycling/`OTHER`/`STATIONARY` Suppression (`TST-FIL-046.2` — `SmartphoneImuCadenceEstimatorTest#walkingTransition_unknownDwellConfirmationAndCyclingOtherStationaryGuards_tstFil046_2`)*:
+     • Verify `(WALKING_TRANSITION, UNKNOWN)` stays `SUPPRESSED` (`0` cadence, `0` strides, `isRunningOrWalkingActive == false`) for `< 25.0 s` (`18–20 s` pre-ride driveway bike-pushing), promotes cleanly to `RUNNING_STEP` at `>= 25.0 s` with both 50-Hz `ACC`-only and `TYPE_STEP_DETECTOR` streams, remains continuous on `UNKNOWN -> RUNNING` and `STATIONARY` pauses, and immediately suppresses with `0` strides on `SportContextHint.CYCLING`, `SportContextHint.OTHER`, backwards timestamps, and `STATIONARY` sport-contradiction transitions.
+  3. *End-to-End `ATTFused` + `BANALService` Integration, Pure-JVM Replay & Contracts (`TST-FIL-046.3` — `SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest#tier4ResolvedWalk_activatesCadenceAndStridesAndRespectsOtherAndBikeGuards_tstFil046_3`, `OfflineTelemetryReplayHarnessTest#replay_phoneOnlyWalkAndCyclingBakeryStop_emitsWalkCadenceStridesAndSuppressesBakeryWalk_tstFil046_3`, `ArchitectureConformanceContractTest`, `DetailedDesignParityContractTest`, `InterfaceSignatureDriftContractTest`)*:
+     • Verify live Robolectric `BANALService` + `SpeedAndLocationDevice_ATTFused` activates walking `CADENCE` & `STRIDES` within `<= 1.0 s` of `setResolvedBSportType(RUN)` (zero `SPORT_TYPE_CHANGED_BY_USER_INTENT`, zero per-sample SQLite), suppresses explicit user-locked `OTHER`, tears down `STRIDES` on Tier 3 `BIKE`, verifies pure-JVM replay on synthetic + real Pixel 10 sidecars `2026-11-23_093732` / `2026-11-23_171814` (`> 80%` active walking coverage, `~45–60 strides/min`, `>= 500` strides) and `2026-11-22_081402` cycling ride (`0` walking strides across driveway + bakery stop), and passes `190/190` tests across `15` targeted suites + LoC & SWE.3 parity contracts (`N/A - 0 string changes`).
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2491,3 +2506,5 @@
 | `1.0.61` | 2026-11-25 | Lane 1 Author (`ATT-8726`, `--as agent1`) | `ATT-8726` | Promoted `TST-TRK-073` (`TST-TRK-073.1`) to `[Verified]` with verbatim method citations (`72/72` PASS across `5` targeted suites: `RadarEdgeOverlayTest 45/45` [`resolveRailMaxRange_returnsExpectedBoundaries`, `resolveLatchedRailMaxRange_holds175mAcross140mAndResetsOnClearOrDisconnect`, `edgeRailAndFullScreen_v1TargetCrossing140m_movesMonotonicallyUpwardAndResetsOnClear`, `overlay_disconnectErrorMidApproach_resetsLatchedRangeTo140mOnReconnect`], `RadarTopDownVehicleMarkerTest 6/6`, `ArchitectureConformanceContractTest 11/11`, `SystemLiveTrackingRequirementsContractTest 4/4`, `SourceTextReadingAuditContractTest 6/6`; live `emulator-5554` Light/Dark smoke `0` crashes + `Rule 8.5` PNGs audited; SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-8726/`). |
 | `1.0.62` | 2026-11-25 | Lane 2 Author (`ATT-8446`, `--as agent1`) | `ATT-8446` | Added `[Planned]` `TST-CON-064` (`.1`–`.3`, symmetric with `REQ-CON-064`) covering `HrmSensorCapabilityHelper` `polarLiveImuEnabled` + Android 13+ matrix, `SensorSourceDialog` paired/opt-in/`CADENCE_PRIORITY` behavioral Compose & API 31 vs 34 tests, `DevicesDatabaseManager` `POLAR_LIVE_IMU_ENABLED` DB gating, and LoC/governance contracts (`N/A - 0 string changes`). |
 | `1.0.63` | 2026-11-25 | Lane 2 Author (`ATT-8446`, `--as agent1`) | `ATT-8446` | Promoted `TST-CON-064` (`.1`–`.3`) to `[Verified]` with 6 verbatim `TestClass#testMethod` citations (`117/117` PASS across 14 targeted suites: `HrmSensorCapabilityHelperTest 5/5`, `DeviceTypeSensorMappingTest 3/3`, `DevicesDatabaseManagerTest 18/18`, `SensorSourceDialogPriorityTest 8/8`, `SensorSourceDialogContractTest 15/15`, `MySensorManagerPriorityTest 8/8`, `MySensorManagerCadenceArbitrationTest 3/3`, `EditSensorFieldViewModelTest 28/28`, `ArchitectureConformanceContractTest 11/11`, `InterfaceSignatureDriftContractTest 3/3`, `SourceTextReadingAuditContractTest 6/6`, `SystemLiveTrackingRequirementsContractTest 4/4`, `ComposeSafePainterContractTest 2/2`, `SensorSourceColorContractTest 3/3`; `0` new warnings; live `emulator-5554` `CADENCE` `SensorSourceDialog` smoke `0` crashes + `3` `Rule 8.5` PNGs inspected). |
+| `1.0.64` | 2026-11-25 | Lane 3 Author (`ATT-9695`, `--as agent1`) | `ATT-9695` | Added `[Planned]` `TST-FIL-046` (`.1`–`.3`, symmetric with `REQ-FIL-046`) covering `BANALService` Tier-4 `mResolvedBSportType` precedence & reset, `TrackerService` propagation, `SmartphoneImuCadenceEstimator` `6.0 s` sustained unclassified walking dwell & cycling/`OTHER`/`STATIONARY` suppression, `SpeedAndLocationDevice_ATTFused` Robolectric integration, pure-JVM replay on synthetic + Pixel 10 walk/bakery-stop logs, and LoC/SWE.3 contracts (`N/A - 0 string changes`). |
+| `1.0.65` | 2026-11-25 | Lane 3 Author (`ATT-9695`, `--as agent1`) | `ATT-9695` | Promoted `TST-FIL-046` (`.1`–`.3`) to `[Verified]` with 6 verbatim `TestClass#testMethod` citations (`190/190` PASS across `15` targeted suites: `BANALServiceSportInferenceTest 3/3`, `TrackerServiceStateMachineCharacterisationTest 9/9`, `KinematicSportTypeDiscriminatorTest 7/7`, `SmartphoneImuCadenceEstimatorTest 13/13`, `SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest 4/4`, `OfflineTelemetryReplayHarnessTest 12/12` [incl. real Pixel 10 sidecars `2026-11-23_093732`, `2026-11-23_171814`, `2026-11-22_081402`], `SpeedAndLocationDevice_ATTFusedTest 42/42`, `BANALServiceMultisportTransitionTest 4/4`, `PhoneCarriageClassifierTest 21/21`, `OfflineReplayCliTest 4/4`, `TrackerServiceFinalizationTest 36/36`, `TrackerServiceResumeTest 18/18`, `ArchitectureConformanceContractTest 11/11`, `DetailedDesignParityContractTest 3/3`, `InterfaceSignatureDriftContractTest 3/3`; `0` new warnings; live `emulator-5554` smoke `0` crashes + `Rule 8.5` PNG verified; SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-9695/`). |

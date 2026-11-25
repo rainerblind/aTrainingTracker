@@ -119,6 +119,8 @@ open class SpeedAndLocationDevice_ATTFused(
     private var mAllowColdStartPinRelease = false
     @Volatile
     private var mLastPublishedInferredSport: BSportType = BSportType.UNKNOWN
+    @Volatile
+    private var mLastObservedSportHint: SportContextHint = SportContextHint.UNKNOWN
     private var mLastMultisportTickMs: Long = Long.MIN_VALUE
 
     private val mCadenceLock = Any()
@@ -879,10 +881,14 @@ open class SpeedAndLocationDevice_ATTFused(
             if (shouldEmitSensor) {
                 mActivityAndCarriageModeSensor?.newValue(mode.code)
             }
-            if (modeChanged) {
+            val sportHintChanged = hint != mLastObservedSportHint
+            if (sportHintChanged) {
+                handleSportTypeChanged(timestampMs)
+            } else if (modeChanged) {
                 synchronized(mCadenceLock) {
                     cadenceEstimator.onModeOrSportChanged(mode, hint, timestampMs)
                 }
+                if (!isStridesAllowed(hint)) unregisterStridesSensor()
                 flushCadenceAndStrideOutputs()
             }
         } else {
@@ -1161,13 +1167,11 @@ open class SpeedAndLocationDevice_ATTFused(
     internal fun handleSportTypeChanged(timestampMs: Long) {
         val mode = synchronized(mYawRateLock) { mCachedCarriageMode }
         val sportHint = resolveSportContextHint()
-        val sportType = resolveActiveBSportType()
-        if (sportType != BSportType.RUN) {
-            unregisterStridesSensor()
-        }
+        mLastObservedSportHint = sportHint
         synchronized(mCadenceLock) {
             cadenceEstimator.onModeOrSportChanged(mode, sportHint, timestampMs)
         }
+        if (!isStridesAllowed(sportHint)) unregisterStridesSensor()
         flushCadenceAndStrideOutputs()
     }
 
@@ -1204,8 +1208,8 @@ open class SpeedAndLocationDevice_ATTFused(
             unregisterCadenceAndStridesSensors()
             return
         }
-        val activeSport = resolveActiveBSportType()
-        if (activeSport != BSportType.RUN) {
+        val stridesAllowed = isStridesAllowed(resolveSportContextHint())
+        if (!stridesAllowed) {
             unregisterStridesSensor()
         }
         if (hasCadence) {
@@ -1215,13 +1219,13 @@ open class SpeedAndLocationDevice_ATTFused(
             } else {
                 val cadSensor = ensureCadenceSensorRegistered()
                 cadSensor.newValue(cadenceVal)
-                if (activeSport == BSportType.RUN) {
+                if (stridesAllowed) {
                     ensureStridesSensorRegistered()
                 }
             }
         }
         if (hasStride) {
-            if (activeSport == BSportType.RUN && !(hasCadence && cadenceVal == null)) {
+            if (stridesAllowed && !(hasCadence && cadenceVal == null)) {
                 val strideSensor = ensureStridesSensorRegistered()
                 if (strideTotal < mLastEstimatorTotalStrides) {
                     mLastEstimatorTotalStrides = 0
@@ -1332,12 +1336,20 @@ open class SpeedAndLocationDevice_ATTFused(
         if (event != null) handleSportTypeChanged(timestampMs)
     }
 
+    private fun isStridesAllowed(sportHint: SportContextHint): Boolean =
+        sportHint == SportContextHint.RUNNING ||
+            (sportHint == SportContextHint.UNKNOWN && cadenceEstimator.isRunningOrWalkingActive)
+
+    private fun isUserSportLocked(): Boolean = try {
+        (mContext as? BANALService)?.isUserSportLocked ?: BANALService.isActiveUserSportLocked()
+    } catch (_: Throwable) { false }
+
     private fun resolveSportContextHint(): SportContextHint =
         mExplicitSportHintForTest ?: try {
-            SportContextHint.fromBSportType(resolveActiveBSportType())
-        } catch (_: Throwable) {
-            SportContextHint.UNKNOWN
-        }
+            val active = resolveActiveBSportType()
+            if (active == BSportType.UNKNOWN && isUserSportLocked()) SportContextHint.OTHER
+            else SportContextHint.fromBSportType(active)
+        } catch (_: Throwable) { SportContextHint.UNKNOWN }
 
     private fun resolveActiveBSportType(): BSportType {
         val testHint = mExplicitSportHintForTest
@@ -1350,7 +1362,7 @@ open class SpeedAndLocationDevice_ATTFused(
             }
         }
         return try {
-            (mContext as? BANALService)?.bSportType ?: BANALService.getActiveBSportType()
+            (mContext as? BANALService)?.effectiveBSportType ?: BANALService.getEffectiveActiveBSportType()
         } catch (_: Throwable) {
             BSportType.UNKNOWN
         }
@@ -1378,10 +1390,14 @@ open class SpeedAndLocationDevice_ATTFused(
         sportDiscriminator.reset()
         multisportDetector.reset()
         mLastPublishedInferredSport = BSportType.UNKNOWN
+        mLastObservedSportHint = SportContextHint.UNKNOWN
         try {
             val service = mContext as? BANALService
             if (service != null) service.clearInferredSportTelemetry()
-            else BANALService.updateActiveInferredSportTelemetry(BSportType.UNKNOWN, null)
+            else {
+                BANALService.updateActiveInferredSportTelemetry(BSportType.UNKNOWN, null)
+                BANALService.updateActiveResolvedBSportType(BSportType.UNKNOWN)
+            }
         } catch (_: Throwable) {
         }
         mActivityAndCarriageModeSensor?.newValue(PhoneCarriageMode.UNKNOWN.code)

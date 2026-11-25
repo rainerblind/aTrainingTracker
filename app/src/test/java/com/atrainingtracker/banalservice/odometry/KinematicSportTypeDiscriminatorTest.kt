@@ -234,6 +234,27 @@ class KinematicSportTypeDiscriminatorTest {
         assertNull(disc.getMovingSpeedSummary())
     }
 
+    // TST-FIL-046.1: Walking-speed (< 1.8 m/s) BIKE_FRONT_POCKET flicker never falsely latches BIKE
+    // (real Pixel 10 2026-11-23_171814 regression), while >= 2.0 m/s cycling still latches BIKE.
+    @Test
+    fun walkingSpeedBikePocketFlicker_neverLatchesBike_whileCyclingSpeedStillLatches_tstFil046_1() {
+        val disc = KinematicSportTypeDiscriminator()
+        var ts = 1_000L
+        for (sec in 0 until 20) {
+            disc.onCarriageMode(PhoneCarriageMode.BIKE_FRONT_POCKET, ts)
+            disc.onSpeedSample(1.3, ts)
+            ts += 1_000L
+        }
+        assertEquals("Walking-speed BIKE_FRONT_POCKET flicker must stay UNKNOWN", BSportType.UNKNOWN, disc.inferredBSportType)
+
+        for (sec in 0 until 10) {
+            disc.onCarriageMode(PhoneCarriageMode.BIKE_FRONT_POCKET, ts)
+            disc.onSpeedSample(2.0, ts)
+            ts += 1_000L
+        }
+        assertEquals("2.0 m/s uphill cycling must still infer BIKE", BSportType.BIKE, disc.inferredBSportType)
+    }
+
     private fun feedQuietImuSecond(disc: KinematicSportTypeDiscriminator, startMs: Long, gyroMag: Double) {
         for (k in 0 until 50) {
             val t = startMs + k * 20L

@@ -1,14 +1,14 @@
 # Living Requirements: Tracking & Live Sensor Cockpit (Part 3 of 3)
 
 **Document ID**: `DOC-REQ-TRK-P3`  
-**Version**: 1.0.59  
+**Version**: 1.0.61  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `tracking_cockpit_part3`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 61
+**Total Requirements**: 62
 
 ---
 
@@ -1981,6 +1981,33 @@
 
 ---
 
+### REQ-FIL-046: Resolved Walking `SportType` Propagation & Sustained Unclassified Walking Cadence/Strides in `SpeedAndLocationDevice_ATTFused` (`ATT-9695`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-046`
+- **System Requirement(s)**: `SYSREQ-TRK-001`, `SYSREQ-TRK-003`, `SYSREQ-TRK-010` — Refines live sport-type propagation and phone-only walking cadence/stride emission across `BANALService.java`, `TrackerService.java`, `SmartphoneImuCadenceEstimator.kt`, `KinematicSportTypeDiscriminator.kt`, and `SpeedAndLocationDevice_ATTFused.kt` (`REQ-FIL-029`, `REQ-FIL-030`).
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `BANALService.java`, `TrackerService.java`, `SmartphoneImuCadenceEstimator.kt`, `KinematicSportTypeDiscriminator.kt`, `SpeedAndLocationDevice_ATTFused.kt`
+- **Localization Parity**: `N/A - 0 string changes`
+- **Rationale**: Across three Pixel 10 phone-only walks (`2026-11-23_093732`, `2026-11-23_171814`, `2026-11-23_182416` Lap 1), `TrackerService.onSearchingFinished()` resolved `sportId = 4` (`Spaziergang`, `BSportType.RUN`) and logged `STATE(4, 1, 1)` to `SmartphoneRawTelemetryRecorder`, but never propagated `bSport` back to `BANALService`. Consequently `SpeedAndLocationDevice_ATTFused.resolveActiveBSportType()` stayed `BSportType.UNKNOWN` during `87–93%` of the walk in `WALKING_TRANSITION`, suppressing walking `CADENCE` and unregistering `STRIDES`; additionally, walking-speed (`1.1–1.56 m/s`) `BIKE_FRONT_POCKET` flickers on `2026-11-23_171814` falsely latched Tier 3 `BIKE` in `KinematicSportTypeDiscriminator` (`ATT-9695`).
+- **Description**:
+  1. *Tier-4 Auto-Resolved `BSportType` Propagation, Anti-Circular Isolation & Cycling Carriage Speed Floor (`REQ-FIL-046.1`)*: `BANALService` SHALL store volatile `mResolvedBSportType` (`BIKE` or `RUN`, else `UNKNOWN`, cleared in `clearInferredSportTelemetry()` on `RESET_ACCUMULATORS_INTENT`/`onDestroy()`/`resetOriginAndEkf()`) via `setResolvedBSportType()` (exposed on `BANALService`, `BANALServiceComm`, and static `updateActiveResolvedBSportType()`, zero `SPORT_TYPE_CHANGED_BY_USER_INTENT`, zero per-sample SQLite) and expose `getEffectiveBSportType()` / static `getEffectiveActiveBSportType()` (mirroring `cDeviceManager != null ? cDeviceManager.getSportType() : UNKNOWN` when `activeInstance() == null`) enforcing `Tier 1 User (incl. explicit OTHER) > Tier 1.5 Multisport > Tier 2 External Hardware > Tier 3 Kinematic > Tier 4 mResolvedBSportType > UNKNOWN`, while leaving `getAuthoritativeBSportType()` (`REQ-FIL-030.2`) and `getBSportType()` (`REQ-FIL-030.3`) strictly unchanged. `TrackerService` SHALL propagate its resolved `BSportType` to `BANALService` in `createNewWorkout()`, `onSearchingFinished()`, and `applyResumedState()`. `KinematicSportTypeDiscriminator` SHALL gate `BIKE_*` carriage votes (`+1.2 * dt`) on `speedMps >= MIN_BIKE_CARRIAGE_VOTE_SPEED_MPS (1.8 m/s)` so walking-speed `BIKE_FRONT_POCKET` flickers never latch Tier 3 `BIKE` over Tier 4 `RUN`, while preserving steep `>= 2.0 m/s` uphill MTB climbs (`REQ-FIL-030.1`).
+  2. *Sustained Unclassified Walking Fallback & Strict Cycling/`OTHER` Guardrails (`REQ-FIL-046.2`)*: `SmartphoneImuCadenceEstimator` SHALL map `WALKING_TRANSITION` to `ModeCategory.RUNNING_STEP` immediately when `sportContext == RUNNING`, and when `sportContext == UNKNOWN` strictly after `UNKNOWN_WALK_CONFIRM_DWELL_MS = 25_000L` continuous monotonic `WALKING_TRANSITION` (rejecting `18–20 s` pre-ride driveway bike-pushing in `2026-11-22_081402`; resetting on non-walking transitions pre-confirm, `BIKE_*`/`UNKNOWN` post-confirm, backwards timestamps, `sportContext != UNKNOWN`, `suppressAll()`, and `reset()`). `WALKING_TRANSITION` under `SportContextHint.CYCLING` or `SportContextHint.OTHER` MUST remain strictly `ModeCategory.SUPPRESSED` (`null` cadence, `0` strides). In `STATIONARY`, `resolveCategory()` SHALL suppress whenever `sportContext` contradicts `activeCategory` (`CYCLING` vs `RUNNING_*`, `RUNNING` vs `BIKE_*`, or `OTHER`). `SmartphoneImuCadenceEstimator` SHALL expose lock-free `@Volatile var isRunningOrWalkingActive: Boolean`, supporting both hardware `TYPE_STEP_DETECTOR` and permission-free 50-Hz `ACC` `1.2–4.0 Hz` impact bandpass fallback.
+  3. *`SpeedAndLocationDevice_ATTFused` Effective Sport Sync & Stride Gating (`REQ-FIL-046.3`)*: `SpeedAndLocationDevice_ATTFused.resolveActiveBSportType()` SHALL read `BANALService.getEffectiveBSportType()` / `getEffectiveActiveBSportType()`; `resolveSportContextHint()` SHALL map user-locked `BSportType.UNKNOWN` (`isUserSportLocked() == true`) to `SportContextHint.OTHER`. On 1-Hz `updateCarriageClassification()` ticks, `mCachedCarriageMode = mode` SHALL be published under `mYawRateLock` strictly before comparing `hint != mLastObservedSportHint` (`@Volatile`), triggering `handleSportTypeChanged(timestampMs)` (which syncs `mLastObservedSportHint`) so Tier 4 updates activate `CADENCE` & `STRIDES` within `<= 1.0 s`, and `else if (modeChanged)` SHALL also unregister `STRIDES` whenever `!isStridesAllowed(hint)`. `applyCadenceAndStrideSensors()` and `handleSportTypeChanged()` SHALL allow `SensorType.STRIDES` iff `sportHint == RUNNING || (sportHint == UNKNOWN && cadenceEstimator.isRunningOrWalkingActive)`, immediately unregistering `STRIDES` on `CYCLING`/`OTHER` while preserving non-retroactive stride baseline sync (`TST-FIL-029.3`) and monolith LoC caps (`TrackerService <= 3,220`, `SpeedAndLocationDevice_ATTFused <= 1,500`, `BANALService <= 1,500`, `SmartphoneImuCadenceEstimator <= 1,500`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a phone-only walk (`2026-11-23_093732` or `2026-11-23_171814`, `sportId = 4 Spaziergang`, `WALKING_TRANSITION`, no external footpod, with or without `TYPE_STEP_DETECTOR`), *When* processed by `TrackerService`/`BANALService`/`SpeedAndLocationDevice_ATTFused`/`SmartphoneImuCadenceEstimator`, *Then* walking `CADENCE` (`~45–60 strides/min`) and cumulative `STRIDES` emit continuously across `> 80%` of active walking.
+• *Given* an active cycling session (`SportContextHint.CYCLING`, e.g., `2026-11-22_081402` bakery stop + `< 25 s` pre-ride driveway bike-pushing) or explicit user-selected `OTHER`, *When* entering `WALKING_TRANSITION`, *Then* `ModeCategory.SUPPRESSED` holds and `0` walking strides are emitted.
+
+**Chesterton's Fence (`REQ-PRO-022`)**:
+1. *Original Requirement ID & Target*: Net-new `REQ-FIL-046` refining `REQ-FIL-029.2`/`.3`, `REQ-FIL-030.2`/`.3`, and `REQ-EXP-046` across `BANALService.java`, `TrackerService.java`, `SmartphoneImuCadenceEstimator.kt`, and `SpeedAndLocationDevice_ATTFused.kt`.
+2. *Historical Origin & Commit Trace*: `a3a5942a` (`ATT-8895`) gated `WALKING_TRANSITION` & `STRIDES` on `BSportType.RUN`; `ATT-8891` (`REQ-FIL-030`) isolated `getAuthoritativeBSportType()` and left `WALKING_TRANSITION` neutral in `KinematicSportTypeDiscriminator`.
+3. *Root Reason for Existing Formulation*: Prevented cycling errand stops from recording walking strides and prevented circular carriage-classifier feedback.
+4. *Preservation of Core Invariants*: Preserves `getAuthoritativeBSportType()` Tier 1+2 isolation, `getBSportType()` `REQ-FIL-030.3` 4-tier finalization contract, strict `CYCLING`/`OTHER`/`BIKE_HANDLEBAR` suppression, zero per-sample SQLite lookups, zero nested locks, and all monolith LoC caps.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -2148,3 +2175,5 @@
 | `1.0.56` | 2026-11-25 | Lane 2 Author (`ATT-8722`, `--as agent1`) | `ATT-8722` | Promoted `REQ-CON-063` (`.1`–`.3`) to `[Verified]` following Stage 4 implementation (`Manufacturer.java`, `ManufacturerTest.kt`, `0` new warnings, `0` UI/string edits), `59/59` targeted unit & contract tests PASS across 5 suites, clean live `emulator-5554` smoke (`0` crashes, `Rule 8.5` PNG inspected), and `docs/engineering/tickets/ATT-8722.md`. |
 | `1.0.57` | 2026-11-25 | Lane 2 Author (`ATT-8446`, `--as agent1`) | `ATT-8446` | Added `[Planned]` `REQ-CON-064` (`.1`–`.3`, linked to `SYSREQ-TRK-001`, refining `REQ-CON-057`/`REQ-SET-112`) for `polarLiveImuEnabled` opt-in, `isPaired`, and Android 13+ (`TIRAMISU`) gating in `HrmSensorCapabilityHelper`, `SensorSourceDialog`, and `DevicesDatabaseManager` (`N/A - 0 string changes`). |
 | `1.0.58` | 2026-11-25 | Lane 2 Author (`ATT-8446`, `--as agent1`) | `ATT-8446` | Promoted `REQ-CON-064` (`.1`–`.3`) to `[Verified]` following Stage 4 implementation (`HrmSensorCapabilityHelper.kt` `121/1,500`, `SensorSourceDialog.kt` `609/1,500`, `DevicesDatabaseManager.java` `1,667/1,671`, `0` edits to `EditDeviceDialog.kt`, `0` new warnings, `0` string edits), `117/117` targeted unit/Compose/contract tests PASS across 14 suites, live `emulator-5554` `CADENCE` `SensorSourceDialog` smoke (`0` crashes, `3` `Rule 8.5` PNGs inspected), and `docs/engineering/tickets/ATT-8446.md`. |
+| `1.0.60` | 2026-11-25 | Lane 3 Author (`ATT-9695`, `--as agent1`) | `ATT-9695` | Added `[Planned]` `REQ-FIL-046` (`.1`–`.3`, linked to `SYSREQ-TRK-001`, `SYSREQ-TRK-003`, `SYSREQ-TRK-010`, refining `REQ-FIL-029`/`REQ-FIL-030`) for Tier-4 `mResolvedBSportType` propagation (`TrackerService` -> `BANALService.getEffectiveBSportType()`), `6.0 s` sustained unclassified walking dwell in `SmartphoneImuCadenceEstimator`, strict `CYCLING`/`OTHER`/`STATIONARY` suppression, and `SpeedAndLocationDevice_ATTFused` 1-Hz effective-sport sync (`N/A - 0 string changes`). |
+| `1.0.61` | 2026-11-25 | Lane 3 Author (`ATT-9695`, `--as agent1`) | `ATT-9695` | Promoted `REQ-FIL-046` (`.1`–`.3`) to `[Verified]` following Gate 3 (`ATT-9697`) PASS + all 4 Watchpoints + empirical Pixel 10 replay calibration (`UNKNOWN_WALK_CONFIRM_DWELL_MS = 25_000L` rejecting `18–20 s` pre-ride driveway bike-pushing in `2026-11-22_081402`; `KinematicSportTypeDiscriminator.MIN_BIKE_CARRIAGE_VOTE_SPEED_MPS = 1.8` eliminating walking-speed `BIKE_FRONT_POCKET` false latches in `2026-11-23_171814`), Stage 4 implementation (`BANALService.java` `1,121/1,500`, `TrackerService.java` `3,193/3,220`, `SmartphoneImuCadenceEstimator.kt` `1,120/1,500`, `KinematicSportTypeDiscriminator.kt` `537/1,500`, `SpeedAndLocationDevice_ATTFused.kt` `1,489/1,500`; `banal_service.md` `v1.0.12`, `tracker_service.md` `v1.0.14`; `0` new warnings, `0` string edits), `190/190` PASS across `15` targeted unit/Robolectric/replay/contract suites, live `emulator-5554` smoke (`0` crashes, `Rule 8.5` PNG verified), and `docs/engineering/walkthroughs/ATT-9695_walkthrough.md`. |

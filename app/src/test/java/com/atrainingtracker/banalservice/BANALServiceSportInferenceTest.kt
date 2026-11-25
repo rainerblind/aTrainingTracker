@@ -138,6 +138,62 @@ class BANALServiceSportInferenceTest {
         }
     }
 
+    // TST-FIL-046.1: Tier-4 mResolvedBSportType precedence, anti-circular isolation, reset & fallback
+    @Test
+    fun tier4ResolvedBSportType_precedenceIsolationResetAndFallback_tstFil046_1() {
+        val controller = Robolectric.buildService(BANALService::class.java).create()
+        val service = controller.get()
+        val binder = service.onBind(Intent()) as BANALService.BANALServiceComm
+        val summary = MovingSpeedSummary(5.2, 5.0, 6.4, 60, 120.0)
+
+        try {
+            // 1. Tier 4 RUN activates effectiveBSportType while keeping getBSportType() & authoritative UNKNOWN
+            binder.setResolvedBSportType(BSportType.RUN)
+            assertEquals(BSportType.RUN, service.effectiveBSportType)
+            assertEquals(BSportType.RUN, BANALService.getEffectiveActiveBSportType())
+            assertEquals(BSportType.UNKNOWN, service.bSportType)
+            assertEquals(BSportType.UNKNOWN, service.authoritativeBSportType)
+
+            // 2. Tier 3 kinematic BIKE overrides Tier 4 RUN immediately
+            service.setInferredSportTelemetry(BSportType.BIKE, summary)
+            assertEquals(BSportType.BIKE, service.effectiveBSportType)
+            assertEquals(BSportType.BIKE, BANALService.getEffectiveActiveBSportType())
+
+            // 3. Clearing Tier 3 restores Tier 4 until reset; Tier 2 hardware overrides Tier 3/4
+            service.setInferredSportTelemetry(BSportType.UNKNOWN, null)
+            assertEquals(BSportType.RUN, service.effectiveBSportType)
+            val dmMock = mockk<DeviceManager>(relaxed = true)
+            every { dmMock.sportType } returns BSportType.BIKE
+            setStaticDeviceManager(dmMock)
+            assertEquals(BSportType.BIKE, service.effectiveBSportType)
+
+            // 4. Tier 1 explicit user OTHER (sportId=1, UNKNOWN) strictly overrides Tier 2..4
+            binder.setUserSelectedSportTypeId(1L)
+            assertEquals(BSportType.UNKNOWN, service.effectiveBSportType)
+            assertEquals(BSportType.UNKNOWN, BANALService.getEffectiveActiveBSportType())
+
+            // 5. RESET_ACCUMULATORS_INTENT clears Tier 4 mResolvedBSportType while preserving Tier 1
+            setStaticDeviceManager(null)
+            service.mResetAccumulatorsReceiver.onReceive(service, Intent(BANALService.RESET_ACCUMULATORS_INTENT))
+            assertEquals(BSportType.UNKNOWN, service.effectiveBSportType)
+            assertEquals(1L, service.sportTypeId)
+        } finally {
+            setStaticDeviceManager(null)
+            controller.destroy()
+        }
+
+        // 6. Watchpoint 2: activeInstance() == null falls back to cDeviceManager.getSportType() / UNKNOWN
+        assertEquals(BSportType.UNKNOWN, BANALService.getEffectiveActiveBSportType())
+        val fallbackDm = mockk<DeviceManager>(relaxed = true)
+        every { fallbackDm.sportType } returns BSportType.RUN
+        setStaticDeviceManager(fallbackDm)
+        try {
+            assertEquals(BSportType.RUN, BANALService.getEffectiveActiveBSportType())
+        } finally {
+            setStaticDeviceManager(null)
+        }
+    }
+
     private fun setStaticDeviceManager(dm: DeviceManager?) {
         val field = BANALService::class.java.getDeclaredField("cDeviceManager")
         field.isAccessible = true

@@ -1905,6 +1905,7 @@ public class TrackerService extends Service {
         }
         try {
             BSportType resumedSport = getSportTypesRepository().getBSportType(getSportTypeId());
+            propagateResolvedBSportType(resumedSport);
             com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder.resumeOrStartActiveSession(getApplicationContext(), mBaseFileName, getSportTypeId(), resumedSport != null ? resumedSport.ordinal() : -1);
         } catch (Throwable t) { Log.w(TAG, "Error resuming SmartphoneRawTelemetryRecorder: " + t.getMessage()); }
 
@@ -2265,6 +2266,12 @@ public class TrackerService extends Service {
     }
 
 
+    private void propagateResolvedBSportType(@Nullable BSportType bSport) {
+        if (bSport == null) return;
+        final BANALServiceComm banal = mBanalService;
+        try { if (banal != null) banal.setResolvedBSportType(bSport); else BANALService.updateActiveResolvedBSportType(bSport); } catch (Throwable ignored) {}
+    }
+
     // not necessary when resuming an already started workout
     protected long createNewWorkout() {
 
@@ -2272,6 +2279,7 @@ public class TrackerService extends Service {
 
         long sportTypeId = getSportTypeId();
         BSportType bSport = getSportTypesRepository().getBSportType(sportTypeId);
+        propagateResolvedBSportType(bSport);
         try { com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder.updateSportState(sportTypeId, bSport != null ? bSport.ordinal() : -1); } catch (Throwable t) { Log.w(TAG, "Error updating SmartphoneRawTelemetryRecorder sport state: " + t.getMessage()); }
         boolean isIndoor = false;
         try {
@@ -2300,6 +2308,7 @@ public class TrackerService extends Service {
 
         long sportTypeId = getSportTypeId();
         BSportType bSport = getSportTypesRepository().getBSportType(sportTypeId);
+        propagateResolvedBSportType(bSport);
         try { com.atrainingtracker.banalservice.devices.raw.SmartphoneRawTelemetryRecorder.updateSportState(sportTypeId, bSport != null ? bSport.ordinal() : -1); } catch (Throwable t) { Log.w(TAG, "Error updating SmartphoneRawTelemetryRecorder sport state: " + t.getMessage()); }
         String gcData = banalService.getGCDataString();
 

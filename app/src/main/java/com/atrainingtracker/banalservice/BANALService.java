@@ -221,6 +221,8 @@ public class BANALService
     private volatile BSportType mInferredBSportType = BSportType.UNKNOWN;
     @NonNull
     private volatile BSportType mMultisportBSportType = BSportType.UNKNOWN;
+    @NonNull
+    private volatile BSportType mResolvedBSportType = BSportType.UNKNOWN;
     @Nullable
     private volatile MovingSpeedSummary mMovingSpeedSummary = null;
 
@@ -372,6 +374,21 @@ public class BANALService
     public static void updateActiveInferredSportTelemetry(@NonNull BSportType inferredSport, @Nullable MovingSpeedSummary summary) {
         BANALService inst = activeInstance();
         if (inst != null) inst.setInferredSportTelemetry(inferredSport, summary);
+    }
+
+    /** Publishes Tier 4 auto-resolved sport (e.g. Spaziergang -> RUN) to the live instance (REQ-FIL-046.1). */
+    public static void updateActiveResolvedBSportType(@NonNull BSportType resolvedSport) {
+        BANALService inst = activeInstance();
+        if (inst != null) inst.setResolvedBSportType(resolvedSport);
+    }
+
+    /** Effective active BSportType for live cadence/stride gating (Tier 1..4, REQ-FIL-046.1). */
+    @NonNull
+    public static BSportType getEffectiveActiveBSportType() {
+        BANALService inst = activeInstance();
+        if (inst != null) return inst.getEffectiveBSportType();
+        DeviceManager dm = cDeviceManager;
+        return dm != null ? dm.getSportType() : BSportType.UNKNOWN;
     }
 
     @Nullable
@@ -597,7 +614,23 @@ public class BANALService
     public void clearInferredSportTelemetry() {
         mInferredBSportType = BSportType.UNKNOWN;
         mMultisportBSportType = BSportType.UNKNOWN;
+        mResolvedBSportType = BSportType.UNKNOWN;
         mMovingSpeedSummary = null;
+    }
+
+    /** Sets Tier 4 auto-resolved BSportType fallback for cadence/stride gating (REQ-FIL-046.1). */
+    public void setResolvedBSportType(@NonNull BSportType resolvedSport) {
+        mResolvedBSportType = (resolvedSport == BSportType.BIKE || resolvedSport == BSportType.RUN)
+                ? resolvedSport : BSportType.UNKNOWN;
+    }
+
+    /** Tier 1 (User incl. OTHER) > 1.5 (Multisport) > 2 (HW) > 3 (Kinematic) > 4 (Resolved) (REQ-FIL-046.1). */
+    @NonNull
+    public BSportType getEffectiveBSportType() {
+        if (mHaveUserSelectedSportType) return mUserSelectedBSportType;
+        BSportType primary = getBSportType();
+        if (primary != BSportType.UNKNOWN && primary != BSportType.CONFLICT) return primary;
+        return mResolvedBSportType;
     }
 
     @Nullable
@@ -980,6 +1013,10 @@ public class BANALService
         @NonNull
         public BSportType getBSportType() {
             return BANALService.this.getBSportType();
+        }
+
+        public void setResolvedBSportType(@NonNull BSportType resolvedSport) {
+            BANALService.this.setResolvedBSportType(resolvedSport);
         }
 
         @Nullable

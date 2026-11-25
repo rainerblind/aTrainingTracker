@@ -1,0 +1,26 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "e1ed9649399a918840771477f89db659b0389aff",
+  "files": {
+    "evidence_summary.json": "5ab660229bdbdfd529f89bad1273c451f0cf2b8cc8231760d605d9485379e523",
+    "junit/TEST-com.atrainingtrac-HBFN464QLFGQ8.banalservice.devices.SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest.xml": "5486f5a7aafb951f2ed0a9d87925cfda6a7a9b9ec57296e82a3b7fa439021448",
+    "junit/TEST-com.atrainingtracker.banalservice.BANALServiceMultisportTransitionTest.xml": "cfef6406f8c29a8b1b9a7717989d4bd02236fe5c0345f9b98108bea8da1c98fc",
+    "junit/TEST-com.atrainingtracker.banalservice.BANALServiceSportInferenceTest.xml": "b516fbe3dc4a673543a05f8e839570775b5f04715f02690f8a0777ddd651a179",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest.xml": "2cfb3f28565e36a1a63420a8987d0b9e9f90173440debf40d43bc64f8367e2c5",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.KinematicSportTypeDiscriminatorTest.xml": "f34434a7bfb6e44da347290d920ef0380f0c4645df761ab1b3ce54e0c730966b",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.PhoneCarriageClassifierTest.xml": "0e1ad6c34aa6f2a8e2fd1eb580a139916e10ec7a7e62652edcac77b7bdecbb51",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.SmartphoneImuCadenceEstimatorTest.xml": "d323e050f18269137f53fd458756c4be70e6866dc8b306ff1e667fc602dd9f3f",
+    "junit/TEST-com.atrainingtracker.banalservice.replay.OfflineReplayCliTest.xml": "2a3c17453d93622f810eb93b2c8ff42e1799acb111c9b12ac639bf9ef53d6c57",
+    "junit/TEST-com.atrainingtracker.banalservice.replay.OfflineTelemetryReplayHarnessTest.xml": "9cf9c3681d0cc3e9ace6a5f2c3c2d49249309a883525ad60ccd346bb632151c8",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml": "7ed155596346a3a85c27327f3cd684952126de4c5c381f20e914374b3dfa6ba9",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.DetailedDesignParityContractTest.xml": "93752501ac9637825730fa0a44c22363cbc19b47237f1e49367971e78bac6e16",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.InterfaceSignatureDriftContractTest.xml": "cee47e971e63658c803c1fb6cbb35b2e47d6ca3063bb3b01189a035a6c346736",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest.xml": "be754f6912f2c2390c383d82229d3f209077f888ceac60f36d4d032e76f72fac",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest.xml": "bdc3a566d75484cea05883db5611fb1d9015d371ef90f06d3eb72bc1e7ec73b9",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServiceStateMachineCharacterisationTest.xml": "26134c5883d99169402054e71ce86e91f331ebb5c5010adf61604f2e3391eeb6",
+    "screenshots/att9695_emulator_smoke.png": "5c6b8da53f3f5b13483b9d82b8bbb34f7b4436b0b26a62f09cb2b4da1bff913e"
+  },
+  "run_started_utc": "2026-11-25T03:03:37.023770+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-9695"
+}

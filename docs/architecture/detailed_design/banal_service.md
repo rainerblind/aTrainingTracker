@@ -1,14 +1,14 @@
 # Detailed Design: BANALService & DeviceManager (ASPICE SWE.3)
 
 **Document ID**: `DOC-ARC-DD-BANAL`  
-**Version**: 1.0.11  
+**Version**: 1.0.12  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
-**Units**: `BANALService` (`app/src/main/java/com/atrainingtracker/banalservice/BANALService.java`, 1,074 LOC), `DeviceManager` (`app/src/main/java/com/atrainingtracker/banalservice/devices/DeviceManager.java`, 1,681 LOC), `MyRemoteDevice` (`MyRemoteDevice.java`, 186 LOC), `DeviceSearchPeriodicRetryCoordinator` (`DeviceSearchPeriodicRetryCoordinator.kt`)  
+**Units**: `BANALService` (`app/src/main/java/com/atrainingtracker/banalservice/BANALService.java`, 1,121 LOC), `DeviceManager` (`app/src/main/java/com/atrainingtracker/banalservice/devices/DeviceManager.java`, 1,681 LOC), `MyRemoteDevice` (`MyRemoteDevice.java`, 186 LOC), `DeviceSearchPeriodicRetryCoordinator` (`DeviceSearchPeriodicRetryCoordinator.kt`)  
 **Collaborators**: `MySensorManager`, `ProxySensor`, `FilterManager`, `SportTypesRepository`, `BANALServiceComm`, `SensorReconnectBackoffPolicy`, `KinematicSportTypeDiscriminator`, `MovingSpeedSummary`, `MultisportTransitionDetector`, `MultisportTransitionBridge`  
 **SWE.2 Alignment**: `docs/architecture.md` §3.2, §4.2, §4.7, §4.8, §4.9 (`IF-SWE-03`, `IF-SWE-04`)  
-**Requirement Trace**: `REQ-PRO-114.1`, `REQ-ARC-008.2`, `REQ-SEN-021`, `REQ-TRK-024`, `REQ-TRK-055`, `REQ-TRK-077`, `REQ-CON-051`, `REQ-FIL-029`, `REQ-CON-052`, `REQ-FIL-030`, `REQ-CON-054`
+**Requirement Trace**: `REQ-PRO-114.1`, `REQ-ARC-008.2`, `REQ-SEN-021`, `REQ-TRK-024`, `REQ-TRK-055`, `REQ-TRK-077`, `REQ-CON-051`, `REQ-FIL-029`, `REQ-CON-052`, `REQ-FIL-030`, `REQ-CON-054`, `REQ-FIL-046`
 
 ---
 
@@ -74,7 +74,7 @@ stateDiagram-v2
 ### 4.1 Interfaces (`IF-SWE-03`, `IF-SWE-04`)
 | Interface | Direction | Contract / Symbols |
 | :--- | :--- | :--- |
-| `IF-SWE-03` | `BANALServiceComm` -> `TrackerService` / Repo | Local `Binder` exposing `getBestSensorData(SensorType)`, `getAllSensorData()`, `getAllButBestSensorData()`, `getAvailableSensorTypeSet()`, `getAccumulatedSensorTypeSet()`, `getFilteredSensorData(FilterData)`, `getSourceDeviceId(SensorType)`, `getBSportType()`, `getSportTypeId()`, `getActivityType()`, `setIndoorMode(boolean)`, `addRrBeatListener(RrBeatListener)` |
+| `IF-SWE-03` | `BANALServiceComm` -> `TrackerService` / Repo | Local `Binder` exposing `getBestSensorData(SensorType)`, `getAllSensorData()`, `getAllButBestSensorData()`, `getAvailableSensorTypeSet()`, `getAccumulatedSensorTypeSet()`, `getFilteredSensorData(FilterData)`, `getSourceDeviceId(SensorType)`, `getBSportType()`, `setResolvedBSportType(BSportType)`, `getSportTypeId()`, `getActivityType()`, `setIndoorMode(boolean)`, `addRrBeatListener(RrBeatListener)` |
 | `IF-SWE-04` | Hardware HAL -> `DeviceManager` / `MySensorManager` | `MyRemoteDevice` subclasses (`MyBTLEDevice`, ANT+ devices) & location/pressure devices register `MySensor` instances into `MySensorManager`, which arbitrates priority via `ProxySensor` (`SPEED_PRIORITY`, `ALTITUDE_PRIORITY`, `LOCATION_PRIORITY`, `CADENCE_PRIORITY` [`RUN_SPEED > BIKE_CADENCE > BIKE_SPEED_AND_CADENCE > BIKE_POWER > HRM > SPEED_AND_LOCATION_ATT_FUSED`], `STRIDES_PRIORITY` [`RUN_SPEED > HRM > SPEED_AND_LOCATION_ATT_FUSED`]); `SpeedAndLocationDevice_ATTFused` dynamically registers smartphone IMU `CADENCE`/`BSportType.RUN`-gated `STRIDES` via `SmartphoneImuCadenceEstimator`, `ImuCadenceDsp` & `MyAccumulatorSensor` (`addSensorListener` total delivery) while suppressing `BIKE_HANDLEBAR`; `DeviceManager` arbitrates single-primary `RrBeatSource` forwarding (`ECG` > `ANT+` > `PPG`, `5000 ms` stale fallback) |
 | Broadcasts | `BANALService` <-> `TrackerService` / UI | Emits `SEARCHING_STARTED_FOR_ALL_INTENT`, `SEARCHING_STARTED_FOR_ONE_INTENT`, `SEARCHING_STOPPED_FOR_ONE_INTENT`, `SEARCHING_FINISHED_FOR_ALL_INTENT`, `LAP_SUMMARY`, `SPORT_TYPE_CHANGED_BY_USER_INTENT`; receives `REQUEST_START_SEARCH_FOR_PAIRED_DEVICES`, `REQUEST_NEW_LAP` |
 
@@ -125,3 +125,4 @@ stateDiagram-v2
 | `1.0.9` | 2026-11-19 | AI Agent (`ATT-8917`, `--as agent1`) | `ATT-8917` | Documented `mMultisportBSportType` precedence (subordinate to Tier 1 `mHaveUserSelectedSportType`, overriding `CONFLICT`/parked bike sensors while keeping `getAuthoritativeBSportType()` Tier 1+2), `onConfirmedMultisportTransition` (`mActivityTypeMax` reset + `MULTISPORT_TRANSITION_INTENT`), `advanceLapsForMultisport` + `MyAccumulatorSensor.resetTo(N)` (`resetAccumulatorSensorsTo`), `BANALService.java` (`1,074 LOC`), and `BANALServiceMultisportTransitionTest` / `MyAccumulatorSensorResetToTest` parity (`REQ-FIL-031`, `REQ-PRO-114`). |
 | `1.0.10` | 2026-11-20 | Lane B Author (`ATT-9155`, `--as agent1`) | `ATT-9155` | Delegated unpair events for devices absent from `mMyRemoteDevices` in `DeviceManager.pairingChanged()` (`1,707 LOC`, `+0` net LoC) to `PolarOfflineGattCoordinator.forceDisconnectDevice()` and added `DeviceManagerTeardownTest` coverage (`REQ-CON-054.1`). |
 | `1.0.11` | 2026-11-24 | Lane 2 Author (`ATT-9178`, `--as agent1`) | `ATT-9178` | Restricted `DeviceSearchPeriodicRetryCoordinator` periodic re-search strictly to lost/MIA sensors (`MyRemoteDevice.hasConnectedInSession() == true`, `15s/30s/1m/2m` presets default `1m`), added `device === current` identity guard & eager coordinator init in `DeviceManager` (`1,681 LOC`) + `mTrackingStateChangedReceiver` `onTrackingModeChanged()` workout-end reset for disconnected MIA devices (`REQ-CON-052`). |
+| `1.0.12` | 2026-11-25 | Lane 3 Author (`ATT-9695`, `--as agent1`) | `ATT-9695` | Added volatile Tier-4 `mResolvedBSportType` (`setResolvedBSportType` on `BANALService`/`BANALServiceComm`/static `updateActiveResolvedBSportType`, cleared in `clearInferredSportTelemetry()`) and `getEffectiveBSportType()` / `getEffectiveActiveBSportType()` (`User > Multisport > HW > Kinematic > Resolved`) for `SpeedAndLocationDevice_ATTFused` walking cadence/stride gating while preserving `getAuthoritativeBSportType()` & `getBSportType()` unchanged (`BANALService.java` `1,121 LOC`, `REQ-FIL-046`, `TST-FIL-046`). |

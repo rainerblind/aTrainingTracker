@@ -58,7 +58,12 @@ class SmartphoneImuCadenceEstimator(
     var totalStrides: Int = 0
         private set
 
+    @Volatile
+    var isRunningOrWalkingActive: Boolean = false
+        private set
+
     private var activeCategory: ModeCategory = ModeCategory.SUPPRESSED
+    private var unknownWalkStartTsMs: Long = Long.MIN_VALUE
     private var hasActiveCadenceSession = false
     private var lastEmittedWasNull: Boolean? = null
     private var lastEmitTsMs: Long = Long.MIN_VALUE
@@ -234,7 +239,8 @@ class SmartphoneImuCadenceEstimator(
 
     @Synchronized
     fun reset() {
-        activeCategory = ModeCategory.SUPPRESSED
+        setActiveCategory(ModeCategory.SUPPRESSED)
+        unknownWalkStartTsMs = Long.MIN_VALUE
         hasActiveCadenceSession = false
         latestCadence = null
         totalStrides = 0
@@ -254,12 +260,36 @@ class SmartphoneImuCadenceEstimator(
         clearRunningBuffers()
     }
 
+    private fun setActiveCategory(category: ModeCategory) {
+        activeCategory = category
+        isRunningOrWalkingActive = isRunningCategory(category)
+    }
+
+    private fun updateUnknownWalkDwell(
+        mode: PhoneCarriageMode,
+        sportContext: SportContextHint,
+        timestampMs: Long
+    ) {
+        if (mode == PhoneCarriageMode.WALKING_TRANSITION && sportContext == SportContextHint.UNKNOWN) {
+            if (unknownWalkStartTsMs == Long.MIN_VALUE || timestampMs < unknownWalkStartTsMs) {
+                unknownWalkStartTsMs = timestampMs
+            }
+        } else if (!(mode == PhoneCarriageMode.STATIONARY &&
+                hasActiveCadenceSession &&
+                activeCategory == ModeCategory.RUNNING_STEP &&
+                sportContext == SportContextHint.UNKNOWN)
+        ) {
+            unknownWalkStartTsMs = Long.MIN_VALUE
+        }
+    }
+
     private fun syncModeState(
         mode: PhoneCarriageMode,
         sportContext: SportContextHint,
         timestampMs: Long
     ): ModeCategory {
-        val desired = resolveCategory(mode, sportContext)
+        updateUnknownWalkDwell(mode, sportContext, timestampMs)
+        val desired = resolveCategory(mode, sportContext, timestampMs)
         if (desired == activeCategory) return desired
 
         if (desired == ModeCategory.SUPPRESSED) {
@@ -285,7 +315,7 @@ class SmartphoneImuCadenceEstimator(
         } else if (activeCategory == ModeCategory.RUNNING_ARM && desired == ModeCategory.RUNNING_STEP) {
             currentArmAcfIntervalMs = null
         }
-        activeCategory = desired
+        setActiveCategory(desired)
         if (mode == PhoneCarriageMode.STATIONARY && hasActiveCadenceSession) {
             return desired
         }
@@ -295,21 +325,33 @@ class SmartphoneImuCadenceEstimator(
 
     private fun resolveCategory(
         mode: PhoneCarriageMode,
-        sportContext: SportContextHint
+        sportContext: SportContextHint,
+        timestampMs: Long
     ): ModeCategory {
         return when (mode) {
             PhoneCarriageMode.BIKE_HANDLEBAR,
             PhoneCarriageMode.UNKNOWN -> ModeCategory.SUPPRESSED
 
-            PhoneCarriageMode.WALKING_TRANSITION ->
-                if (sportContext == SportContextHint.RUNNING) {
-                    ModeCategory.RUNNING_STEP
-                } else {
-                    ModeCategory.SUPPRESSED
-                }
+            PhoneCarriageMode.WALKING_TRANSITION -> when (sportContext) {
+                SportContextHint.RUNNING -> ModeCategory.RUNNING_STEP
+                SportContextHint.UNKNOWN ->
+                    if (unknownWalkStartTsMs != Long.MIN_VALUE &&
+                        timestampMs - unknownWalkStartTsMs >= UNKNOWN_WALK_CONFIRM_DWELL_MS
+                    ) {
+                        ModeCategory.RUNNING_STEP
+                    } else {
+                        ModeCategory.SUPPRESSED
+                    }
+                SportContextHint.CYCLING,
+                SportContextHint.OTHER -> ModeCategory.SUPPRESSED
+            }
 
             PhoneCarriageMode.STATIONARY ->
-                if (hasActiveCadenceSession) {
+                if (hasActiveCadenceSession &&
+                    sportContext != SportContextHint.OTHER &&
+                    !(sportContext == SportContextHint.CYCLING && isRunningCategory(activeCategory)) &&
+                    !(sportContext == SportContextHint.RUNNING && isBikeCategory(activeCategory))
+                ) {
                     activeCategory
                 } else {
                     ModeCategory.SUPPRESSED
@@ -336,7 +378,8 @@ class SmartphoneImuCadenceEstimator(
     }
 
     private fun suppressAll() {
-        activeCategory = ModeCategory.SUPPRESSED
+        setActiveCategory(ModeCategory.SUPPRESSED)
+        unknownWalkStartTsMs = Long.MIN_VALUE
         hasActiveCadenceSession = false
         latestCadence = null
         smoothedCadence = 0.0
@@ -947,7 +990,11 @@ class SmartphoneImuCadenceEstimator(
     private fun isBikeCategory(category: ModeCategory): Boolean =
         category == ModeCategory.BIKE_FRONT_POCKET || category == ModeCategory.BIKE_JERSEY_BACK
 
+    private fun isRunningCategory(category: ModeCategory): Boolean =
+        category == ModeCategory.RUNNING_STEP || category == ModeCategory.RUNNING_ARM
+
     companion object {
+        const val UNKNOWN_WALK_CONFIRM_DWELL_MS = 25_000L
         private const val FS_HZ = ImuCadenceDspConstants.FS_HZ
         private const val GRID_STEP_MS = ImuCadenceDspConstants.GRID_STEP_MS
         private const val WINDOW_SAMPLES = ImuCadenceDspConstants.WINDOW_SAMPLES

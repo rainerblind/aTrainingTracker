@@ -170,7 +170,8 @@ data class OfflineReplayScorecard(
     val ertsDescentM: Double?,
     val ertsMinSlopePct: Double?,
     val ertsMaxSlopePct: Double?,
-    val coldStartTimeToMotionSec: Double?
+    val coldStartTimeToMotionSec: Double?,
+    val phoneTotalStrides: Int = 0
 ) {
     /**
      * Formats a concise human-readable scorecard table for CLI output.
@@ -192,7 +193,7 @@ data class OfflineReplayScorecard(
         if (ertsTotalDistanceM != null || ertsAscentM != null) {
             sb.appendLine("ERTS : dist=${f(ertsTotalDistanceM, 1)} m, ascent=${f(ertsAscentM, 1)} m, descent=${f(ertsDescentM, 1)} m, slope=[${f(ertsMinSlopePct, 1)}%, ${f(ertsMaxSlopePct, 1)}%]")
         }
-        sb.appendLine("Cadence (mean spm): phone=${f(phoneCadence.meanSpm, 1)} (n=${phoneCadence.sampleCount}), H10=${f(polarH10Cadence.meanSpm, 1)} (n=${polarH10Cadence.sampleCount}), Verity=${f(polarVerityCadence.meanSpm, 1)} (n=${polarVerityCadence.sampleCount})")
+        sb.appendLine("Cadence (mean spm): phone=${f(phoneCadence.meanSpm, 1)} (n=${phoneCadence.sampleCount}, strides=$phoneTotalStrides), H10=${f(polarH10Cadence.meanSpm, 1)} (n=${polarH10Cadence.sampleCount}), Verity=${f(polarVerityCadence.meanSpm, 1)} (n=${polarVerityCadence.sampleCount})")
         for (cmp in cadenceComparisons) {
             sb.appendLine("  Cadence diff ${cmp.sourceA} vs ${cmp.sourceB}: MAE=${f(cmp.maeSpm, 2)} spm, bias=${f(cmp.biasSpm, 2)} spm (n=${cmp.pairedSeconds}s)")
         }
@@ -225,6 +226,7 @@ data class OfflineReplayScorecard(
             append(",\"carriageModeDistributionPct\":{").append(modesJson).append('}')
             append(",\"inferredSport\":\"").append(inferredSport.name).append('"')
             append(",\"phoneCadenceMeanSpm\":").append(numOrNull(phoneCadence.meanSpm))
+            append(",\"phoneTotalStrides\":").append(phoneTotalStrides)
             append(",\"polarH10CadenceMeanSpm\":").append(numOrNull(polarH10Cadence.meanSpm))
             append(",\"polarVerityCadenceMeanSpm\":").append(numOrNull(polarVerityCadence.meanSpm))
             append(",\"cadenceComparisons\":[").append(cmpJson).append(']')
