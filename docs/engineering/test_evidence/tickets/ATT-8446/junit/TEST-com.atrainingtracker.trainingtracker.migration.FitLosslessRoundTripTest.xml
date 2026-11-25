@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.FitLosslessRoundTripTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-25T01:16:16.826Z" hostname="rainer-HP-EliteBook-850-G5" time="9.055">
+  <properties/>
+  <testcase name="testPedalDynamicsLosslessRoundTrip" classname="com.atrainingtracker.trainingtracker.migration.FitLosslessRoundTripTest" time="2.227"/>
+  <testcase name="testEpicFlagFitRoundTripAndLegacyImportPropagation_tstDat050_3" classname="com.atrainingtracker.trainingtracker.migration.FitLosslessRoundTripTest" time="1.202"/>
+  <testcase name="testEquipmentResolutionAndPersistenceContract" classname="com.atrainingtracker.trainingtracker.migration.FitLosslessRoundTripTest" time="1.117"/>
+  <testcase name="testBikeRadarDeveloperFieldsIngestion" classname="com.atrainingtracker.trainingtracker.migration.FitLosslessRoundTripTest" time="1.141"/>
+  <testcase name="testThirdPartyFitBackwardCompatibility" classname="com.atrainingtracker.trainingtracker.migration.FitLosslessRoundTripTest" time="1.12"/>
+  <testcase name="testSessionMetadataRoundTrip" classname="com.atrainingtracker.trainingtracker.migration.FitLosslessRoundTripTest" time="1.159"/>
+  <testcase name="testSessionMetricsSerialization" classname="com.atrainingtracker.trainingtracker.migration.FitLosslessRoundTripTest" time="1.086"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

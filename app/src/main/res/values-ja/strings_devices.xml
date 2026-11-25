@@ -102,6 +102,7 @@
     <string name="device_altitude_position_pros_cons">+ 天候や気圧ドリフトに影響されず、校正不要で正確な絶対標高を提供。\n- 未キャッシュ地域ではアクティブなインターネット接続が必要；GPS精度に依存し、橋や急崖などでは誤差が生じる場合があります。</string>
 
     <!-- ATT Odometry Fusion Device Configuration (ATT-7751, REQ-SEN-028) -->
+    <string name="device_att_fused_sources_header">データソース</string>
     <string name="device_att_fused_how_it_works">GNSS位置情報、校正済みホイール回転、3Dジャイロの回転を5状態拡張カルマンフィルター（EKF）で統合し、高精度な推測航法を提供します。</string>
     <string name="device_att_fused_pros_cons">+ トンネルや森林でも途切れないトラッキング、サブメートル精度、外れ値の除去。\n- ジャイロセンサーの常時動作によるバッテリー消費の増加。</string>
     <string name="device_att_fused_toggle_gnss">GNSS位置情報を使用</string>

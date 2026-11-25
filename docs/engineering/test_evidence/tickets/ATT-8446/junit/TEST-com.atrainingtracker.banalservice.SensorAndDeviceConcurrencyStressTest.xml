@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.SensorAndDeviceConcurrencyStressTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-25T01:07:16.646Z" hostname="rainer-HP-EliteBook-850-G5" time="18.982">
+  <properties/>
+  <testcase name="TST-TRK-024_2 concurrent MySensor ProxySensor MyAccumulatorSensor and MySensorManager stress test" classname="com.atrainingtracker.banalservice.SensorAndDeviceConcurrencyStressTest" time="9.313"/>
+  <testcase name="TST-TRK-024_3 concurrent LiveWorkoutSession sampling altitude shift and snapshot reads" classname="com.atrainingtracker.banalservice.SensorAndDeviceConcurrencyStressTest" time="1.828"/>
+  <testcase name="TST-TRK-028_2 initial newValue dispatch on ProxySensor occurs without holding monitor locks" classname="com.atrainingtracker.banalservice.SensorAndDeviceConcurrencyStressTest" time="1.509"/>
+  <testcase name="TST-TRK-028_3 source sensor swap in ProxySensor cleanly migrates listeners and propagates values" classname="com.atrainingtracker.banalservice.SensorAndDeviceConcurrencyStressTest" time="1.587"/>
+  <testcase name="TST-TRK-024_1 concurrent DeviceManager and FilterManager operations are thread-safe" classname="com.atrainingtracker.banalservice.SensorAndDeviceConcurrencyStressTest" time="3.079"/>
+  <testcase name="TST-TRK-028_1 concurrent MySensorManager registration and ProxySensor listener queries are deadlock-free" classname="com.atrainingtracker.banalservice.SensorAndDeviceConcurrencyStressTest" time="1.655"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

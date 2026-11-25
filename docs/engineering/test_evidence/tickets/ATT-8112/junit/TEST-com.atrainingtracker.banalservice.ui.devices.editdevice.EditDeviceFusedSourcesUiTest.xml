@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFusedSourcesUiTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-25T01:01:20.307Z" hostname="rainer-HP-EliteBook-850-G5" time="13.554">
+  <properties/>
+  <testcase name="testAttFusedAltitudeSourcesCard_german130FontScale_zeroSwitchOverlapOrCutoff" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFusedSourcesUiTest" time="12.941"/>
+  <testcase name="testSplitToggleTitleAndSubtitle_handlesAsciiFullWidthAndPlainLabels" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFusedSourcesUiTest" time="0.169"/>
+  <testcase name="testAttFusedOdometrySourcesCard_unifiedHeaderGuardsAndToggleInteraction" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFusedSourcesUiTest" time="0.443"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

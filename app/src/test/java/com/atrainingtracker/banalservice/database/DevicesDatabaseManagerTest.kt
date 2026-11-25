@@ -628,17 +628,18 @@ class DevicesDatabaseManagerTest {
                 DevicesDatabaseManager.DevicesDbHelper.PROTOCOL,
                 DevicesDatabaseManager.DevicesDbHelper.NAME,
                 DevicesDatabaseManager.DevicesDbHelper.MANUFACTURER_NAME,
-                DevicesDatabaseManager.DevicesDbHelper.BT_ADDRESS
+                DevicesDatabaseManager.DevicesDbHelper.BT_ADDRESS,
+                DevicesDatabaseManager.DevicesDbHelper.POLAR_LIVE_IMU_ENABLED
             )
             val deviceRows = listOf(
-                listOf(1L, "HRM", "BLUETOOTH_LE", "My Chest Strap", "", h10Mac),
-                listOf(2L, "HRM", "BLUETOOTH_LE", "My Armband", "", verityMac),
-                listOf(3L, "HRM", "ANT_PLUS", "Polar H10 ANT+", "Polar", null),
-                listOf(4L, "HRM", "BLUETOOTH_LE", "Wahoo TICKR", "Wahoo", "11:22:33:44:55:66"),
-                listOf(5L, "HRM", "BLUETOOTH_LE", "Polar H10 Fake", "Polar", spoofedMac),
-                listOf(6L, "RUN_SPEED", "BLUETOOTH_LE", "Stryd Pod", "Stryd", "22:33:44:55:66:77"),
-                listOf(7L, "BIKE_POWER", "ANT_PLUS", "Assioma Duo", "Favero", null),
-                listOf(8L, "ALTITUDE_AND_SLOPE_ATT_FUSED", "SMARTPHONE", "ATT Fused Alt", "Google", null)
+                listOf(1L, "HRM", "BLUETOOTH_LE", "My Chest Strap", "", h10Mac, 1),
+                listOf(2L, "HRM", "BLUETOOTH_LE", "My Armband", "", verityMac, 1),
+                listOf(3L, "HRM", "ANT_PLUS", "Polar H10 ANT+", "Polar", null, 1),
+                listOf(4L, "HRM", "BLUETOOTH_LE", "Wahoo TICKR", "Wahoo", "11:22:33:44:55:66", 1),
+                listOf(5L, "HRM", "BLUETOOTH_LE", "Polar H10 Fake", "Polar", spoofedMac, 1),
+                listOf(6L, "RUN_SPEED", "BLUETOOTH_LE", "Stryd Pod", "Stryd", "22:33:44:55:66:77", 0),
+                listOf(7L, "BIKE_POWER", "ANT_PLUS", "Assioma Duo", "Favero", null, 0),
+                listOf(8L, "ALTITUDE_AND_SLOPE_ATT_FUSED", "SMARTPHONE", "ATT Fused Alt", "Google", null, 0)
             )
             every {
                 mockDb.query(
@@ -715,6 +716,79 @@ class DevicesDatabaseManagerTest {
             assertTrue("Missing PROTOCOL column must safely exclude HRM from Live-IMU without throwing", minimalCadence.deviceIds.isEmpty())
             val minimalHr = manager.getDeviceIdAndNameLists(com.atrainingtracker.banalservice.sensor.SensorType.HR)
             assertEquals(listOf(99L), minimalHr.deviceIds.toList())
+        } finally {
+            com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStore.resetForTesting()
+        }
+    }
+
+    // TST-CON-064.3: DevicesDatabaseManager.getDeviceIdAndNameLists requires POLAR_LIVE_IMU_ENABLED == 1
+    // for CADENCE/STRIDES/VO/GCT while preserving HR/HRV_RMSSD when POLAR_LIVE_IMU_ENABLED == 0
+    @Test
+    fun testGetDeviceIdAndNameLists_requiresPolarLiveImuOptIn_TST_CON_064_3() {
+        val h10OptedInMac = "A0:9E:1A:41:41:41"
+        val h10DisabledMac = "A0:9E:1A:42:42:42"
+        val verityDisabledMac = "A0:9E:1A:43:43:43"
+        try {
+            com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStore.recordSdkDeviceType(
+                null, h10OptedInMac,
+                com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStore.PolarDeviceType.H10
+            )
+            com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStore.recordSdkDeviceType(
+                null, h10DisabledMac,
+                com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStore.PolarDeviceType.H10
+            )
+            com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStore.recordSdkDeviceType(
+                null, verityDisabledMac,
+                com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStore.PolarDeviceType.VERITY_SENSE
+            )
+
+            val cols = listOf(
+                DevicesDatabaseManager.DevicesDbHelper.C_ID,
+                DevicesDatabaseManager.DevicesDbHelper.DEVICE_TYPE,
+                DevicesDatabaseManager.DevicesDbHelper.PROTOCOL,
+                DevicesDatabaseManager.DevicesDbHelper.NAME,
+                DevicesDatabaseManager.DevicesDbHelper.MANUFACTURER_NAME,
+                DevicesDatabaseManager.DevicesDbHelper.BT_ADDRESS,
+                DevicesDatabaseManager.DevicesDbHelper.POLAR_LIVE_IMU_ENABLED
+            )
+            val rows = listOf(
+                listOf(10L, "HRM", "BLUETOOTH_LE", "H10 Opted-In", "Polar", h10OptedInMac, 1),
+                listOf(11L, "HRM", "BLUETOOTH_LE", "H10 Disabled", "Polar", h10DisabledMac, 0),
+                listOf(12L, "HRM", "BLUETOOTH_LE", "Verity Disabled", "Polar", verityDisabledMac, 0),
+                listOf(13L, "HRM", "BLUETOOTH_LE", "H10 Null IMU", "Polar", "A0:9E:1A:44:44:44", null)
+            )
+            every {
+                mockDb.query(
+                    DevicesDatabaseManager.DevicesDbHelper.DEVICES,
+                    isNull(), isNull(), isNull(), isNull(), isNull(), isNull()
+                )
+            } answers { MockCursorFactory.create(cols, rows) }
+
+            val manager = object : DevicesDatabaseManager(mockContext) {
+                override val database: SQLiteDatabase get() = mockDb
+            }
+
+            for (imuMetric in listOf(
+                com.atrainingtracker.banalservice.sensor.SensorType.CADENCE,
+                com.atrainingtracker.banalservice.sensor.SensorType.STRIDES,
+                com.atrainingtracker.banalservice.sensor.SensorType.VERTICAL_OSCILLATION,
+                com.atrainingtracker.banalservice.sensor.SensorType.GROUND_CONTACT_TIME
+            )) {
+                assertEquals(
+                    "Only POLAR_LIVE_IMU_ENABLED=1 row may pass for $imuMetric",
+                    listOf(10L),
+                    manager.getDeviceIdAndNameLists(imuMetric).deviceIds.toList()
+                )
+            }
+
+            assertEquals(
+                listOf(10L, 11L, 12L, 13L),
+                manager.getDeviceIdAndNameLists(com.atrainingtracker.banalservice.sensor.SensorType.HR).deviceIds.toList()
+            )
+            assertEquals(
+                listOf(10L, 11L, 12L, 13L),
+                manager.getDeviceIdAndNameLists(com.atrainingtracker.banalservice.sensor.SensorType.HRV_RMSSD).deviceIds.toList()
+            )
         } finally {
             com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarOfflineCapabilityStore.resetForTesting()
         }

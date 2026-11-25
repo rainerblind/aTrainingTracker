@@ -1,0 +1,65 @@
+{
+  "android_test_summary": {
+    "details": "190 Android unit/Robolectric/replay/contract tests passed across 15 JUnit XML suites (0 fail, 0 err, 0 skip; excludes pre-existing ATT-9681 TuningPreferencesDataStoreRoundTripTest).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 190
+  },
+  "checks": [
+    {
+      "details": "Android: 190 Android unit/Robolectric/replay/contract tests passed across 15 JUnit XML suites (0 fail, 0 err, 0 skip; excludes pre-existing ATT-9681 TuningPreferencesDataStoreRoundTripTest). | Python: N/A (0 Python files changed)",
+      "failing_tests": [],
+      "name": "dependent_unit_tests",
+      "passed": true
+    },
+    {
+      "details": "All safety linters passed.",
+      "name": "static_safety_linters",
+      "passed": true
+    },
+    {
+      "details": "Deliverable lint passed (2 file(s)).",
+      "name": "deliverable_lint",
+      "passed": true
+    },
+    {
+      "details": "PASS: Zero Git conflict markers detected (12682 tracked file(s) scanned).",
+      "name": "conflict_markers",
+      "passed": true
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "e1ed9649399a918840771477f89db659b0389aff",
+  "junit_xml_files": [
+    "junit/TEST-com.atrainingtrac-HBFN464QLFGQ8.banalservice.devices.SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.BANALServiceMultisportTransitionTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.BANALServiceSportInferenceTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.KinematicSportTypeDiscriminatorTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.PhoneCarriageClassifierTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.odometry.SmartphoneImuCadenceEstimatorTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.replay.OfflineReplayCliTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.replay.OfflineTelemetryReplayHarnessTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.DetailedDesignParityContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.InterfaceSignatureDriftContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServiceFinalizationTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.tracker.TrackerServiceStateMachineCharacterisationTest.xml"
+  ],
+  "python_test_summary": {
+    "details": "Skipped (--skip-tests).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "risk_tier": "tier-a",
+  "run_started_utc": "2026-11-25T03:03:37.023770+00:00",
+  "schema_version": "1.0.0",
+  "screenshots": [
+    "screenshots/att9695_emulator_smoke.png"
+  ],
+  "ticket_key": "ATT-9695",
+  "ui_touching": false,
+  "verdict": "PASS"
+}

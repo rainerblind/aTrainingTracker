@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarTopDownVehicleMarkerTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-25T00:18:56.621Z" hostname="rainer-HP-EliteBook-850-G5" time="23.767">
+  <properties/>
+  <testcase name="resolveTopDownVehicleVisualSpec_enforcesNonMotorcycleCompactCarAndDistinctProportions" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarTopDownVehicleMarkerTest" time="16.25"/>
+  <testcase name="topDownMarkers_preserveTouchPassThroughAndOpaqueNonPulsingHysteresis" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarTopDownVehicleMarkerTest" time="5.631"/>
+  <testcase name="topDownMarkers_renderDistinctSilhouettesUnclippedAndClampedOnFrame1" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarTopDownVehicleMarkerTest" time="0.635"/>
+  <testcase name="markerStyleEnum_defaultsToCompactBadgeAndDeserializesSafely" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarTopDownVehicleMarkerTest" time="0.147"/>
+  <testcase name="captureAtt8959TopDownVehiclesPreviewPng" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarTopDownVehicleMarkerTest" time="0.628"/>
+  <testcase name="fullScreenStyleSwitch_togglesBetweenCompactBadgeAndTopDown_andRespectsV1LaneGuideGate" classname="com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarTopDownVehicleMarkerTest" time="0.468"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

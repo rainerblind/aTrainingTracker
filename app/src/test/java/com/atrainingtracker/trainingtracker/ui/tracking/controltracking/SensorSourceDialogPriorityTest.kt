@@ -72,7 +72,9 @@ class SensorSourceDialogPriorityTest {
         protocol: Protocol = Protocol.SMARTPHONE,
         manufacturer: String = "TestManufacturer",
         btAddress: String? = null,
-        hrModality: HrModality? = null
+        hrModality: HrModality? = null,
+        isPaired: Boolean = true,
+        polarLiveImuEnabled: Boolean = false
     ): DeviceUiData {
         return DeviceUiData(
             id = id,
@@ -81,7 +83,7 @@ class SensorSourceDialogPriorityTest {
             lastSeen = null,
             manufacturer = manufacturer,
             deviceName = name,
-            isPaired = true,
+            isPaired = isPaired,
             linkedEquipment = emptyList(),
             availableEquipment = emptyList(),
             powerFeaturesFlags = null,
@@ -98,7 +100,8 @@ class SensorSourceDialogPriorityTest {
             allValues = null,
             isNewlyDiscovered = false,
             btAddress = btAddress,
-            hrModality = hrModality
+            hrModality = hrModality,
+            polarLiveImuEnabled = polarLiveImuEnabled
         )
     }
 
@@ -496,16 +499,23 @@ class SensorSourceDialogPriorityTest {
         val mockContext = mockk<Context>(relaxed = true)
         every { mockContext.getString(com.atrainingtracker.R.string.devices_unknown_manufacturer) } returns "Unbekannter Hersteller"
 
-        val bleH10Renamed = createDevice(1L, "Brustgurt", DeviceType.HRM, Protocol.BLUETOOTH_LE, "", btAddress = h10Mac)
+        val bleH10Renamed = createDevice(
+            1L, "Brustgurt", DeviceType.HRM, Protocol.BLUETOOTH_LE, "",
+            btAddress = h10Mac, polarLiveImuEnabled = true
+        )
         val bleH10LegacyUnknownMfg = createDevice(
             2L,
             "Polar H10 99887766",
             DeviceType.HRM,
             Protocol.BLUETOOTH_LE,
             "Unbekannter Hersteller",
-            btAddress = "A0:9E:1A:53:53:53"
+            btAddress = "A0:9E:1A:53:53:53",
+            polarLiveImuEnabled = true
         )
-        val bleVerityRenamed = createDevice(3L, "Armband", DeviceType.HRM, Protocol.BLUETOOTH_LE, "", btAddress = verityMac)
+        val bleVerityRenamed = createDevice(
+            3L, "Armband", DeviceType.HRM, Protocol.BLUETOOTH_LE, "",
+            btAddress = verityMac, polarLiveImuEnabled = true
+        )
         val antH10 = createDevice(4L, "Polar H10 ANT+", DeviceType.HRM, Protocol.ANT_PLUS, "Polar")
         val bleGenericHrm = createDevice(5L, "Wahoo TICKR", DeviceType.HRM, Protocol.BLUETOOTH_LE, "Wahoo", btAddress = "11:22:33:44:55:66")
         val bikePower = createDevice(6L, "Assioma Duo", DeviceType.BIKE_POWER, Protocol.ANT_PLUS, "Favero")
@@ -547,5 +557,95 @@ class SensorSourceDialogPriorityTest {
             context = mockContext
         )
         assertEquals(5, hrNotConnected.size)
+    }
+
+    // TST-CON-064.2: SensorSourceDialog.sortNotConnectedDevices enforces paired + polarLiveImuEnabled + TIRAMISU
+    // and preserves CADENCE_PRIORITY / STRIDES_PRIORITY ordering
+    @Test
+    fun testNotConnectedDevices_gatesPolarLiveImuOptInPairedAndCadencePriority_TST_CON_064_2() {
+        val h10MacOptedIn = "A0:9E:1A:71:71:71"
+        val h10MacDisabled = "A0:9E:1A:72:72:72"
+        val h10MacUnpaired = "A0:9E:1A:73:73:73"
+        val verityMacOptedIn = "A0:9E:1A:74:74:74"
+        val verityMacDisabled = "A0:9E:1A:75:75:75"
+        PolarOfflineCapabilityStore.recordSdkDeviceType(null, h10MacOptedIn, PolarOfflineCapabilityStore.PolarDeviceType.H10)
+        PolarOfflineCapabilityStore.recordSdkDeviceType(null, h10MacDisabled, PolarOfflineCapabilityStore.PolarDeviceType.H10)
+        PolarOfflineCapabilityStore.recordSdkDeviceType(null, h10MacUnpaired, PolarOfflineCapabilityStore.PolarDeviceType.H10)
+        PolarOfflineCapabilityStore.recordSdkDeviceType(null, verityMacOptedIn, PolarOfflineCapabilityStore.PolarDeviceType.VERITY_SENSE)
+        PolarOfflineCapabilityStore.recordSdkDeviceType(null, verityMacDisabled, PolarOfflineCapabilityStore.PolarDeviceType.VERITY_SENSE)
+
+        val strydFootpod = createDevice(10L, "Stryd Pod", DeviceType.RUN_SPEED, Protocol.BLUETOOTH_LE, "Stryd")
+        val assiomaPower = createDevice(11L, "Assioma Duo", DeviceType.BIKE_POWER, Protocol.ANT_PLUS, "Favero")
+        val h10OptedIn = createDevice(
+            12L, "Polar H10 OptIn", DeviceType.HRM, Protocol.BLUETOOTH_LE, "Polar",
+            btAddress = h10MacOptedIn, isPaired = true, polarLiveImuEnabled = true
+        )
+        val verityOptedIn = createDevice(
+            13L, "Verity OptIn", DeviceType.HRM, Protocol.BLUETOOTH_LE, "Polar",
+            btAddress = verityMacOptedIn, isPaired = true, polarLiveImuEnabled = true
+        )
+        val h10Disabled = createDevice(
+            14L, "Polar H10 Disabled", DeviceType.HRM, Protocol.BLUETOOTH_LE, "Polar",
+            btAddress = h10MacDisabled, isPaired = true, polarLiveImuEnabled = false
+        )
+        val verityDisabled = createDevice(
+            15L, "Verity Disabled", DeviceType.HRM, Protocol.BLUETOOTH_LE, "Polar",
+            btAddress = verityMacDisabled, isPaired = true, polarLiveImuEnabled = false
+        )
+        val h10Unpaired = createDevice(
+            16L, "Polar H10 Unpaired", DeviceType.HRM, Protocol.BLUETOOTH_LE, "Polar",
+            btAddress = h10MacUnpaired, isPaired = false, polarLiveImuEnabled = true
+        )
+        val antH10 = createDevice(
+            17L, "Polar H10 ANT+", DeviceType.HRM, Protocol.ANT_PLUS, "Polar",
+            isPaired = true, polarLiveImuEnabled = true
+        )
+        val attFused = createDevice(
+            18L, "ATT Fused", DeviceType.SPEED_AND_LOCATION_ATT_FUSED, Protocol.SMARTPHONE, "Google"
+        )
+
+        val allDevices = listOf(
+            attFused, h10Disabled, verityDisabled, h10Unpaired, antH10, verityOptedIn, h10OptedIn, assiomaPower, strydFootpod
+        )
+
+        // API 33+: CADENCE_PRIORITY = RUN_SPEED (10) < BIKE_POWER (11) < HRM [Polar H10 OptIn (12) < Verity OptIn (13)] < ATT_FUSED (18)
+        val cadenceApi34 = sortNotConnectedDevices(
+            allDevices = allDevices,
+            activeDeviceIds = emptySet(),
+            potentialTypes = DeviceType.getDeviceTypeList(SensorType.CADENCE) ?: emptySet(),
+            sensorType = SensorType.CADENCE,
+            sdkInt = android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE
+        )
+        assertEquals(listOf(10L, 11L, 12L, 13L, 18L), cadenceApi34.map { it.id })
+
+        // STRIDES_PRIORITY = RUN_SPEED (10) < HRM (12, 13) < ATT_FUSED (18)
+        val stridesApi34 = sortNotConnectedDevices(
+            allDevices = allDevices,
+            activeDeviceIds = emptySet(),
+            potentialTypes = DeviceType.getDeviceTypeList(SensorType.STRIDES) ?: emptySet(),
+            sensorType = SensorType.STRIDES,
+            sdkInt = android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE
+        )
+        assertEquals(listOf(10L, 12L, 13L, 18L), stridesApi34.map { it.id })
+
+        // API 32 (< TIRAMISU): ALL Live-IMU HRMs excluded even if paired & opted-in
+        val cadenceApi32 = sortNotConnectedDevices(
+            allDevices = allDevices,
+            activeDeviceIds = emptySet(),
+            potentialTypes = DeviceType.getDeviceTypeList(SensorType.CADENCE) ?: emptySet(),
+            sensorType = SensorType.CADENCE,
+            sdkInt = android.os.Build.VERSION_CODES.S_V2
+        )
+        assertEquals(listOf(10L, 11L, 18L), cadenceApi32.map { it.id })
+
+        // HR selection remains inclusive across paired/opt-in/API levels
+        val hrApi32 = sortNotConnectedDevices(
+            allDevices = allDevices,
+            activeDeviceIds = emptySet(),
+            potentialTypes = DeviceType.getDeviceTypeList(SensorType.HR) ?: emptySet(),
+            sensorType = SensorType.HR,
+            sdkInt = android.os.Build.VERSION_CODES.S_V2
+        )
+        assertEquals(6, hrApi32.size)
     }
 }

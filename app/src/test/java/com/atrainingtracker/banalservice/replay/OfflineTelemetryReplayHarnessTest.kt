@@ -250,6 +250,85 @@ class OfflineTelemetryReplayHarnessTest {
         assertEquals(candidate.dominantCarriagePct - baseline.dominantCarriagePct, diff.deltaDominantCarriagePct, 1e-9)
     }
 
+    // TST-FIL-046.3: Synthetic phone-only walk (with delayed STATE RUN & without STATE) emits continuous
+    // walking CADENCE (~52 spm) & STRIDES; cycling bakery stop emits 0 walking strides.
+    @Test
+    fun replay_phoneOnlyWalkAndCyclingBakeryStop_emitsWalkCadenceStridesAndSuppressesBakeryWalk_tstFil046_3() {
+        // 1. Synthetic phone-only walk (180 s @ 1.3 m/s, 1.75 Hz steps = 52.5 spm, zero STEP rows, STATE RUN at t=38 s)
+        val walkRows = ArrayList<PhoneRawTelemetryRow>(10_000)
+        val walkStepHz = 1.75
+        walkRows.add(PhoneRawTelemetryRow(0L, 1_000_000L, PhoneRawChannel.STATE, 1.0, BSportType.UNKNOWN.ordinal.toDouble(), -1.0))
+        for (sec in 0 until 180) {
+            if (sec == 38) {
+                walkRows.add(PhoneRawTelemetryRow(sec * 1_000_000_000L, 1_000_000L + sec * 1000L, PhoneRawChannel.STATE, 4.0, BSportType.RUN.ordinal.toDouble(), 1.0))
+            }
+            for (k in 0 until 50) {
+                val tMs = sec * 1000L + k * 20L
+                val tNs = tMs * 1_000_000L
+                val tSec = tMs / 1000.0
+                val halfTilt = Math.toRadians(18.0 + 4.0 * sin(2.0 * PI * (walkStepHz / 2.0) * tSec)) * 0.5
+                walkRows.add(PhoneRawTelemetryRow(tNs, 1_000_000L + tMs, PhoneRawChannel.ROTVEC, sin(halfTilt), 0.0, 0.0, cos(halfTilt)))
+                walkRows.add(PhoneRawTelemetryRow(tNs, 1_000_000L + tMs, PhoneRawChannel.ACC, 0.3, 9.81 + 2.2 * sin(2.0 * PI * walkStepHz * tSec), 0.4))
+            }
+            val tMs = sec * 1000L
+            walkRows.add(PhoneRawTelemetryRow(tMs * 1_000_000L, 1_000_000L + tMs, PhoneRawChannel.GNSS, 48.137 + sec * 0.000012, 11.576, 520.0, 1.3, 0.0, 4.0))
+        }
+        val walkResult = OfflineTelemetryReplayHarness.replayParsed(walkRows, emptyList())
+        val walkRows1Hz = walkResult.series.filter { it.carriageMode == PhoneCarriageMode.WALKING_TRANSITION }
+        val walkCovered = walkRows1Hz.count { (it.phoneCadenceSpm ?: 0.0) > 0.0 }
+        val coverage = if (walkRows1Hz.isNotEmpty()) walkCovered.toDouble() / walkRows1Hz.size else 0.0
+        assertTrue("Expected > 80% walking cadence coverage (got ${"%.1f".format(Locale.US, coverage * 100)}%)", coverage > 0.80)
+        assertNotNull(walkResult.scorecard.phoneCadence.meanSpm)
+        assertTrue("Expected walking cadence in 45..60 spm (got ${walkResult.scorecard.phoneCadence.meanSpm})", walkResult.scorecard.phoneCadence.meanSpm!! in 45.0..60.0)
+        assertTrue("Expected positive cumulative walking strides (got ${walkResult.scorecard.phoneTotalStrides})", walkResult.scorecard.phoneTotalStrides >= 100)
+
+        // 2. Synthetic cycling ride with STATE BIKE + 20 s bakery walk stop -> 0 walking strides
+        val bikeRows = ArrayList<PhoneRawTelemetryRow>(3_000)
+        bikeRows.add(PhoneRawTelemetryRow(0L, 2_000_000L, PhoneRawChannel.STATE, 9.0, BSportType.BIKE.ordinal.toDouble(), 4.0))
+        for (sec in 0 until 45) {
+            val isBakeryWalk = sec >= 20
+            for (k in 0 until 50) {
+                val tMs = sec * 1000L + k * 20L
+                val tNs = tMs * 1_000_000L
+                val tSec = tMs / 1000.0
+                if (!isBakeryWalk) {
+                    val halfTilt = Math.toRadians(55.0 + 22.0 * sin(2.0 * PI * 1.25 * tSec)) * 0.5
+                    bikeRows.add(PhoneRawTelemetryRow(tNs, 2_000_000L + tMs, PhoneRawChannel.ROTVEC, sin(halfTilt), 0.0, 0.0, cos(halfTilt)))
+                    bikeRows.add(PhoneRawTelemetryRow(tNs, 2_000_000L + tMs, PhoneRawChannel.GYRO, 2.2 * sin(2.0 * PI * 1.25 * tSec), 0.5, 0.3))
+                    bikeRows.add(PhoneRawTelemetryRow(tNs, 2_000_000L + tMs, PhoneRawChannel.ACC, 2.0 * sin(2.0 * PI * 1.25 * tSec), 9.81, 1.5 * cos(2.0 * PI * 1.25 * tSec)))
+                } else {
+                    val halfTilt = Math.toRadians(18.0 + 4.0 * sin(2.0 * PI * (walkStepHz / 2.0) * tSec)) * 0.5
+                    bikeRows.add(PhoneRawTelemetryRow(tNs, 2_000_000L + tMs, PhoneRawChannel.ROTVEC, sin(halfTilt), 0.0, 0.0, cos(halfTilt)))
+                    bikeRows.add(PhoneRawTelemetryRow(tNs, 2_000_000L + tMs, PhoneRawChannel.ACC, 0.3, 9.81 + 2.2 * sin(2.0 * PI * walkStepHz * tSec), 0.4))
+                }
+            }
+            val tMs = sec * 1000L
+            val spd = if (isBakeryWalk) 1.2 else 6.0
+            bikeRows.add(PhoneRawTelemetryRow(tMs * 1_000_000L, 2_000_000L + tMs, PhoneRawChannel.GNSS, 48.137 + sec * 0.00004, 11.576, 520.0, spd, 0.0, 4.0))
+        }
+        val bikeResult = OfflineTelemetryReplayHarness.replayParsed(bikeRows, emptyList())
+        assertEquals("Cycling bakery stop must emit strictly 0 walking strides", 0, bikeResult.scorecard.phoneTotalStrides)
+
+        // 3. Optional real Pixel 10 sidecar verification when local developer raw_telemetry archive is present
+        val rawDir = File("/home/rainer/AndroidStudioProjects/aTrainingTracker_raw_telemetry")
+        val walk1 = File(rawDir, "2026-11-23_093732.phone_raw.csv.gz")
+        val walk2 = File(rawDir, "2026-11-23_171814.phone_raw.csv.gz")
+        val bakeryBike = File(rawDir, "2026-11-22_081402.phone_raw.csv.gz")
+        if (walk1.isFile && walk2.isFile && bakeryBike.isFile) {
+            for (wf in listOf(walk1, walk2)) {
+                val res = OfflineTelemetryReplayHarness.replay(ReplayInputs(phoneRawFile = wf, config = ReplayConfig(enableErtsSmoothing = false)))
+                val walkSec = res.series.filter { it.carriageMode == PhoneCarriageMode.WALKING_TRANSITION }
+                val cov = walkSec.count { (it.phoneCadenceSpm ?: 0.0) > 0.0 }.toDouble() / walkSec.size.coerceAtLeast(1)
+                assertTrue("${wf.name}: expected > 80% walking coverage (got ${"%.1f".format(Locale.US, cov * 100)}%)", cov > 0.80)
+                assertNotNull("${wf.name}: expected mean walking cadence", res.scorecard.phoneCadence.meanSpm)
+                assertTrue("${wf.name}: expected mean cadence in 40..65 spm (got ${res.scorecard.phoneCadence.meanSpm})", res.scorecard.phoneCadence.meanSpm!! in 40.0..65.0)
+                assertTrue("${wf.name}: expected >= 500 cumulative strides (got ${res.scorecard.phoneTotalStrides})", res.scorecard.phoneTotalStrides >= 500)
+            }
+            val bikeRes = OfflineTelemetryReplayHarness.replay(ReplayInputs(phoneRawFile = bakeryBike, config = ReplayConfig(enableErtsSmoothing = false)))
+            assertEquals("Real Pixel 10 cycling bakery stop 2026-11-22_081402 must emit 0 walking strides", 0, bikeRes.scorecard.phoneTotalStrides)
+        }
+    }
+
     // TST-EXP-046.3
     @Test
     fun writeCsv_emitsDotDecimalOneHzRowsWithCanonicalHeader() {

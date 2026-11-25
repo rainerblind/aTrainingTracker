@@ -213,6 +213,10 @@ object SportTypeReconciliationHelper {
                 sportDb.endTransaction()
             }
 
+            if (insertedCount > 0) {
+                com.atrainingtracker.trainingtracker.repositories.SportTypesRepository.notifySportTypesChanged()
+            }
+
             insertedCount
         } finally {
             try {
@@ -278,12 +282,15 @@ object SportTypeReconciliationHelper {
             gcName?.let { put(SportTypeDatabaseManager.SportType.GOLDEN_CHEETAH_NAME, it) }
         }
 
-        sportDb.update(
+        val updated = sportDb.update(
             SportTypeDatabaseManager.SportType.TABLE,
             cv,
             "${SportTypeDatabaseManager.SportType.C_ID} = ?",
             arrayOf(sportId.toString())
         )
+        if (updated > 0) {
+            com.atrainingtracker.trainingtracker.repositories.SportTypesRepository.notifySportTypesChanged()
+        }
     }
 
     /**
@@ -397,6 +404,9 @@ object SportTypeReconciliationHelper {
                 sportDb.endTransaction()
             }
 
+            if (deletedCount > 0) {
+                com.atrainingtracker.trainingtracker.repositories.SportTypesRepository.notifySportTypesChanged()
+            }
             return deletedCount
         } finally {
             try {

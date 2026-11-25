@@ -1,7 +1,7 @@
 # Living Test Specification: UI Components & Design System (Part 3 of 3)
 
 **Document ID**: `DOC-TST-UI-P3`  
-**Version**: 1.0.48  
+**Version**: 1.0.49  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -1168,7 +1168,7 @@
   1. *Navigation Drawer Structure & Route Resolution Test (`TST-UI-513.1`, `NavigationDrawerStateTest.kt` / `AppNavigationDrawerTest.kt` / `AutoPauseNavigationTest.kt`)*:
   • Verify Training drawer group has exactly 4 items (`drawer_start_tracking`, `drawer_workouts`, `drawer_periods`, `drawer_athlete_profile`).
   • Verify `drawer_morning_hrv` is absent from the drawer group items.
-  • Verify Settings drawer group contains exactly 7 items in order: `drawer_training_zones`, `drawer_sport_types`, `drawer_tracking_layouts`, `drawer_display_settings`, `drawer_auto_pause`, `drawer_units`, `drawer_advanced_tuning`.
+  • Verify Settings drawer group contains the 7 release items in order (`drawer_training_zones`, `drawer_sport_types`, `drawer_tracking_layouts`, `drawer_display_settings`, `drawer_auto_pause`, `drawer_units`, `drawer_advanced_tuning`), followed by `drawer_developer_menu` in debug builds (`BuildConfig.DEBUG == true`).
   • Verify `isDrawerItemSelected` separates `drawer_training_zones` and `drawer_athlete_profile`.
   2. *Periods Screen Clean Decoupling Test (`TST-UI-513.2`, `PeriodsViewModelTest.kt`)*:
   • Verify `PeriodsViewModel` operates cleanly without `HrvReadinessRepository` dependencies and `PeriodsTabsScreen` contains zero HRV trend composables.

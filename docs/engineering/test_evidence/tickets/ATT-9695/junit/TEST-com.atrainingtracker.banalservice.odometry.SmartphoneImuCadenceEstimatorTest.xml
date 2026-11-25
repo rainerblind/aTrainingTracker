@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.odometry.SmartphoneImuCadenceEstimatorTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-11-25T02:52:07.958Z" hostname="rainer-HP-EliteBook-850-G5" time="0.145">
+  <properties/>
+  <testcase name="runningArmMode_gyroAbsent_20SecondsWarmArmAcc_countsFullStridesAcrossArmToStepTransition_tstFil029_2" classname="com.atrainingtracker.banalservice.odometry.SmartphoneImuCadenceEstimatorTest" time="0.024"/>
+  <testcase name="gyroAbsentIndoorFallback_accPlusStepDetectorDelivers85StridesPerMinAndStrides_tstFil029_3" classname="com.atrainingtracker.banalservice.odometry.SmartphoneImuCadenceEstimatorTest" time="0.015"/>
+  <testcase name="runningStandstill_zerosCadenceWithinTimeoutWithoutPhantomStrides_tstFil029_3" classname="com.atrainingtracker.banalservice.odometry.SmartphoneImuCadenceEstimatorTest" time="0.004"/>
+  <testcase name="suppressedBikeAndUnknownModes_neverEmitCadenceOrStrides_tstFil029_2" classname="com.atrainingtracker.banalservice.odometry.SmartphoneImuCadenceEstimatorTest" time="0.006"/>
+  <testcase name="bikeJerseyBack_disambiguatesFVs2fAndRejectsLowProminenceRoadChatter_tstFil029_2" classname="com.atrainingtracker.banalservice.odometry.SmartphoneImuCadenceEstimatorTest" time="0.011"/>
+  <testcase name="walkingTransition_unknownDwellConfirmationAndCyclingOtherStationaryGuards_tstFil046_2" classname="com.atrainingtracker.banalservice.odometry.SmartphoneImuCadenceEstimatorTest" time="0.018"/>
+  <testcase name="outOfOrderStepTimestamps_rejectedWithoutDoubleCountingStrides_tstFil029_3" classname="com.atrainingtracker.banalservice.odometry.SmartphoneImuCadenceEstimatorTest" time="0.001"/>
+  <testcase name="bikeFrontPocketGyroAbsentResumeAndJerseyBackLowAmpAndNoiseDropout_tstFil029_2" classname="com.atrainingtracker.banalservice.odometry.SmartphoneImuCadenceEstimatorTest" time="0.013"/>
+  <testcase name="runBicepAndHandheld_track85StridesPerMinAndBlankGlanceSpikes_tstFil029_3" classname="com.atrainingtracker.banalservice.odometry.SmartphoneImuCadenceEstimatorTest" time="0.02"/>
+  <testcase name="bikeFrontPocket_tracks75RpmCoastsToZeroWithin2sAndSuppressesOnHandlebar_tstFil029_2" classname="com.atrainingtracker.banalservice.odometry.SmartphoneImuCadenceEstimatorTest" time="0.008"/>
+  <testcase name="runningArmModes_gyroAndStepDetectorAbsent_fallBackToImpactAccCadenceAndStrides_tstFil029_2" classname="com.atrainingtracker.banalservice.odometry.SmartphoneImuCadenceEstimatorTest" time="0.009"/>
+  <testcase name="runWaistHip_emits85StridesPerMinAndMonotonicStridesFromOne_tstFil029_3" classname="com.atrainingtracker.banalservice.odometry.SmartphoneImuCadenceEstimatorTest" time="0.006"/>
+  <testcase name="nonFiniteSamplesDoNotPoisonIirOrRmsAndShortWindowReturnsNull_tstFil029_2" classname="com.atrainingtracker.banalservice.odometry.SmartphoneImuCadenceEstimatorTest" time="0.01"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

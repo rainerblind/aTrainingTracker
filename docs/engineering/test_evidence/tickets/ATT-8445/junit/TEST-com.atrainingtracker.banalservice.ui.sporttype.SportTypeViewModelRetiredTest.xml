@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.sporttype.SportTypeViewModelRetiredTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-25T02:17:20.212Z" hostname="rainer-HP-EliteBook-850-G5" time="5.509">
+  <properties/>
+  <testcase name="testGetDetailedStats_routesThroughWorkoutRepository" classname="com.atrainingtracker.banalservice.ui.sporttype.SportTypeViewModelRetiredTest" time="4.234"/>
+  <testcase name="testWorkoutDeletedMutationEvent_reloadsSportTypes" classname="com.atrainingtracker.banalservice.ui.sporttype.SportTypeViewModelRetiredTest" time="0.404"/>
+  <testcase name="testAvailableEquipment_callsGetEquipmentItemsWithActiveOnlyTrue" classname="com.atrainingtracker.banalservice.ui.sporttype.SportTypeViewModelRetiredTest" time="0.869"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

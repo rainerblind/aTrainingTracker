@@ -778,4 +778,99 @@ class SmartphoneImuCadenceEstimatorTest {
         )
         assertEquals((1..estimator.totalStrides).toList(), strides)
     }
+
+    // TST-FIL-046.2: Sustained unclassified WALKING_TRANSITION (>= 6 s dwell), < 6 s blip rejection,
+    // UNKNOWN -> RUNNING continuity, STATIONARY sport-contradiction suppression, and CYCLING/OTHER 0-stride guard.
+    @Test
+    fun walkingTransition_unknownDwellConfirmationAndCyclingOtherStationaryGuards_tstFil046_2() {
+        val strides = mutableListOf<Int>()
+        val estimator = SmartphoneImuCadenceEstimator(onStride = { strides.add(it) })
+        val walkStepHz = 1.75 // 105 steps/min = 52.5 strides/min
+
+        // 1. Pre-ride 18 s driveway bike-walkout under UNKNOWN must stay SUPPRESSED (0 cadence, 0 strides)
+        for (tick in 0..900) { // 0..18000 ms (< 25 s dwell)
+            val ts = tick * 20L
+            val tSec = ts / 1000.0
+            estimator.onAccSample(
+                axMps2 = 0.4 * sin(2.0 * PI * (walkStepHz / 2.0) * tSec),
+                ayMps2 = 9.81 + 2.4 * sin(2.0 * PI * walkStepHz * tSec),
+                azMps2 = 0.5 * cos(2.0 * PI * walkStepHz * tSec),
+                timestampMs = ts,
+                mode = PhoneCarriageMode.WALKING_TRANSITION,
+                sportContext = SportContextHint.UNKNOWN
+            )
+        }
+        assertNull("18 s UNKNOWN driveway walkout must stay suppressed", estimator.latestCadence)
+        assertEquals("18 s UNKNOWN driveway walkout must emit 0 strides", 0, estimator.totalStrides)
+        assertTrue(!estimator.isRunningOrWalkingActive)
+
+        // Interleave brief BIKE_FRONT_POCKET -> resets dwell timer cleanly
+        estimator.onModeOrSportChanged(PhoneCarriageMode.BIKE_FRONT_POCKET, SportContextHint.UNKNOWN, 18_200L)
+        assertTrue(!estimator.isRunningOrWalkingActive)
+
+        // 2. Sustained 34 s phone-only walk under UNKNOWN (pure 50-Hz ACC, zero TYPE_STEP_DETECTOR)
+        val walkStartMs = 20_000L
+        for (tick in 0..1700) { // 34.0 s (>= 25 s dwell + 9 s active walking)
+            val ts = walkStartMs + tick * 20L
+            val tSec = ts / 1000.0
+            estimator.onAccSample(
+                axMps2 = 0.4 * sin(2.0 * PI * (walkStepHz / 2.0) * tSec),
+                ayMps2 = 9.81 + 2.4 * sin(2.0 * PI * walkStepHz * tSec),
+                azMps2 = 0.5 * cos(2.0 * PI * walkStepHz * tSec),
+                timestampMs = ts,
+                mode = PhoneCarriageMode.WALKING_TRANSITION,
+                sportContext = SportContextHint.UNKNOWN
+            )
+            if (ts - walkStartMs < SmartphoneImuCadenceEstimator.UNKNOWN_WALK_CONFIRM_DWELL_MS) {
+                assertEquals("Must stay suppressed prior to 25.0 s dwell at dt=${ts - walkStartMs} ms", 0, estimator.totalStrides)
+            }
+        }
+        assertTrue("Sustained >= 25 s UNKNOWN walk must activate RUNNING_STEP", estimator.isRunningOrWalkingActive)
+        assertNotNull("Sustained UNKNOWN walk must emit walking CADENCE", estimator.latestCadence)
+        assertTrue("Expected walking cadence in 45..60 spm (got ${estimator.latestCadence})", estimator.latestCadence!! in 45.0..60.0)
+        assertTrue("Expected positive walking strides (got ${estimator.totalStrides})", estimator.totalStrides >= 4)
+
+        // 3. Seamless UNKNOWN -> RUNNING transition + STATIONARY pause continuity, then CYCLING contradiction suppresses
+        val stridesBeforeRun = estimator.totalStrides
+        estimator.onModeOrSportChanged(PhoneCarriageMode.WALKING_TRANSITION, SportContextHint.RUNNING, 54_020L)
+        assertTrue(estimator.isRunningOrWalkingActive)
+        estimator.onModeOrSportChanged(PhoneCarriageMode.STATIONARY, SportContextHint.RUNNING, 54_500L)
+        assertTrue("STATIONARY under RUNNING must retain active walking session", estimator.isRunningOrWalkingActive)
+        estimator.onModeOrSportChanged(PhoneCarriageMode.STATIONARY, SportContextHint.CYCLING, 55_000L)
+        assertTrue("STATIONARY contradicted by CYCLING must suppress immediately", !estimator.isRunningOrWalkingActive)
+        assertNull(estimator.latestCadence)
+
+        // 4. Long 30 s WALKING_TRANSITION under CYCLING and OTHER must emit 0 additional strides
+        val stridesBeforeSuppressed = estimator.totalStrides
+        assertEquals(stridesBeforeRun, stridesBeforeSuppressed)
+        for (ctx in listOf(SportContextHint.CYCLING, SportContextHint.OTHER)) {
+            val base = if (ctx == SportContextHint.CYCLING) 60_000L else 100_000L
+            for (tick in 0..1500) { // 30 s (> 25 s dwell)
+                val ts = base + tick * 20L
+                val tSec = ts / 1000.0
+                estimator.onAccSample(
+                    axMps2 = 0.4 * sin(2.0 * PI * (walkStepHz / 2.0) * tSec),
+                    ayMps2 = 9.81 + 2.4 * sin(2.0 * PI * walkStepHz * tSec),
+                    azMps2 = 0.5 * cos(2.0 * PI * walkStepHz * tSec),
+                    timestampMs = ts,
+                    mode = PhoneCarriageMode.WALKING_TRANSITION,
+                    sportContext = ctx
+                )
+                if (tick % 28 == 0) {
+                    estimator.onStepDetected(ts, PhoneCarriageMode.WALKING_TRANSITION, ctx)
+                }
+            }
+            assertNull("WALKING_TRANSITION under $ctx must stay null", estimator.latestCadence)
+            assertTrue("WALKING_TRANSITION under $ctx must keep isRunningOrWalkingActive false", !estimator.isRunningOrWalkingActive)
+        }
+        assertEquals("CYCLING and OTHER walking must emit 0 strides", stridesBeforeSuppressed, estimator.totalStrides)
+
+        // 5. Backwards timestamp resets dwell cleanly; reset() clears all state
+        estimator.reset()
+        assertTrue(!estimator.isRunningOrWalkingActive)
+        assertEquals(0, estimator.totalStrides)
+        estimator.onAccSample(0.2, 10.5, 0.3, 10_000L, PhoneCarriageMode.WALKING_TRANSITION, SportContextHint.UNKNOWN)
+        estimator.onAccSample(0.2, 10.5, 0.3, 4_000L, PhoneCarriageMode.WALKING_TRANSITION, SportContextHint.UNKNOWN)
+        assertTrue("Backwards timestamp must reset dwell without promoting", !estimator.isRunningOrWalkingActive)
+    }
 }

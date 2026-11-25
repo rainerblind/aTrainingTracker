@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.replay.OfflineReplayCliTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-25T02:50:28.472Z" hostname="rainer-HP-EliteBook-850-G5" time="1.798">
+  <properties/>
+  <testcase name="cli_missingOrInvalidArguments_returnsUsageErrorCode" classname="com.atrainingtracker.banalservice.replay.OfflineReplayCliTest" time="0.011"/>
+  <testcase name="cli_validInputsWithPassingTruth_printsScorecardWritesCsvAndJsonAndReturnsZero" classname="com.atrainingtracker.banalservice.replay.OfflineReplayCliTest" time="1.128"/>
+  <testcase name="cli_failingGroundTruth_printsViolationsAndReturnsNonZero" classname="com.atrainingtracker.banalservice.replay.OfflineReplayCliTest" time="0.228"/>
+  <testcase name="cli_gnssProviderFlag_selectsAutoGpsFusedAndRejectsInvalidValue_TST_EXP_047_3" classname="com.atrainingtracker.banalservice.replay.OfflineReplayCliTest" time="0.431"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

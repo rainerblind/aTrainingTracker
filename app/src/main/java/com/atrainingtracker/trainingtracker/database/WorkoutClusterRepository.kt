@@ -397,6 +397,7 @@ class WorkoutClusterRepository internal constructor(
                 if (realCount == 0 && !isRouteLinked) {
                     if (DEBUG) android.util.Log.i("WorkoutClusterRepo", "Purging unlinked zero-workout orphan cluster: ${cluster.name} (id: ${cluster.id})")
                     clusterDb.deleteCluster(cluster.id)
+                    WorkoutClusterEngine.invalidatePreviewStationCacheIfInitialized(cluster.id)
                     return@mapIndexed null
                 }
 
@@ -451,6 +452,7 @@ class WorkoutClusterRepository internal constructor(
                 // Persist the enrichment (ATT-441)
                 if (finalCluster != cluster) {
                     clusterDb.updateCluster(finalCluster)
+                    WorkoutClusterEngine.invalidatePreviewStationCacheIfInitialized(finalCluster.id)
                 }
                 finalCluster
             }
@@ -633,6 +635,7 @@ class WorkoutClusterRepository internal constructor(
         if (trimmedName.isEmpty()) return@withContext
         val sanitized = cluster.copy(name = trimmedName)
         clusterDb.updateCluster(sanitized)
+        WorkoutClusterEngine.invalidatePreviewStationCacheIfInitialized(sanitized.id)
         propagateClusterRename(
             clusterId = sanitized.id,
             newName = sanitized.name,
@@ -777,6 +780,7 @@ class WorkoutClusterRepository internal constructor(
 
         // 3. Delete the cluster itself
         clusterDb.deleteCluster(clusterId)
+        WorkoutClusterEngine.invalidatePreviewStationCacheIfInitialized(clusterId)
 
         // 4. Refresh & propagate in-memory
         refreshClusters()
@@ -998,14 +1002,23 @@ class WorkoutClusterRepository internal constructor(
     fun getClusterByIdSync(id: Long): WorkoutCluster? = clusterDb.getClusterById(id)
     fun getClusterByName(name: String): WorkoutCluster? = clusterDb.getClusterByName(name)
     fun getClusterNameById(id: Long): String? = clusterDb.getClusterNameById(id)
-    fun insertCluster(cluster: WorkoutCluster): Long = clusterDb.insertCluster(cluster)
+    fun insertCluster(cluster: WorkoutCluster): Long = clusterDb.insertCluster(cluster).also { id ->
+        if (id > 0L) WorkoutClusterEngine.invalidatePreviewStationCacheIfInitialized(id)
+    }
     fun updateClusterSync(cluster: WorkoutCluster) {
         val trimmedName = cluster.name.trim()
         if (trimmedName.isEmpty()) return
         clusterDb.updateCluster(cluster.copy(name = trimmedName))
+        WorkoutClusterEngine.invalidatePreviewStationCacheIfInitialized(cluster.id)
     }
-    fun deleteClusterSync(id: Long) = clusterDb.deleteCluster(id)
-    fun deleteAllClustersSync() = clusterDb.deleteAllClusters()
+    fun deleteClusterSync(id: Long) {
+        clusterDb.deleteCluster(id)
+        WorkoutClusterEngine.invalidatePreviewStationCacheIfInitialized(id)
+    }
+    fun deleteAllClustersSync() {
+        clusterDb.deleteAllClusters()
+        WorkoutClusterEngine.invalidatePreviewStationCacheIfInitialized(null)
+    }
     fun isNameTaken(name: String, excludeId: Long = -1): Boolean = clusterDb.isNameTaken(name, excludeId)
 
     fun <T> runInTransaction(block: () -> T): T {

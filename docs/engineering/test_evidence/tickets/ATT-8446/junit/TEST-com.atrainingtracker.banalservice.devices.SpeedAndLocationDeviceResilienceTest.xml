@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceResilienceTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-25T01:10:10.943Z" hostname="rainer-HP-EliteBook-850-G5" time="10.208">
+  <properties/>
+  <testcase name="testGpsDevice_requestLocationUpdatesThrowsIllegalArgumentException_handledCleanly" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceResilienceTest" time="1.125"/>
+  <testcase name="testGpsDevice_missingGpsProvider_initializesCleanlyWithoutCrashing" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceResilienceTest" time="1.142"/>
+  <testcase name="testGpsDevice_onProviderEnabled_handlesExceptionGracefully" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceResilienceTest" time="1.123"/>
+  <testcase name="testGpsDevice_onProviderEnabled_getProviderThrowsSecurityException_handledCleanly" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceResilienceTest" time="1.153"/>
+  <testcase name="testGpsDevice_validProvider_registersLocationUpdatesAndShutsDownCleanly" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceResilienceTest" time="1.164"/>
+  <testcase name="testGpsDevice_getProviderThrowsIllegalArgumentException_handledCleanly" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceResilienceTest" time="1.116"/>
+  <testcase name="testGpsDevice_getProviderThrowsSecurityException_handledCleanly" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceResilienceTest" time="1.169"/>
+  <testcase name="testGpsDevice_requestLocationUpdatesThrowsSecurityException_handledCleanly" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceResilienceTest" time="1.118"/>
+  <testcase name="testShutDown_handlesRemoveUpdatesExceptionGracefully" classname="com.atrainingtracker.banalservice.devices.SpeedAndLocationDeviceResilienceTest" time="1.097"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

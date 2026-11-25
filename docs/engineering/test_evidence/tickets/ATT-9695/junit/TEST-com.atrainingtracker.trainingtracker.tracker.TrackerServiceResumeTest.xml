@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" tests="18" skipped="0" failures="0" errors="0" timestamp="2026-11-25T02:51:23.057Z" hostname="rainer-HP-EliteBook-850-G5" time="51.311">
+  <properties/>
+  <testcase name="testResumedSession_publicationSafety_assignsLiveSessionOnlyAfterRehydrationCompletes" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="10.866"/>
+  <testcase name="testRehydrateLiveSession_corruptPolyline_stillRestoresAltitudeDistanceAndExtrema" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="2.511"/>
+  <testcase name="testRecreateValuesWhenResuming_queriesTargetedProjectionAndAppliesState" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="2.356"/>
+  <testcase name="testResumedSession_whenServiceRecreated_constructsNewSessionAndRehydratesFromDb" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="2.225"/>
+  <testcase name="testRehydrateLiveSession_restoresAccumulatedSensorTypesAndCombinesWithNewSamples" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="2.267"/>
+  <testcase name="testGetTableName_rejectsNullEmptyOrLiteralNullString" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="2.155"/>
+  <testcase name="testResumedSession_whenServiceRemainsAlive_reusesLiveSessionAndPreservesRawLatLngs" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="2.387"/>
+  <testcase name="testApplyResumedState_updatesSamplesTableNameAndCompletesFuture" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="2.202"/>
+  <testcase name="testApplyResumedState_inMemoryPauseResume_preservesMultisportActiveLegAndAnchor" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="2.166"/>
+  <testcase name="testRecreateValuesWhenResuming_emptyTable_logsWarningAndEarlyReturnsWithoutMutation" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="2.251"/>
+  <testcase name="testApplyResumedState_seedsAllNineSensorAccumulators" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="2.194"/>
+  <testcase name="testDeferredResumeServiceRecreation_whenBanalServiceConnectsLater_restoresTableNameAndWritesSamplesToResumedTable" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="2.72"/>
+  <testcase name="testApplyResumedState_instantiatesAndRehydratesLiveSession_fromEncodedStreamsAndExtrema" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="2.221"/>
+  <testcase name="testDeferredResumeByUser_whenBanalServiceConnectsLater_recreatesValuesBeforeCreateNewLapAndSearchingFinished" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="2.305"/>
+  <testcase name="testSampleAndWriteToDb_whileIsRehydratingTrue_skipsLiveSessionMutationWithoutRace" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="2.301"/>
+  <testcase name="testResumedSession_finalizeLiveSession_persistsCombinedRouteStreamsAndMergedExtrema" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="3.35"/>
+  <testcase name="testHandleMissingColumns_selfHealsMissingTableWhenBaseFileNameValid_andRejectsUnrecoverableError" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="2.516"/>
+  <testcase name="testRecreateValuesWhenResuming_missingColumn_failsFastWithoutPartialMutation" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceResumeTest" time="2.308"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

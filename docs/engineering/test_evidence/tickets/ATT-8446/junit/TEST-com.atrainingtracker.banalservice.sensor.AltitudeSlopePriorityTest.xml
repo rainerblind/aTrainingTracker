@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.sensor.AltitudeSlopePriorityTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-25T01:15:02.823Z" hostname="rainer-HP-EliteBook-850-G5" time="1.972">
+  <properties/>
+  <testcase name="testPriorityArrays_containAltitudeAndSlopeAttFusedAtRankZero" classname="com.atrainingtracker.banalservice.sensor.AltitudeSlopePriorityTest" time="0.596"/>
+  <testcase name="testAltitudeSlopePriority_highestPrecedenceAndCleanFallback" classname="com.atrainingtracker.banalservice.sensor.AltitudeSlopePriorityTest" time="0.682"/>
+  <testcase name="testGetSensorForDeviceType_returnsSpecificDeviceSensor" classname="com.atrainingtracker.banalservice.sensor.AltitudeSlopePriorityTest" time="0.693"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

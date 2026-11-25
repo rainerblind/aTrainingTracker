@@ -1,0 +1,30 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "dceb2ddaa01ddafe135e14231b686c14f0f217b4",
+  "files": {
+    "evidence_summary.json": "9ccc9f98d0ab2b25eaaa0dd2e30e67cd680bc0f7be9bda9d75d527ce0dc895bf",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml": "ed31556819ade71b1750e08a55ee9b5112ac1776b08357815954ab67eee20403",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.WorkoutClusterCorridorDetectorTest.xml": "2fe5331cd373d53cc32bc68c89bd57dd93b4a700c109a13ed5b184178ad9995f",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.WorkoutClusterCorridorScoringTest.xml": "9b23ae3d71707124a60be687a5787ee83a96220f7642af262d6c07a146582c9e",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.WorkoutClusterEngineOptimizationTest.xml": "fe372ad6a251df8da47fc687c95e6f009d592ed44bc8f4a4ac471e7d1b055052",
+    "junit/TEST-com.atrainingtracker.trainingtracker.database.WorkoutClusterRepositoryTest.xml": "85207ba7f2837a8f6e8a95ec6608ba85cf1f2165a79a4a159ff785a6c282b28a",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModelFitTest.xml": "4db594dbb3266e7ab3f558d919fabef2745f47c49b65958f02542cedc37c42bd",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.ClusterNamingDialogPathPreviewTest.xml": "579a3639c7d41211128e228b35a5071740da0ae64ca2ae5914d8c7b472d90466",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.ImportBackupMapResilienceTest.xml": "f0421860ef86f2dbf784714bc10e593748090b42b946b0acb427e8b5b8121973",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.ImportBackupTabsSealedStateComposeTest.xml": "335dbb053c61ca73a342987889a724cd5778b7c378e47b08c0f5b85e4de4da50",
+    "junit/TEST-com.atrainingtracker.trainingtracker.migration.ImportBackupTabsUiContractTest.xml": "031948dcb88bc0bd489d8d68b2efde1c330a9484d8933036f4385b9fb5176007",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryDeferredExportTest.xml": "30c17ad28e8db05059449ea96e6e82d169a71058cc52bc8bd914d38a7449cd11",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutClusteringTest.xml": "050cc9715c7b770401f7b913b393aee889d10111256300001a0b610a285d6f1a",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.clusters.ClusterNamingDialogEscapeContractTest.xml": "4513ba5fd42aac84d3c631fe5915e8b56ad239b86a602d19544c34e6cc77925f",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.clusters.ClusterNamingDialogLabelsVisualContractTest.xml": "c40fd1e1f924067b19a908819fac7bbcd41d9254c0659610db1646285e68d786",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSplitMapPreviewTest.xml": "65067fecb9f05fd3caaa48a34adbded1179e5463fed79820b2d792eb1b4c7cbe",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.components.workoutlaps.WorkoutLapsIconContractTest.xml": "2b00516a5d0c3f231bf81ac7e9aca1ced33dea037a8d7f0cf5b3f52522a51ae0",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.DarkMapStyleResolutionTest.xml": "b3046d476804666d3e999f9ba73717ba67e49bd43ae2af6464cb93c1e4e904b6",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.PathPreviewMapBoundsTest.xml": "69a4cef9858fcb89c6c60bf33c20614836316721c852b208c424d25b93391040",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.map.UnifiedSpatialMarkersTest.xml": "5a1800e0fcaa11f8d700c3f702cd6bf1deb74517067c0d5eefe78995b13aee6b",
+    "screenshots/ATT-9019_import_backup_screen.png": "facaaa11d042a3fbdbc38264dafa90b43e236a665029ddc3c9046f41f32ce8a4"
+  },
+  "run_started_utc": "2026-11-25T02:31:49.998562+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-9019"
+}

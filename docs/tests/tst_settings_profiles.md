@@ -1,14 +1,14 @@
 # Living Test Specification: Settings, Profiles & Localization
 
 **Document ID**: `DOC-TST-SET`  
-**Version**: 1.0.50  
+**Version**: 1.0.54  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Tests**: 119
+**Total Tests**: 120
 
 ---
 
@@ -961,7 +961,7 @@
 - **Test Description**:
 1. In debug build, set `supporterTierOverride` to `BRONZE`, `SILVER`, `GOLD`, `DIAMOND`; verify `ProFeatureManager.effectiveTier` and `isProActive()` immediately reflect override.
 2. Verify setting override to `NONE` falls back to Pioneer or Subscription status.
-3. *Developer Menu Navigation & Release Isolation (`TST-SET-087.3`)*: Verify `DeveloperMenuScreen` is accessible in the navigation drawer via `R.id.drawer_developer_menu` in debug builds (`BuildConfig.DEBUG == true`), and that the drawer item, route, and debug overrides are completely absent in release builds (`BuildConfig.DEBUG == false`).
+3. *Developer Menu Navigation & Release Isolation (`TST-SET-087.3`)*: Verify `DeveloperMenuScreen` is accessible in the navigation drawer via `R.id.drawer_developer_menu` inside `drawer__settings` directly below `R.id.drawer_advanced_tuning` (and absent from `drawer__info_support`) in debug builds (`BuildConfig.DEBUG == true`), and that the drawer item, route, and debug overrides are completely absent in release builds (`BuildConfig.DEBUG == false`).
 4. *Clean AdvancedTuningScreen (`TST-SET-087.4`)*: Verify `AdvancedTuningScreen` contains zero developer or supporter tier override controls, having relocated them cleanly to `DeveloperMenuScreen`.
 
 ### TST-SET-088: **Supporter N+1 Garage Detector & Upgrade Prompts Verification Suite** [Verified]
@@ -1793,6 +1793,22 @@
 
 ---
 
+### TST-SET-134: **Reactive Sport-Type List & Picker Refresh on Swimming Activation Verification Suite (`ATT-8445`)** [Verified]
+- **Requirement(s)**: `REQ-SET-134`
+- **Component**: `SportTypesRepository.kt`, `SportTypeDatabaseManager.java`, `SportTypeReconciliationHelper.kt`, `SportTypeViewModel.kt`, `SportTypesTabsScreen.kt`, `SportTypesComposeHelpers.kt`, `EditWorkoutViewModel.kt`, `EquipmentViewModel.kt`, `WorkoutClusterHeatmapScreen.kt`, `ManualClusterScreen.kt`, `ImportBackupTabsScreen.kt`
+- **Jira**: `ATT-8445`
+- **Priority**: Medium | **Type**: Functional | **Verification Method**: Unit, Integration, On-Device Manual
+- **Test Description**:
+  1. *Repository Mutation Signal & Idempotency (`TST-SET-134.1`, `SportTypeSwimTemplateTest#testEnsureSwimSportTypeExists_updateAndDelete_emitSportTypesChangedStrictlyOnMutation_TST_SET_134_1`, `SportTypeSwimTemplateTest#testReconcileOrphanSportTypes_emitsSportTypesChangedStrictlyWhenInserted_TST_SET_134_1`)*:
+     • Verify `SportTypeDatabaseManager.ensureSwimSportTypeExists()`, `updateSportType()`, `delete()`, and `SportTypeReconciliationHelper.reconcileOrphanSportTypes()` emit `SportTypesRepository.sportTypesChanged` strictly on actual SQLite mutations (`insertedCount > 0`, while second idempotent calls and protected system-sport deletes emit zero events) and `resetForTesting()` resets the stream.
+  2. *`SportTypeViewModel` & `SportTypesTabsScreen` Live Refresh (`TST-SET-134.2`, `SportTypeViewModelRefreshTest#testEnsureSwimSportTypeExists_immediatelyRefreshesExistingViewModelWithoutRestart_TST_SET_134_2`, `SportTypeViewModelRefreshTest#testSportTypeViewModel_preservesApplicationReflectionConstructor_TST_SET_134_2`, `SportTypesTabsScreenComposeTest#testSportTypesTabsScreen_showsSwimmingImmediatelyOnActivationAndTabSwitch_TST_SET_134_2`, `SportTypesTabsScreenComposeTest#testSportTypesTabsScreen_onResumeTriggersReload_TST_SET_134_2`)*:
+     • Verify `SportTypeViewModel` reacts immediately to `ensureSwimSportTypeExists()` / `sportTypesChanged` by reloading `_sportTypes` with Swimming, and `SportTypesTabsScreen` invokes `viewModel.loadSportTypes()` on `ON_RESUME` and displays Swimming in `All` and `Other` tabs without restart.
+  3. *Downstream Pickers & Architecture Contracts (`TST-SET-134.3`, `EditWorkoutViewModelTest#testSportTypesChanged_refreshesSportTypeNamesWithoutRestart_TST_SET_134_3`, `EquipmentViewModelLifecycleTest#testSportTypesChanged_refreshesBikeRunSportTypesAndReloadsEquipment_TST_SET_134_3`, `SportTypesComposeHelpersTest#testRememberSportTypesList_recomposesImmediatelyOnSportTypesChanged_TST_SET_134_3`)*:
+     • Verify `EditWorkoutViewModel`, `EquipmentViewModel`, and `rememberSportTypesList` Compose pickers update immediately when `sportTypesChanged` emits, and `RepositoryUiCleanlinessContractTest` (`9/9`), `ArchitectureConformanceContractTest` (`11/11`), `AndroidViewModelReflectionContractTest` (`2/2`), and `UiReflectionOnlyTestAuditContractTest` (`4/4`) pass (`Localization Parity: N/A - 0 string changes`).
+- **Verification Evidence**: Tier-1 targeted `:app:testDebugUnitTest --rerun` `69/69 PASS` (`0` fail, `0` err, `0` skip) across 12 suites (`SportTypeSwimTemplateTest` `7/7`, `SportTypeViewModelRefreshTest` `2/2`, `SportTypeViewModelRetiredTest` `3/3`, `SportTypesTabsScreenComposeTest` `2/2`, `SportTypesTabsScreenContractTest` `3/3`, `SportTypesComposeHelpersTest` `1/1`, `EditWorkoutViewModelTest` `19/19`, `EquipmentViewModelLifecycleTest` `6/6`, `RepositoryUiCleanlinessContractTest` `9/9`, `ArchitectureConformanceContractTest` `11/11`, `AndroidViewModelReflectionContractTest` `2/2`, `UiReflectionOnlyTestAuditContractTest` `4/4`; `0` new compiler warnings); live `emulator-5554` (`Pixel_8_Android_15`) verification PASS (`ATT-8445_sport_types_before.png` -> Expert Settings Swimming activation -> `ATT-8445_sport_types_after.png` without app restart, `CRASH_COUNT=0` in `logcat`, `Rule 8.5` PNGs inspected via `read_file`); evidence bundle `docs/engineering/test_evidence/tickets/ATT-8445/`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1846,3 +1862,6 @@
 | `1.0.48` | 2026-11-23 | Lane 2 Author (`ATT-9611`, `--as agent1`) | `ATT-9611` | Promoted `TST-SET-132` to `[Verified]` with all `10/10` verbatim `TestClass#testMethod` citations (`250/250 PASS` across 24 Polar/`WorkoutSamples`/Contract suites, `:app:assembleDebug` PASS, `0` production compiler warnings, evidence bundle `docs/engineering/test_evidence/tickets/ATT-9611/`). |
 | `1.0.49` | 2026-11-24 | Lane 2 Author (`ATT-9578`, `--as agent1`) | `ATT-9578` | Added `TST-SET-133` (`[Planned]`, `.1`–`.4`, strictly symmetric `REQ-SET-131`) covering Robolectric cold-start opt-in/update/reset/upgrade-backfill parity (`SensorsGpsFilterSectionTest`), non-blocking $O(1)$ bridge & `dataStoreOverride` isolation (`SettingsDataStoreJavaHelperNonBlockingTest`), `SmartphoneRawTelemetryRecorder.isEnabled` delegation & `mockkStatic` parity (`SmartphoneRawTelemetryRecorderTest`), and hot-path zero-`runBlocking` contract enforcement (`DataStoreHotPathContractTest`, `N/A - 0 string changes`). |
 | `1.0.50` | 2026-11-24 | Lane 2 Author (`ATT-9578`, `--as agent1`) | `ATT-9578` | Promoted `TST-SET-133` to `[Verified]` with verbatim method citations (`122/122 PASS` across 24 suites, `0` new production warnings, `3/3` safety linters PASS, live `emulator-5554` smoke `CRASH_LOGCAT_CLEAN`, SHA-256 evidence bundle `docs/engineering/test_evidence/tickets/ATT-9578/`). |
+| `1.0.51` | 2026-11-25 | Lane 2 Author (`ATT-8445`, `--as agent1`) | `ATT-8445` | Added `TST-SET-134` (`[Planned]`, `.1`–`.3`, strictly symmetric `REQ-SET-134`) covering `SportTypesRepository.sportTypesChanged` emission/idempotency, `SportTypeViewModel`/`SportTypesTabsScreen` live Swimming refresh, downstream picker reactivity, and architecture/reflection contracts (`N/A - 0 string changes`). |
+| `1.0.52` | 2026-11-25 | Lane 2 Author (`ATT-8445`, `--as agent1`) | `ATT-8445` | Promoted `TST-SET-134` to `[Verified]` with verbatim `TestClass#testMethod` citations (`68/68 PASS` across 12 suites, `0` new compiler warnings, live `emulator-5554` Swimming activation & immediate Sport Types refresh `CRASH_COUNT=0`, `Rule 8.5` before/after PNGs inspected, evidence bundle `docs/engineering/test_evidence/tickets/ATT-8445/`). |
+| `1.0.53` | 2026-11-25 | Lane 2 Author (`ATT-8445`, `--as agent1`) | `ATT-8445` | Stage 6 Bounce 1/5 heal: added `testReconcileOrphanSportTypes_emitsSportTypesChangedStrictlyWhenInserted_TST_SET_134_1` verifying `reconcileOrphanSportTypes()` mutation-gated `sportTypesChanged` emission (`insertedCount > 0` vs `0`). |

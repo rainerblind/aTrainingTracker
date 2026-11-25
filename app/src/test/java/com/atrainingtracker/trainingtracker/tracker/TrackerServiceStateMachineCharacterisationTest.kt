@@ -680,4 +680,14 @@ class TrackerServiceStateMachineCharacterisationTest {
             com.atrainingtracker.banalservice.devices.bluetooth_le.polar.PolarVeritySenseOfflineController.resetForTesting()
         }
     }
+
+    // TST-FIL-046.1: TrackerService.onSearchingFinished() propagates auto-resolved walking BSportType.RUN to BANALService
+    @Test
+    fun testOnSearchingFinished_propagatesResolvedWalkingBSportTypeToBanalService_TST_FIL_046_1() {
+        every { mockSportTypesRepo.getBSportType(any()) } returns BSportType.RUN
+
+        service.onSearchingFinished()
+
+        verify(atLeast = 1) { mockBanalComm.setResolvedBSportType(BSportType.RUN) }
+    }
 }

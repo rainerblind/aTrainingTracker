@@ -20,375 +20,184 @@ package com.atrainingtracker.banalservice.devices;
 
 import android.util.Log;
 
+import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
+
 import com.atrainingtracker.banalservice.BANALService;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
+
+/**
+ * Maps numeric ANT+ / FIT manufacturer IDs to human-readable manufacturer names.
+ *
+ * <p>Uses {@link com.garmin.fit.Manufacturer#getStringFromValue(Integer)} backed by a sparse
+ * override and extension map ({@link #MANUFACTURER_OVERRIDES}) for curated display names and
+ * newer ANT+ IDs beyond the bundled FIT SDK (REQ-CON-063).
+ */
 @SuppressWarnings("SpellCheckingInspection")
 public class Manufacturer {
-    /**
-     * The lookup table
-     **/
-    static final String[] manufacturerString = {
-            "Unknown",           // 0
-            "Garmin",            // 1
-            "Garmin", //fr405_antfs,2
-            "Zephyr",            // 3
-            "Dayton",            // 4
-            "IDT",               // 5
-            "SRM",               // 6
-            "Quarq",             // 7
-            "iBike",             // 8
-            "Saris / CycleOps",  // 9
-            "Spark",             // 10
-            "Tanita",            // 11
-            "Echowell",          // 12
-            "Dynastream",        // 13
-            "Nautilus",          // 14
-            "Dynastream",        // 15
-            "Timex",             // 16
-            "MetriGear",         // 17
-            "Xelic",             // 18
-            "Beurer",            // 19
-            "Cardiosport",       // 20
-            "A & D Medical",     // 21
-            "HMM Diagnostics",   // 22
-            "Suunto",            // 23
-            "Thita",             // 24
-            "G.PULSE",           // 25
-            "Clean Mobile",      // 26
-            "Pedal Brain",       // 27
-            "Peaksware (TrainingPeaks)", // 28
-            "Saxonar",                   // 29
-            "LeMond Fitness",            // 30
-            "Dexcom",                    // 31
-            "Wahoo Fitness",             // 32
-            "Octane Fitness",            // 33
-            "Archinoetics",              // 34
-            "The Hurt Box",              // 35
-            "Citizen Systems",           // 36
-            "Magellan",                  // 37
-            "o-synce",                   // 38
-            "Holux",                     // 39
-            "Concept 2",                 // 40
-            "Shimano",                   // 41 there seems to be no entry
-            "One Giant Leap",            // 42
-            "Ace Sensor",                // 43
-            "Brim Brothers",             // 44
-            "Xplova",                    // 45
-            "Perception Digital",        // 46
-            "bf1systems",                // 47
-            "Pioneer",                   // 48
-            "Spantec",                   // 49
-            "MetaLogics",                // 50
-            "4iiiis",                    // 51
-            "Seiko Epson",               // 52
-            "Seiko Epson",               // 53
-            "Ifor Powell",               // 54
-            "Maxwell Guider",            // 55
-            "StarTrac",                  // 56
-            "Breakaway",                 // 57
-            "ALATECH",                   // 58
-            "Mio Technology (MiTAC Global Corporation)",   // 59
-            "ROTOR",                     // 60
-            "Geonaute",                  // 61
-            "IDbike",                    // 62
-            "Specialized",               // 63
-            "WTEK",                      // 64
-            "Physi-Cal Enterprises Inc. (MIO Global)",     // 65
-            "North Pole Engineering",    // 66
-            "BKOOL",                     // 67
-            "CatEye",                    // 68
-            "Stages Cycling",            // 69
-            "Sigma Sport",               // 70
-            "TomTom",                    // 71
-            "PeriPedal",                 // 72
-            "Wattbike",                  // 73
-            "Unknown",                   // 74 there seems to be no entry
-            "Unknown",                   // 75 there seems to be no entry
-            "Moxy Monitor",              // 76
-            "CicloSport",                // 77
-            "POWERbahn",                 // 78
-            "Acorn Projects",            // 79
-            "LifeBEAM",                  // 80
-            "Bontrager",                 // 81
-            "WELLGO",                    // 82
-            "Scosche",                   // 83
-            "MAGURA",                    // 84
-            "Woodway",                   // 85
-            "Elite",                     // 86
-            "Nielsen-Kellerman",         // 87
-            "DK City",                   // 88
-            "Tacx",                      // 89
-            "Direction Technology",      // 90
-            "Magtonic",                  // 91
-            "1partCarbon",               // 92
-            "Inside Ride Technology",    // 93
-            "Sound of Motion",           // 94
-            "Stryd",                     //	95
-            "Indoorcycling Group",         // 96
-            "MiPulse",                   //	97
-            "Bsx Athletics",             //	98
-            "Look",                      //	99
-            "Campagnolo",                // 100
-            "Body Bike Smart",           // 101
-            "Praxisworks",               // 102
-            "Limits Technology Ltd.",    // 103
-            "TopAction Technology Inc.", // 104
-            "Cosinuss",                  // 105
-            "Fitcare",                   // 106
-            "Magene",                    // 107
-            "Giant Manufacturing Co",    // 108
-            "Tigrasport",                // 109
-            "Salutron",                  // 110
-            "Technogym",                 // 111
-            "Bryton Sensors",            // 112
-            "Latitude Limited",          // 113
-            "Soaring Technology",        // 114
-            "Igpsport",                  // 115
-            "ThinkRider",                // 116
-            "Gopher Sport",              // 117
-            "WaterRower",                // 118
-            "OrangeTheory",              // 119
-	        "Inpeak",                    // 120
-            "Kinetic",                   // 121
-            "Johnson Health Tech",       // 122
-            "Polar Electro",             // 123
-            "Seesense",                  // 124;
-            "NCI Technology",            // 125;
-            "Iqsquare",                  // 126;
-            "Leomo",                     // 127;
-            "ifit com",                  // 128;
-            "Coros Byte",                // 129;
-            "Versa Design",              // 130;
-            "Chileaf",                   // 131;
-            "Cycplus",                   // 132;
-            "Gravaa Byte",               // 133;
-            "Sigeyi",                    // 134;
-            "Coospo",                    // 135;
-            "Geoid",                     // 136;
-            "Bosch",                     // 137;
-            "Kyto",                      // 138;
-            "Kinetic Sports",            // 139;
-            "Decathlon Byte",            // 140;
-            "TQ Systems",                // 141;
-            "Tag Heuer",                 // 142;
-            "Keiser Fitness",            // 143;
-            "Zwift Byte",                // 144;
-            "Porsche EP",                // 145;
-            "Blackbird",                 // 146;
-            "Meilan Byte",               // 147;
-            "Ezon",                      // 148;
-            "Laisi",                     // 149;
-            "Myzone",                    // 150;
-            "Abawo",                     // 151;
-            "Bafang",                    // 152;
-            "Luhong Technology",         // 153;
-            "Unknown",                   // 154 there seems to be no entry
-            "Unknown",                   // 155 there seems to be no entry
-            "Unknown",                   // 156 there seems to be no entry
-            "Unknown",                   // 157 there seems to be no entry
-            "Unknown",                   // 158 there seems to be no entry
-            "Unknown",                   // 159 there seems to be no entry
-            "Unknown",                   // 160 there seems to be no entry
-            "Unknown",                   // 161 there seems to be no entry
-            "Unknown",                   // 162 there seems to be no entry
-            "Unknown",                   // 163 there seems to be no entry
-            "Unknown",                   // 164 there seems to be no entry
-            "Unknown",                   // 165 there seems to be no entry
-            "Unknown",                   // 166 there seems to be no entry
-            "Unknown",                   // 167 there seems to be no entry
-            "Unknown",                   // 168 there seems to be no entry
-            "Unknown",                   // 169 there seems to be no entry
-            "Unknown",                   // 170 there seems to be no entry
-            "Unknown",                   // 171 there seems to be no entry
-            "Unknown",                   // 172 there seems to be no entry
-            "Unknown",                   // 173 there seems to be no entry
-            "Unknown",                   // 174 there seems to be no entry
-            "Unknown",                   // 175 there seems to be no entry
-            "Unknown",                   // 176 there seems to be no entry
-            "Unknown",                   // 177 there seems to be no entry
-            "Unknown",                   // 178 there seems to be no entry
-            "Unknown",                   // 179 there seems to be no entry
-            "Unknown",                   // 180 there seems to be no entry
-            "Unknown",                   // 181 there seems to be no entry
-            "Unknown",                   // 182 there seems to be no entry
-            "Unknown",                   // 183 there seems to be no entry
-            "Unknown",                   // 184 there seems to be no entry
-            "Unknown",                   // 185 there seems to be no entry
-            "Unknown",                   // 186 there seems to be no entry
-            "Unknown",                   // 187 there seems to be no entry
-            "Unknown",                   // 188 there seems to be no entry
-            "Unknown",                   // 189 there seems to be no entry
-            "Unknown",                   // 190 there seems to be no entry
-            "Unknown",                   // 191 there seems to be no entry
-            "Unknown",                   // 192 there seems to be no entry
-            "Unknown",                   // 193 there seems to be no entry
-            "Unknown",                   // 194 there seems to be no entry
-            "Unknown",                   // 195 there seems to be no entry
-            "Unknown",                   // 196 there seems to be no entry
-            "Unknown",                   // 197 there seems to be no entry
-            "Unknown",                   // 198 there seems to be no entry
-            "Unknown",                   // 199 there seems to be no entry
-            "Unknown",                   // 200 there seems to be no entry
-            "Unknown",                   // 201 there seems to be no entry
-            "Unknown",                   // 202 there seems to be no entry
-            "Unknown",                   // 203 there seems to be no entry
-            "Unknown",                   // 204 there seems to be no entry
-            "Unknown",                   // 205 there seems to be no entry
-            "Unknown",                   // 206 there seems to be no entry
-            "Unknown",                   // 207 there seems to be no entry
-            "Unknown",                   // 208 there seems to be no entry
-            "Unknown",                   // 209 there seems to be no entry
-            "Unknown",                   // 210 there seems to be no entry
-            "Unknown",                   // 211 there seems to be no entry
-            "Unknown",                   // 212 there seems to be no entry
-            "Unknown",                   // 213 there seems to be no entry
-            "Unknown",                   // 214 there seems to be no entry
-            "Unknown",                   // 215 there seems to be no entry
-            "Unknown",                   // 216 there seems to be no entry
-            "Unknown",                   // 217 there seems to be no entry
-            "Unknown",                   // 218 there seems to be no entry
-            "Unknown",                   // 219 there seems to be no entry
-            "Unknown",                   // 220 there seems to be no entry
-            "Unknown",                   // 221 there seems to be no entry
-            "Unknown",                   // 222 there seems to be no entry
-            "Unknown",                   // 223 there seems to be no entry
-            "Unknown",                   // 224 there seems to be no entry
-            "Unknown",                   // 225 there seems to be no entry
-            "Unknown",                   // 226 there seems to be no entry
-            "Unknown",                   // 227 there seems to be no entry
-            "Unknown",                   // 228 there seems to be no entry
-            "Unknown",                   // 229 there seems to be no entry
-            "Unknown",                   // 230 there seems to be no entry
-            "Unknown",                   // 231 there seems to be no entry
-            "Unknown",                   // 232 there seems to be no entry
-            "Unknown",                   // 233 there seems to be no entry
-            "Unknown",                   // 234 there seems to be no entry
-            "Unknown",                   // 235 there seems to be no entry
-            "Unknown",                   // 236 there seems to be no entry
-            "Unknown",                   // 237 there seems to be no entry
-            "Unknown",                   // 238 there seems to be no entry
-            "Unknown",                   // 239 there seems to be no entry
-            "Unknown",                   // 240 there seems to be no entry
-            "Unknown",                   // 241 there seems to be no entry
-            "Unknown",                   // 242 there seems to be no entry
-            "Unknown",                   // 243 there seems to be no entry
-            "Unknown",                   // 244 there seems to be no entry
-            "Unknown",                   // 245 there seems to be no entry
-            "Unknown",                   // 246 there seems to be no entry
-            "Unknown",                   // 247 there seems to be no entry
-            "Unknown",                   // 248 there seems to be no entry
-            "Unknown",                   // 249 there seems to be no entry
-            "Unknown",                   // 250 there seems to be no entry
-            "Unknown",                   // 251 there seems to be no entry
-            "Unknown",                   // 252 there seems to be no entry
-            "Unknown",                   // 253 there seems to be no entry
-            "Unknown",                   // 254 there seems to be no entry
-            "Development",               // 255
-            "Unknown",                   // 256 there seems to be no entry
-            "Healthandlife",             // 257
-            "Lezyne",                    // 258
-            "Scribe Labs",               // 259
-            "Zwift",                     // 260
-            "Watteam",                   // 261
-            "Recon",                     // 262
-            "Favero Electronics",        // 263
-            "Dynovelo",                  // 264
-            "Strava",                    // 265
-            "Amer Sports",               // 266
-            "Bryton",                    // 267
-            "Sram",                      // 268
-            "Mio Technology",            // 269
-            "Cobi GmbH",                 // 270
-            "Spivi",                     // 271
-            "Mio Magellan",              // 272
-            "Evesports",                 // 273
-            "Sensitivus Gauge",          // 274
-            "Podoon",                    // 275
-            "Life Time Fitness",         // 276
-            "Falco eMotors Inc.",        // 277
-            "Minoura",                   // 278
-            "Cycliq",                    // 279
-            "Luxottica",                 // 280
-            "Trainer Road",              // 281
-            "The Sufferfest",            // 282
-            "FSA",                       // 283
-            "VirtualTraining",           // 284
-            "FeedbackSports",            // 285
-            "Omata",                     // 286
-            "Vdo",                       // 287
-            "MagneticDays",              // 288
-	    "Hammerhead",                // 289
-	    "Kinetic by Kurt",           // 290
-	    "Shapelog",                  // 291
-	    "Dabuziduo",                 // 292
-	    "Jetblack",                  // 293
-	    "Coros",                     // 294
-	    "Virtugo",                   // 295
-	    "Velosense",                 // 296
-	    "Cycligentinc",              // 297
-	    "Trailforks",                // 298
-	    "Mahle Ebikemotion",         // 299
-	    "Nurvv",                     // 300
-	    "Microprogram",              // 301
-	    "Zone5cloud",                // 302
-	    "Greenteg",                  // 303
-	    "Yamaha Motors",             // 304
-	    "Whoop",                     // 305
-	    "Gravaa",                    // 306
-	    "Onelap",                    // 307
-	    "Monark Exercise",           // 308
-	    "Form",                      // 309
-	    "Decathlon",                 // 310
-	    "Syncros",                   // 311
-	    "Heatup",                    // 312
-	    "Cannondale",                // 313
-	    "True Fitness",              // 314
-	    "Rgt Cycling",               // 315
-	    "Vasa",                      // 316
-	    "Race Republic",             // 317
-	    "Fazua",                     // 318
-	    "Oreka Training",            // 319
-	    "Lishun Electric & Communication", // 320
-	    "Lululemon Studio",          // 321
-	    "Shanyue",                   // 322
-	    "Spinning MDA",              // 323
-	    "Hilldating",                // 324
-	    "Aero Sensor",               // 325
-	    "Nike",                      // 326
-	    "Magicshine",                // 327
-	    "Ictrainer",                 // 328
-	    "Absolute Cycling",          // 329
-	    "EO Swimbetter",             // 330
-	    "Mywhoosh",                  // 331
-	    "Ravemen",                   // 332
-	    "Tektro Racing Products",    // 333
-	    "Darad Innovation Corporation", // 334
-	    "Cycloptim",                 // 335;
-	    "Runna",                     // 337;
-	    "Zepp",                      // 339;
-	    "Peloton",                   // 340;
-	    "Carv",                      // 341;
-	    "Tissot",                    // 342;
-	    "Real Velo",                 // 345;
-	    "Wetech",                    // 346;
-	    "Jespr",                     // 347;
-	    "Huawei",                    // 348;
-	    "Gotoes",                    // 349;
-	    "Cadence App"};              // 350;
-    
     private static final String TAG = "Manufacturer";
     private static final boolean DEBUG = BANALService.getDebug(false);
 
     /**
-     * maps the Manufacturer ID to a string
+     * Sparse overrides preserving curated capitalization/punctuation for FIT SDK entries
+     * and adding ANT+ manufacturer IDs not yet present in the bundled FIT SDK (e.g. 151–153,
+     * 330–350, and curated 5759 ActiGraph).
      */
+    private static final Map<Integer, String> MANUFACTURER_OVERRIDES;
+
+    static {
+        Map<Integer, String> overrides = new HashMap<>();
+        // Curated overrides for FIT SDK tokens (1..329, 5759)
+        overrides.put(2, "Garmin"); // GARMIN_FR405_ANTFS
+        overrides.put(5, "IDT");
+        overrides.put(6, "SRM");
+        overrides.put(8, "iBike");
+        overrides.put(9, "Saris / CycleOps");
+        overrides.put(10, "Spark");
+        overrides.put(13, "Dynastream"); // DYNASTREAM_OEM
+        overrides.put(17, "MetriGear");
+        overrides.put(21, "A & D Medical");
+        overrides.put(22, "HMM Diagnostics");
+        overrides.put(24, "Thita");
+        overrides.put(25, "G.PULSE");
+        overrides.put(28, "Peaksware (TrainingPeaks)");
+        overrides.put(30, "LeMond Fitness");
+        overrides.put(38, "o-synce");
+        overrides.put(40, "Concept 2");
+        overrides.put(47, "bf1systems");
+        overrides.put(50, "MetaLogics");
+        overrides.put(51, "4iiiis");
+        overrides.put(53, "Seiko Epson"); // SEIKO_EPSON_OEM
+        overrides.put(56, "StarTrac");
+        overrides.put(58, "ALATECH");
+        overrides.put(59, "Mio Technology (MiTAC Global Corporation)");
+        overrides.put(60, "ROTOR");
+        overrides.put(62, "IDbike");
+        overrides.put(64, "WTEK");
+        overrides.put(65, "Physi-Cal Enterprises Inc. (MIO Global)");
+        overrides.put(67, "BKOOL");
+        overrides.put(68, "CatEye");
+        overrides.put(70, "Sigma Sport");
+        overrides.put(71, "TomTom");
+        overrides.put(72, "PeriPedal");
+        overrides.put(76, "Moxy Monitor");
+        overrides.put(77, "CicloSport");
+        overrides.put(78, "POWERbahn");
+        overrides.put(79, "Acorn Projects");
+        overrides.put(80, "LifeBEAM");
+        overrides.put(82, "WELLGO");
+        overrides.put(84, "MAGURA");
+        overrides.put(87, "Nielsen-Kellerman");
+        overrides.put(88, "DK City");
+        overrides.put(92, "1partCarbon");
+        overrides.put(93, "Inside Ride Technology");
+        overrides.put(94, "Sound of Motion");
+        overrides.put(96, "Indoorcycling Group");
+        overrides.put(97, "MiPulse");
+        overrides.put(100, "Campagnolo");
+        overrides.put(103, "Limits Technology Ltd.");
+        overrides.put(104, "TopAction Technology Inc.");
+        overrides.put(116, "ThinkRider");
+        overrides.put(118, "WaterRower");
+        overrides.put(119, "OrangeTheory");
+        overrides.put(125, "NCI Technology");
+        overrides.put(128, "ifit com");
+        overrides.put(141, "TQ Systems");
+        overrides.put(145, "Porsche EP");
+        overrides.put(266, "Amer Sports"); // PRECOR in FIT SDK
+        overrides.put(269, "Mio Technology"); // NAVMAN in FIT SDK
+        overrides.put(270, "Cobi GmbH");
+        overrides.put(277, "Falco eMotors Inc.");
+        overrides.put(283, "FSA"); // FULLSPEEDAHEAD
+        overrides.put(284, "VirtualTraining");
+        overrides.put(285, "FeedbackSports");
+        overrides.put(288, "MagneticDays");
+        overrides.put(290, "Kinetic by Kurt");
+        overrides.put(320, "Lishun Electric & Communication"); // LSEC
+        overrides.put(323, "Spinning MDA");
+        overrides.put(5759, "ActiGraph"); // ACTIGRAPHCORP
+
+        // Extensions beyond bundled FIT SDK (21.141.0)
+        overrides.put(151, "Abawo");
+        overrides.put(152, "Bafang");
+        overrides.put(153, "Luhong Technology");
+        overrides.put(330, "EO Swimbetter");
+        overrides.put(331, "Mywhoosh");
+        overrides.put(332, "Ravemen");
+        overrides.put(333, "Tektro Racing Products");
+        overrides.put(334, "Darad Innovation Corporation");
+        overrides.put(335, "Cycloptim");
+        // 336 omitted in FIT Profile
+        overrides.put(337, "Runna");
+        // 338 omitted in FIT Profile
+        overrides.put(339, "Zepp");
+        overrides.put(340, "Peloton");
+        overrides.put(341, "Carv");
+        overrides.put(342, "Tissot");
+        // 343, 344 omitted in FIT Profile
+        overrides.put(345, "Real Velo");
+        overrides.put(346, "Wetech");
+        overrides.put(347, "Jespr");
+        overrides.put(348, "Huawei");
+        overrides.put(349, "Gotoes");
+        overrides.put(350, "Cadence App");
+
+        MANUFACTURER_OVERRIDES = Collections.unmodifiableMap(overrides);
+    }
+
+    /**
+     * Maps an ANT+ / FIT manufacturer ID to a display string, or {@code null} when unknown.
+     */
+    @Nullable
     public static String getName(int manID) {
         if (DEBUG) Log.d(TAG, "getName: " + manID);
 
-        if (manID >= 0 && manID < manufacturerString.length) {
-            return manufacturerString[manID];
-        } else {
+        if (manID <= 0) {
             return null;
         }
+
+        String override = MANUFACTURER_OVERRIDES.get(manID);
+        if (override != null) {
+            return override;
+        }
+
+        String fitToken = com.garmin.fit.Manufacturer.getStringFromValue(manID);
+        return formatFitToken(fitToken);
+    }
+
+    /**
+     * Formats a raw FIT SDK constant token (e.g. {@code "WAHOO_FITNESS"}) into a clean
+     * title-cased display name ({@code "Wahoo Fitness"}), or {@code null} if blank.
+     */
+    @Nullable
+    @VisibleForTesting
+    static String formatFitToken(@Nullable String rawToken) {
+        if (rawToken == null) {
+            return null;
+        }
+        String trimmed = rawToken.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+
+        String[] parts = trimmed.split("_+");
+        StringBuilder sb = new StringBuilder(trimmed.length());
+        for (String part : parts) {
+            if (part.isEmpty()) {
+                continue;
+            }
+            if (sb.length() > 0) {
+                sb.append(' ');
+            }
+            sb.append(part.substring(0, 1).toUpperCase(Locale.ROOT));
+            if (part.length() > 1) {
+                sb.append(part.substring(1).toLowerCase(Locale.ROOT));
+            }
+        }
+        return sb.length() == 0 ? null : sb.toString();
     }
 }

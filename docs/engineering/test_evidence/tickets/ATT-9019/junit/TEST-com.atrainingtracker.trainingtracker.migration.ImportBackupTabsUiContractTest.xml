@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.ImportBackupTabsUiContractTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-25T02:30:32.340Z" hostname="rainer-HP-EliteBook-850-G5" time="40.278">
+  <properties/>
+  <testcase name="testAutoImportFormatSegmentedButtons_germanLocaleSingleLineOnPhoneWidths" classname="com.atrainingtracker.trainingtracker.migration.ImportBackupTabsUiContractTest" time="19.001"/>
+  <testcase name="testPositiveImportUiAlignment_omitsLegacyOrRecoveryTerminology_TST_MIG_016" classname="com.atrainingtracker.trainingtracker.migration.ImportBackupTabsUiContractTest" time="13.169"/>
+  <testcase name="testDropboxRestoreConfirmation_showsAlertDialogAndBlocksRestoreUntilConfirmed_TST_MIG_004" classname="com.atrainingtracker.trainingtracker.migration.ImportBackupTabsUiContractTest" time="6.232"/>
+  <testcase name="testInformativeDashboardLabels_rendersBackupAndRestoreDescriptions_TST_MIG_005" classname="com.atrainingtracker.trainingtracker.migration.ImportBackupTabsUiContractTest" time="0.306"/>
+  <testcase name="testAutoImportFormatSegmentedButtons_renderSingleLineWithUniformHeightOnPhoneWidths" classname="com.atrainingtracker.trainingtracker.migration.ImportBackupTabsUiContractTest" time="0.828"/>
+  <testcase name="testTabbedNavigation_rendersFourTabsAndSwitchesBetweenImportBackupRestore_TST_MIG_008" classname="com.atrainingtracker.trainingtracker.migration.ImportBackupTabsUiContractTest" time="0.742"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

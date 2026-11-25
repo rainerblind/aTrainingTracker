@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.navigation.NavigationDrawerAndDialogContractTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-25T01:16:53.516Z" hostname="rainer-HP-EliteBook-850-G5" time="1.525">
+  <properties/>
+  <testcase name="testDrawerExpansionAndSelectionDispatch" classname="com.atrainingtracker.trainingtracker.ui.navigation.NavigationDrawerAndDialogContractTest" time="0.638"/>
+  <testcase name="testTrackingTabsRouteAndActivityTypeSelectionDialog" classname="com.atrainingtracker.trainingtracker.ui.navigation.NavigationDrawerAndDialogContractTest" time="0.236"/>
+  <testcase name="testDrawerStructureAndGroupPlacement" classname="com.atrainingtracker.trainingtracker.ui.navigation.NavigationDrawerAndDialogContractTest" time="0.126"/>
+  <testcase name="testDrawerTerminologyLocalization_de" classname="com.atrainingtracker.trainingtracker.ui.navigation.NavigationDrawerAndDialogContractTest" time="0.28"/>
+  <testcase name="testDrawerTerminologyLocalization_en" classname="com.atrainingtracker.trainingtracker.ui.navigation.NavigationDrawerAndDialogContractTest" time="0.245"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

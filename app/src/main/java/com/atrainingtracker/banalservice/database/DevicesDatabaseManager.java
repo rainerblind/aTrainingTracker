@@ -487,7 +487,9 @@ public class DevicesDatabaseManager extends BaseDatabaseManager<DevicesDatabaseM
                             String name = nameIdx >= 0 ? BleDisStringSanitizer.sanitize(cursor.getString(nameIdx)) : null;
                             String manufacturer = mfgIdx >= 0 ? BleDisStringSanitizer.sanitize(cursor.getString(mfgIdx)) : null;
                             String btAddress = btAddrIdx >= 0 ? cursor.getString(btAddrIdx) : null;
-                            if (!HrmSensorCapabilityHelper.isSensorSupported(mContext, sensorType, protocol, name, manufacturer, btAddress)) {
+                            int imuIdx = cursor.getColumnIndex(DevicesDbHelper.POLAR_LIVE_IMU_ENABLED);
+                            boolean liveImu = imuIdx >= 0 && !cursor.isNull(imuIdx) && cursor.getInt(imuIdx) == 1;
+                            if (!HrmSensorCapabilityHelper.isSensorSupported(mContext, sensorType, protocol, name, manufacturer, btAddress, liveImu)) {
                                 continue;
                             }
                         }

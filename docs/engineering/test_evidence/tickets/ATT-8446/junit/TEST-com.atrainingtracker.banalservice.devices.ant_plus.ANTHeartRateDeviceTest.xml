@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.ant_plus.ANTHeartRateDeviceTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-25T01:11:33.166Z" hostname="rainer-HP-EliteBook-850-G5" time="9.829">
+  <properties/>
+  <testcase name="testZeroDetectedNullsHeartRate" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTHeartRateDeviceTest" time="0.908"/>
+  <testcase name="testZeroDetectedResetsContinuity" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTHeartRateDeviceTest" time="0.858"/>
+  <testcase name="testUnregisterSensors_cleansUpRrIntervalSensor_andReconnectCreatesNewInstance" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTHeartRateDeviceTest" time="0.974"/>
+  <testcase name="testRrIntervalSensor_deactivatesAndNotifiesNullOnUnregisterAndShutDown_TST_FIL_038_2" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTHeartRateDeviceTest" time="0.879"/>
+  <testcase name="testMultiBeatGapFlagging_preventsFalseBradycardiaSpike" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTHeartRateDeviceTest" time="0.884"/>
+  <testcase name="testEstTimestampUtcEpochConversion" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTHeartRateDeviceTest" time="0.936"/>
+  <testcase name="testSingleBeatContinuityAndDuplicateRejection" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTHeartRateDeviceTest" time="0.926"/>
+  <testcase name="testSensorReRegistrationOnReconnect" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTHeartRateDeviceTest" time="0.863"/>
+  <testcase name="testMonotonicDriftClamping_andPhysiologicalGapFlagging" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTHeartRateDeviceTest" time="0.865"/>
+  <testcase name="testEightBitRolloverContinuity" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTHeartRateDeviceTest" time="0.889"/>
+  <testcase name="testPerDeviceHrv_antHeartRateRegistersLazilyCalculatesAndClearsOnDisconnectAndReset_TST_HRV_050_3" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTHeartRateDeviceTest" time="0.847"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -38,7 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BANALService
-import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
+import com.atrainingtracker.trainingtracker.ui.common.rememberSportTypesList
 import com.atrainingtracker.trainingtracker.ui.components.DropdownSelector
 import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
@@ -59,8 +59,8 @@ fun ManualClusterScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val sportTypesList = remember { SportTypesRepository.getInstance(context.applicationContext as android.app.Application).sportTypesList }
-    val sportNames = remember { sportTypesList.map { it.name } }
+    val sportTypesList = rememberSportTypesList()
+    val sportNames = remember(sportTypesList) { sportTypesList.map { it.name } }
 
     var name by remember { mutableStateOf("") }
     var selectedSportName by remember { mutableStateOf(sportNames.firstOrNull() ?: "") }

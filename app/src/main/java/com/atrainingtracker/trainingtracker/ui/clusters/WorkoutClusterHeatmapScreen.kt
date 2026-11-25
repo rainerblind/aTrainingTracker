@@ -60,9 +60,9 @@ import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterStats
-import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.common.rememberSportTypesList
 import com.atrainingtracker.trainingtracker.ui.components.DropdownSelector
 import com.atrainingtracker.trainingtracker.ui.components.MetricItem
 import com.atrainingtracker.trainingtracker.ui.map.*
@@ -1203,9 +1203,8 @@ fun EditWorkoutClusterIdentityDialog(
     var name by remember { mutableStateOf(cluster.name) }
     var hasCounter by remember { mutableStateOf(cluster.hasCounter) }
     
-    val context = LocalContext.current
-    val sportTypesList = remember { SportTypesRepository.getInstance(context.applicationContext as android.app.Application).sportTypesList }
-    val sportNames = remember { sportTypesList.map { it.name } }
+    val sportTypesList = rememberSportTypesList()
+    val sportNames = remember(sportTypesList) { sportTypesList.map { it.name } }
     
     var selectedSportName by remember { 
         mutableStateOf(sportTypesList.find { it.id == cluster.probableSportId }?.name ?: sportNames.firstOrNull() ?: "") 

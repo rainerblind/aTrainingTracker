@@ -78,8 +78,10 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     val workoutData: StateFlow<WorkoutData?> = _workoutData.asStateFlow()
 
     // Options for Spinners (Sport Types & Equipment)
-    private val sportTypesList: List<SimpleSportTypeInfo> = sportTypesRepository.sportTypesList
+    private val sportTypesList: List<SimpleSportTypeInfo>
+        get() = sportTypesRepository.sportTypesList
     private val equipmentList: List<EquipmentData> = equipmentRepository.equipmentList
+    private var showingAllSportTypes: Boolean = false
 
     private val _sportTypeNames = MutableLiveData<List<String>>()
     val sportTypeNames: LiveData<List<String>> = _sportTypeNames
@@ -169,6 +171,17 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
             PolarRetrySyncCoordinator.completedWorkoutEvents.collect { completedWorkoutId ->
                 if (completedWorkoutId == workoutId) {
                     repository.refreshWorkout(workoutId)
+                }
+            }
+        }
+
+        // Refresh sport-type picker options when SportType.db mutates externally (REQ-SET-134.3)
+        viewModelScope.launch {
+            SportTypesRepository.sportTypesChanged.collect {
+                if (showingAllSportTypes) {
+                    showAllSportTypes()
+                } else {
+                    _workoutData.value?.let { updateSuggestedSportTypeNames(it) }
                 }
             }
         }
@@ -366,6 +379,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     // --- Smart handlers for suggestions (SCRUM-200) ---
 
     private fun updateSuggestedSportTypeNames(data: WorkoutData) {
+        showingAllSportTypes = false
         val suggestedSports = if (!userManuallyChangedSport && (data.bSportType == BSportType.UNKNOWN || 
                 (discoveryManager.getLinkedSportTypeIds(data.id).isEmpty() && data.avgSpeedMps > 0.0 && 
                  discoveryManager.getCandidateBSportTypes(BSportType.UNKNOWN, data.avgSpeedMps).contains(data.bSportType)))) {
@@ -428,6 +442,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     }
 
     private fun showAllSportTypes() {
+        showingAllSportTypes = true
         _sportTypeNames.value = sportTypesList.map { it.name }
     }
 

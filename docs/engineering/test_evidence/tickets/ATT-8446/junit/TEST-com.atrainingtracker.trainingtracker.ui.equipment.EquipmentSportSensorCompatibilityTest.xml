@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSportSensorCompatibilityTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-25T01:16:52.867Z" hostname="rainer-HP-EliteBook-850-G5" time="0.001">
+  <properties/>
+  <testcase name="testIsBikeSensor_cyclingSensorsClassification" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSportSensorCompatibilityTest" time="0.0"/>
+  <testcase name="testIsRunSensor_runningSensorsClassification" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSportSensorCompatibilityTest" time="0.0"/>
+  <testcase name="testSimpleSensorInfo_deviceTypeEncapsulation" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSportSensorCompatibilityTest" time="0.001"/>
+  <testcase name="testIsSharedSensor_universalSensorsClassification" classname="com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSportSensorCompatibilityTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -187,6 +187,7 @@ class KinematicSportTypeDiscriminator {
         private const val MAX_STEP_LENGTH_M = 1.82 // Allows 0.02 Hz ACF interpolation jitter at 5.6 m/s / 3.2 Hz
         private const val BIKE_CYCLE_DISTANCE_M = 3.5
         private const val HIGH_BIKE_SPEED_MPS = 5.0
+        private const val MIN_BIKE_CARRIAGE_VOTE_SPEED_MPS = 1.8
 
         private const val COASTING_MIN_SPEED_MPS = 3.0
         private const val COASTING_MIN_DURATION_MS = 3_000L
@@ -430,13 +431,17 @@ class KinematicSportTypeDiscriminator {
             deltaScore += 2.0 * dtSec
         }
 
-        // 3. Carriage mode coupling (subordinated to active physiological footstrikes & ACC check)
+        // 3. Carriage mode coupling (subordinated to active physiological footstrikes & cycling speed floor)
         if (!hasPhysiologicalRunFootstrike) {
             when (lastCarriageMode) {
                 PhoneCarriageMode.BIKE_HANDLEBAR,
                 PhoneCarriageMode.BIKE_JERSEY_BACK,
                 PhoneCarriageMode.BIKE_FRONT_POCKET -> {
-                    deltaScore += 1.2 * dtSec
+                    // Prevent walking-speed (< 1.8 m/s) pocket carriage flickers from falsely latching BIKE
+                    // while preserving steep 2.0 m/s uphill MTB climbs (REQ-FIL-030.1, REQ-FIL-046.1).
+                    if (speedMps >= MIN_BIKE_CARRIAGE_VOTE_SPEED_MPS) {
+                        deltaScore += 1.2 * dtSec
+                    }
                 }
                 PhoneCarriageMode.RUN_WAIST_HIP,
                 PhoneCarriageMode.RUN_BICEP_ARM,

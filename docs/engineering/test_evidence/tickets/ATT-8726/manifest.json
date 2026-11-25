@@ -1,0 +1,14 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "668bc698aef1dd2d80e871066fef6a64120e5253",
+  "files": {
+    "evidence_summary.json": "ca8d4b3c02a101008c3c7df5c4aa996503f141df0bb91d7c3acf04d615e15b13",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayTest.xml": "ce316c1309eed1a790846dfa103bdfe69b8913887085cd31ae34ab248c085c0e",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarTopDownVehicleMarkerTest.xml": "e58d46794b46498bc832143422711997b3053575d80013216d8014d352d97cee",
+    "screenshots/ATT-8726_emulator_dark.png": "03f5f9826e11895d37dd8dde85313b3193fa213996482405a3974dd0e862007d",
+    "screenshots/ATT-8726_emulator_light.png": "ed9e8e06e5c8cad2c1e254bbe077595faecc726e533d01d632f8b9ebd944b0cb"
+  },
+  "run_started_utc": "2026-11-25T00:18:36.737821+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-8726"
+}

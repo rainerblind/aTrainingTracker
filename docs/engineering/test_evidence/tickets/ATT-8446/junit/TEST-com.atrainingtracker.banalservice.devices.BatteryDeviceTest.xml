@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.BatteryDeviceTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-25T01:08:26.285Z" hostname="rainer-HP-EliteBook-850-G5" time="10.277">
+  <properties/>
+  <testcase name="testRemainingDuration_earlyDropBeforeStabilization_stabilizesAtWarmupThreshold" classname="com.atrainingtracker.banalservice.devices.BatteryDeviceTest" time="0.954"/>
+  <testcase name="testRemainingDuration_activeDrain_projectsRemainingHoursAndMinutes" classname="com.atrainingtracker.banalservice.devices.BatteryDeviceTest" time="0.914"/>
+  <testcase name="testRemainingDuration_zeroDrain_displaysDashes" classname="com.atrainingtracker.banalservice.devices.BatteryDeviceTest" time="0.888"/>
+  <testcase name="testRemainingDuration_floorClamping_preventsPrematureDepletion" classname="com.atrainingtracker.banalservice.devices.BatteryDeviceTest" time="0.947"/>
+  <testcase name="testRemainingDuration_stepDrop_recalibratesSmoothly" classname="com.atrainingtracker.banalservice.devices.BatteryDeviceTest" time="0.923"/>
+  <testcase name="testRemainingDuration_constantPercentage_countsDownMonotonicallyWithoutDrift" classname="com.atrainingtracker.banalservice.devices.BatteryDeviceTest" time="0.962"/>
+  <testcase name="testBatteryLevel_broadcastReceived_updatesPhoneBatterySensor" classname="com.atrainingtracker.banalservice.devices.BatteryDeviceTest" time="0.932"/>
+  <testcase name="testRemainingDuration_pauseNeutrality_preservesCountdownWithoutDrift" classname="com.atrainingtracker.banalservice.devices.BatteryDeviceTest" time="0.955"/>
+  <testcase name="testResetDrainHistory_clearsTrackingState" classname="com.atrainingtracker.banalservice.devices.BatteryDeviceTest" time="0.978"/>
+  <testcase name="testRemainingDuration_deviceCharging_displaysChargingOrDashes" classname="com.atrainingtracker.banalservice.devices.BatteryDeviceTest" time="0.89"/>
+  <testcase name="testRemainingDuration_warmupPeriod_displaysDashes" classname="com.atrainingtracker.banalservice.devices.BatteryDeviceTest" time="0.932"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

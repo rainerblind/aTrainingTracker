@@ -1,0 +1,60 @@
+{
+  "android_test_summary": {
+    "details": "41 Android unit tests passed (8 JUnit XML; TuningPreferencesDataStoreRoundTripTest excluded per pre-existing ATT-9681 livelock).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 41
+  },
+  "checks": [
+    {
+      "details": "Android: 41 Android unit tests passed (8 JUnit XML; TuningPreferencesDataStoreRoundTripTest excluded per pre-existing ATT-9681 livelock). | Python: 0 selected.",
+      "failing_tests": [],
+      "name": "dependent_unit_tests",
+      "passed": true
+    },
+    {
+      "details": "All safety linters passed.",
+      "name": "static_safety_linters",
+      "passed": true
+    },
+    {
+      "details": "Deliverable lint passed (1 file(s)).",
+      "name": "deliverable_lint",
+      "passed": true
+    },
+    {
+      "details": "PASS: Zero Git conflict markers detected (12448 tracked file(s) scanned).",
+      "name": "conflict_markers",
+      "passed": true
+    }
+  ],
+  "ci_run_url": null,
+  "commit_sha": "238e13b882deaff850b504ae10eb3946018d9f2e",
+  "junit_xml_files": [
+    "junit/TEST-com.atrainingtracker.banalservice.devices.EditDeviceDialogAltitudeGuardsTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.devices.EditDeviceDialogGuardsTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogDraftLocaleRotationTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogErtsSmoothingTest.xml",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceViewModelTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.AndroidViewModelReflectionContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningErtsContractTest.xml"
+  ],
+  "python_test_summary": {
+    "details": "Skipped (--skip-tests).",
+    "failing_tests": [],
+    "passed": true,
+    "ran": 0
+  },
+  "risk_tier": "tier-b",
+  "run_started_utc": "2026-11-24T23:50:11.040485+00:00",
+  "schema_version": "1.0.0",
+  "screenshots": [
+    "screenshots/att8113_edit_device_altitude_erts_synced.png",
+    "screenshots/att8113_edit_device_odometry_erts_after.png",
+    "screenshots/att8113_edit_device_odometry_erts_before.png"
+  ],
+  "ticket_key": "ATT-8113",
+  "ui_touching": true,
+  "verdict": "PASS"
+}

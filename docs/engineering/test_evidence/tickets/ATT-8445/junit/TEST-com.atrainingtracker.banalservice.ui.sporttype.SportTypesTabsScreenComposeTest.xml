@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.sporttype.SportTypesTabsScreenComposeTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-25T02:17:19.742Z" hostname="rainer-HP-EliteBook-850-G5" time="12.42">
+  <properties/>
+  <testcase name="testSportTypesTabsScreen_showsSwimmingImmediatelyOnActivationAndTabSwitch_TST_SET_134_2" classname="com.atrainingtracker.banalservice.ui.sporttype.SportTypesTabsScreenComposeTest" time="11.043"/>
+  <testcase name="testSportTypesTabsScreen_onResumeTriggersReload_TST_SET_134_2" classname="com.atrainingtracker.banalservice.ui.sporttype.SportTypesTabsScreenComposeTest" time="1.377"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogErtsSmoothingTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-24T23:29:52.905Z" hostname="rainer-HP-EliteBook-850-G5" time="30.257">
+  <properties/>
+  <testcase name="testPostWorkoutErtsSmoothingCard_pointerClickTogglesSwitchAndShowsLocalizedText_tstFil017_5" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogErtsSmoothingTest" time="18.759"/>
+  <testcase name="testErtsDraft_survivesRotationAndDiscardsWithZeroWritesOnCancel_tstFil017_5" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogErtsSmoothingTest" time="5.813"/>
+  <testcase name="testEditDeviceDialog_excludesErtsSwitchForNonFusedSensors_tstFil017_5" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogErtsSmoothingTest" time="3.484"/>
+  <testcase name="testShouldShowPostWorkoutErtsToggle_exclusivelyForBothAttFusedSensors_tstFil017_5" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogErtsSmoothingTest" time="0.149"/>
+  <testcase name="testBidirectionalSync_betweenBothFusedSensorsAndAdvancedTuningConfig_tstFil017_5" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogErtsSmoothingTest" time="0.255"/>
+  <testcase name="testEditDeviceDialog_altitudeAttFusedHydratesPersistedStateAndTogglesOff_tstFil017_5" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogErtsSmoothingTest" time="0.992"/>
+  <testcase name="testEditDeviceDialog_odometryAttFusedRendersErtsToggleAndPersistsOnSave_tstFil017_5" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogErtsSmoothingTest" time="0.797"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

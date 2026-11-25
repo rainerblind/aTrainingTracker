@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.navigation.AppNavigationDrawerAssetResilienceTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-25T01:20:11.353Z" hostname="rainer-HP-EliteBook-850-G5" time="0.002">
+  <properties/>
+  <testcase name="testLogo512ResourceIdIsValid" classname="com.atrainingtracker.trainingtracker.ui.navigation.AppNavigationDrawerAssetResilienceTest" time="0.0"/>
+  <testcase name="testLogo512PresentInRootAndDensityBuckets" classname="com.atrainingtracker.trainingtracker.ui.navigation.AppNavigationDrawerAssetResilienceTest" time="0.001"/>
+  <testcase name="testDrawerHeaderUsesSafePainterResource" classname="com.atrainingtracker.trainingtracker.ui.navigation.AppNavigationDrawerAssetResilienceTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

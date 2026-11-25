@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogErtsSmoothingTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-25T01:00:52.603Z" hostname="rainer-HP-EliteBook-850-G5" time="26.174">
+  <properties/>
+  <testcase name="testPostWorkoutErtsSmoothingCard_pointerClickTogglesSwitchAndShowsLocalizedText_tstFil017_5" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogErtsSmoothingTest" time="17.39"/>
+  <testcase name="testErtsDraft_survivesRotationAndDiscardsWithZeroWritesOnCancel_tstFil017_5" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogErtsSmoothingTest" time="2.836"/>
+  <testcase name="testEditDeviceDialog_excludesErtsSwitchForNonFusedSensors_tstFil017_5" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogErtsSmoothingTest" time="3.757"/>
+  <testcase name="testShouldShowPostWorkoutErtsToggle_exclusivelyForBothAttFusedSensors_tstFil017_5" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogErtsSmoothingTest" time="0.159"/>
+  <testcase name="testBidirectionalSync_betweenBothFusedSensorsAndAdvancedTuningConfig_tstFil017_5" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogErtsSmoothingTest" time="0.204"/>
+  <testcase name="testEditDeviceDialog_altitudeAttFusedHydratesPersistedStateAndTogglesOff_tstFil017_5" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogErtsSmoothingTest" time="0.941"/>
+  <testcase name="testEditDeviceDialog_odometryAttFusedRendersErtsToggleAndPersistsOnSave_tstFil017_5" classname="com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogErtsSmoothingTest" time="0.886"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

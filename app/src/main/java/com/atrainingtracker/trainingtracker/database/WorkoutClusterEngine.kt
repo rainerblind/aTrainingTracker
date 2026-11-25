@@ -45,17 +45,23 @@ class WorkoutClusterEngine private constructor(context: Context) {
 
     private val appContext = context.applicationContext
     private val clusterRepo get() = WorkoutClusterRepository.getInstance(appContext)
+    private val previewStationCache = ClusterPreviewStationCache()
     private val dbManager = object {
         fun getAllClusters(): List<WorkoutCluster> = clusterRepo.getAllClustersSync()
         fun getClusterById(id: Long): WorkoutCluster? = clusterRepo.getClusterByIdSync(id)
         fun getClusterByName(name: String): WorkoutCluster? = clusterRepo.getClusterByName(name)
-        fun insertCluster(cluster: WorkoutCluster): Long = clusterRepo.insertCluster(cluster)
-        fun updateCluster(cluster: WorkoutCluster) = clusterRepo.updateClusterSync(cluster)
-        fun deleteCluster(id: Long) = clusterRepo.deleteClusterSync(id)
-        fun deleteAllClusters() = clusterRepo.deleteAllClustersSync()
+        fun insertCluster(cluster: WorkoutCluster): Long = clusterRepo.insertCluster(cluster).also { id -> if (id > 0L) previewStationCache.invalidateCluster(id) }
+        fun updateCluster(cluster: WorkoutCluster) { clusterRepo.updateClusterSync(cluster); previewStationCache.invalidateCluster(cluster.id) }
+        fun deleteCluster(id: Long) { clusterRepo.deleteClusterSync(id); previewStationCache.invalidateCluster(id) }
+        fun deleteAllClusters() { clusterRepo.deleteAllClustersSync(); previewStationCache.invalidateAll() }
         fun isNameTaken(name: String, excludeId: Long = -1): Boolean = clusterRepo.isNameTaken(name, excludeId)
     }
     internal val clusterLock = Any()
+
+    /** Invalidates cached decoded corridor stations for [clusterId] or all clusters (`REQ-MIG-062.2`). */
+    fun invalidatePreviewStationCache(clusterId: Long? = null) {
+        if (clusterId == null) previewStationCache.invalidateAll() else previewStationCache.invalidateCluster(clusterId)
+    }
 
     companion object {
         private const val TAG = "WorkoutClusterEngine"
@@ -73,7 +79,12 @@ class WorkoutClusterEngine private constructor(context: Context) {
 
         @androidx.annotation.VisibleForTesting
         fun resetForTesting(newInstance: WorkoutClusterEngine? = null) {
+            instance?.invalidatePreviewStationCache()
             instance = newInstance
+        }
+
+        internal fun invalidatePreviewStationCacheIfInitialized(clusterId: Long? = null) {
+            instance?.invalidatePreviewStationCache(clusterId)
         }
 
         /**
@@ -135,9 +146,6 @@ class WorkoutClusterEngine private constructor(context: Context) {
 
     fun distanceBetween(p1: LatLng, p2: LatLng): Float = Companion.distanceBetween(p1, p2)
 
-    /**
-     * Suggests a cluster match for a workout based on spatial shape metrics, sport type, and optional name.
-     */
     /**
      * Finds the best matching WorkoutCluster candidate evaluating against a set of candidate sport types (ATT-773, REQ-SET-064)
      * and optional 3D altitude extrema coordinates (ATT-502, REQ-SET-065).
@@ -1063,22 +1071,27 @@ class WorkoutClusterEngine private constructor(context: Context) {
 
     /**
      * Calculates similarity between a spatial signature and a WorkoutCluster,
-     * supporting multi-sport candidate evaluation (ATT-773, REQ-SET-064).
-     */
-    /**
-     * Calculates similarity between a spatial signature and a WorkoutCluster,
      * supporting multi-sport candidate evaluation (ATT-773, REQ-SET-064)
      * and optional 3D altitude extrema coordinates (ATT-502, REQ-SET-065).
      */
     @JvmOverloads
     fun calculateSimilarity(
-        start: LatLng, end: LatLng, apex: LatLng, distance: Double, 
-        cluster: WorkoutCluster, 
+        start: LatLng, end: LatLng, apex: LatLng, distance: Double,
+        cluster: WorkoutCluster,
         workoutName: String? = null,
         candidateSportTypes: Set<BSportType>,
         minAltPos: LatLng? = null,
         maxAltPos: LatLng? = null,
         workoutPolyline: List<LatLng>? = null
+    ): Double = calculateSimilarityInternal(
+        start, end, apex, distance, cluster, workoutName, candidateSportTypes, minAltPos, maxAltPos,
+        WorkoutClusterCorridorDetector.samplePolylineStationsOrNull(workoutPolyline, cluster.previewPaths.isNotEmpty())
+    )
+
+    private fun calculateSimilarityInternal(
+        start: LatLng, end: LatLng, apex: LatLng, distance: Double, cluster: WorkoutCluster,
+        workoutName: String?, candidateSportTypes: Set<BSportType>,
+        minAltPos: LatLng?, maxAltPos: LatLng?, preSampledWorkoutStations: List<LatLng>?
     ): Double {
         val useAlt = minAltPos != null && maxAltPos != null &&
                      cluster.minAltLatLng != null && cluster.maxAltLatLng != null &&
@@ -1105,22 +1118,10 @@ class WorkoutClusterEngine private constructor(context: Context) {
             s1 + s2 + s3 + s4
         }
 
-        // Corridor deviation tie-breaking (REQ-SET-097.3, ATT-5899)
-        if (workoutPolyline != null && workoutPolyline.isNotEmpty() && cluster.previewPaths.isNotEmpty()) {
+        // Corridor deviation tie-breaking (REQ-SET-097.3, REQ-MIG-062.2, ATT-5899, ATT-9019)
+        if (preSampledWorkoutStations != null && cluster.previewPaths.isNotEmpty()) {
             try {
-                val workoutStations = WorkoutClusterCorridorDetector.samplePolylineStations(workoutPolyline)
-                val minCorridorDev = cluster.previewPaths.mapNotNull { previewPoly ->
-                    val clusterPts = PolyUtil.decode(previewPoly)
-                    if (clusterPts.isNotEmpty()) {
-                        val clusterStations = WorkoutClusterCorridorDetector.samplePolylineStations(clusterPts)
-                        WorkoutClusterCorridorDetector.computeCorridorDistance(workoutStations, clusterStations)
-                    } else null
-                }.minOrNull()
-
-                if (minCorridorDev != null) {
-                    val corridorCost = (minCorridorDev / 500.0) * 0.30
-                    totalScore += corridorCost
-                }
+                totalScore += previewStationCache.computeCorridorCost(cluster.id, cluster.previewPaths, preSampledWorkoutStations)
             } catch (e: Exception) {
                 if (DEBUG) Log.w(TAG, "Failed to compute corridor deviation for cluster ${cluster.name}", e)
             }
@@ -1221,9 +1222,14 @@ class WorkoutClusterEngine private constructor(context: Context) {
         minAltPos: LatLng? = null,
         maxAltPos: LatLng? = null,
         workoutPolyline: List<LatLng>? = null
-    ): List<Pair<WorkoutCluster, Double>> = clusters.map { 
-        it to calculateSimilarity(start, end, apex, distance, it, workoutName, candidateSportTypes, minAltPos, maxAltPos, workoutPolyline) 
-    }.sortedBy { it.second }
+    ): List<Pair<WorkoutCluster, Double>> {
+        val preSampled = WorkoutClusterCorridorDetector.samplePolylineStationsOrNull(
+            workoutPolyline, clusters.any { it.previewPaths.isNotEmpty() }
+        )
+        return clusters.map {
+            it to calculateSimilarityInternal(start, end, apex, distance, it, workoutName, candidateSportTypes, minAltPos, maxAltPos, preSampled)
+        }.sortedBy { it.second }
+    }
 
     @JvmOverloads
     fun scoreClusters(

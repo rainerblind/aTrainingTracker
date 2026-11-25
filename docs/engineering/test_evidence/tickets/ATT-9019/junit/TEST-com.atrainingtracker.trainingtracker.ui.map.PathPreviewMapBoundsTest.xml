@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.PathPreviewMapBoundsTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-25T02:31:08.108Z" hostname="rainer-HP-EliteBook-850-G5" time="3.912">
+  <properties/>
+  <testcase name="estimateInitialCameraPosition_clampsZoomAndHandlesSinglePointAndAntimeridian" classname="com.atrainingtracker.trainingtracker.ui.map.PathPreviewMapBoundsTest" time="2.161"/>
+  <testcase name="resolvePreviewBounds_prioritizesTargetThenPathThenCompositePoints" classname="com.atrainingtracker.trainingtracker.ui.map.PathPreviewMapBoundsTest" time="0.291"/>
+  <testcase name="createLiteModeMapOptions_enforcesLiteModeAndAttachesCamera" classname="com.atrainingtracker.trainingtracker.ui.map.PathPreviewMapBoundsTest" time="0.173"/>
+  <testcase name="tryApplyPreviewBounds_retriesAfterTransientIllegalStateException" classname="com.atrainingtracker.trainingtracker.ui.map.PathPreviewMapBoundsTest" time="0.152"/>
+  <testcase name="buildValidatedBounds_rejectsNullNonFiniteOutOfRangeAndInvertedLat" classname="com.atrainingtracker.trainingtracker.ui.map.PathPreviewMapBoundsTest" time="0.146"/>
+  <testcase name="buildValidatedBounds_acceptsStandardAndAntimeridianBounds" classname="com.atrainingtracker.trainingtracker.ui.map.PathPreviewMapBoundsTest" time="0.154"/>
+  <testcase name="pathPreviewMap_rendersSafelyInsideIntrinsicSizeMinWithoutSubcomposeCrash" classname="com.atrainingtracker.trainingtracker.ui.map.PathPreviewMapBoundsTest" time="0.202"/>
+  <testcase name="captureLightAndDarkPreviewPng_forRule85Inspection" classname="com.atrainingtracker.trainingtracker.ui.map.PathPreviewMapBoundsTest" time="0.63"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

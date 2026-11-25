@@ -1,7 +1,7 @@
 # Living Requirements: UI Components & Design System (Part 6 of 6)
 
 **Document ID**: `DOC-REQ-UI-P6`  
-**Version**: 1.0.36  
+**Version**: 1.0.37  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
@@ -745,7 +745,7 @@
        4. Fitness & Physiology (`R.id.drawer_athlete_profile`, title `R.string.drawer_fitness_physiology` / `drawer_athlete_profile`)
      - Standalone `drawer_morning_hrv` SHALL be retired from top-level drawer items.
   2. *Settings Drawer Items Ordering (`REQ-UI-513.2`)*:
-     - The *Settings* drawer group (`drawer__settings`) in `AppNavigationDrawer.kt` SHALL contain exactly 7 items in the following sequence:
+     - The *Settings* drawer group (`drawer__settings`) in `AppNavigationDrawer.kt` SHALL contain 7 release items (plus debug-only Developer Menu directly below Expert Settings when `BuildConfig.DEBUG == true` per `REQ-SET-087.2` / `ATT-8106`) in the following sequence:
        1. Trainings Zonen (`R.id.drawer_training_zones`, icon `R.drawable.ic_speed`, title `R.string.prefs_training_zones`)
        2. Sportarten (`R.id.drawer_sport_types`, icon `R.drawable.ic_sports_combined`, title `R.string.sport_types`)
        3. Tracking Tabs (`R.id.drawer_tracking_layouts`, icon `R.drawable.ic_table_edit`, title `R.string.prefsConfigureDisplaysTitle`)
@@ -753,6 +753,7 @@
        5. Auto-Pause (`R.id.drawer_auto_pause`, icon `R.drawable.ic_pause_circle`, title `R.string.auto_pause_title`)
        6. Maßeinheiten (`R.id.drawer_units`, icon `R.drawable.ic_square_foot`, title `R.string.prefsUnitsTitle`)
        7. Experten-Einstellungen (`R.id.drawer_advanced_tuning`, icon `R.drawable.ic_tune`, title `R.string.advanced_tuning_title`)
+       8. *(Debug builds only)* Developer Menu (`R.id.drawer_developer_menu`, icon `R.drawable.ic_settings_24`, title `R.string.developer_menu_title`)
      - `isDrawerItemSelected` SHALL recognize `R.id.drawer_training_zones` independently from `R.id.drawer_athlete_profile`, preserving deep-link backward compatibility.
   3. *Clean Periods Screen Decoupling (`REQ-UI-513.3`)*:
      - `PeriodsTabsScreen.kt` and `PeriodsViewModel.kt` SHALL strictly display calendar volume aggregations, removing `HrvReadinessTrendCard` and unnecessary `HrvReadinessRepository` loading overhead.

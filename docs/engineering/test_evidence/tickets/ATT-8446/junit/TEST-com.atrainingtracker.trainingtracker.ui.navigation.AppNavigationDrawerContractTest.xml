@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.navigation.AppNavigationDrawerContractTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-25T01:16:52.873Z" hostname="rainer-HP-EliteBook-850-G5" time="0.591">
+  <properties/>
+  <testcase name="testDrawerHeaderBrandingRowAndRule72Invariant_REQ_UI_496_2" classname="com.atrainingtracker.trainingtracker.ui.navigation.AppNavigationDrawerContractTest" time="0.001"/>
+  <testcase name="testHealthConnectNavigationDrawerContract" classname="com.atrainingtracker.trainingtracker.ui.navigation.AppNavigationDrawerContractTest" time="0.03"/>
+  <testcase name="testDrawerHeaderHeightAndAlignmentContract_REQ_UI_496_1" classname="com.atrainingtracker.trainingtracker.ui.navigation.AppNavigationDrawerContractTest" time="0.001"/>
+  <testcase name="testGermanNavigationDrawerUnitsDisambiguation" classname="com.atrainingtracker.trainingtracker.ui.navigation.AppNavigationDrawerContractTest" time="0.312"/>
+  <testcase name="testUnitsSettingsDialogImperialLocalizationParity" classname="com.atrainingtracker.trainingtracker.ui.navigation.AppNavigationDrawerContractTest" time="0.246"/>
+  <testcase name="testActivityTypeBikePowerIconDistinctness" classname="com.atrainingtracker.trainingtracker.ui.navigation.AppNavigationDrawerContractTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

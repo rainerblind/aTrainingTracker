@@ -40,6 +40,7 @@ import com.atrainingtracker.database.DatabaseConstants;
 import com.atrainingtracker.util.CursorUtils;
 import com.atrainingtracker.util.EnumUtils;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
+import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository;
 
 import java.util.ArrayList;
 import com.atrainingtracker.database.BaseDatabaseManager;
@@ -394,18 +395,24 @@ public class SportTypeDatabaseManager extends BaseDatabaseManager<SportTypeDatab
         values.put(SportTypeDatabaseManager.SportType.IS_PLACEHOLDER, 0);
 
         long resultId;
+        boolean mutated = false;
         if (id == -1L) {
             resultId = db.insert(SportTypeDatabaseManager.SportType.TABLE, null, values);
+            mutated = resultId != -1L;
         } else {
-            db.update(
+            int updatedRows = db.update(
                     SportTypeDatabaseManager.SportType.TABLE,
                     values,
                     SportTypeDatabaseManager.SportType.C_ID + "=?",
                     new String[]{Long.toString(id)}
             );
             resultId = id;
+            mutated = updatedRows > 0;
         }
 
+        if (mutated) {
+            SportTypesRepository.notifySportTypesChanged();
+        }
         return resultId;
     }
 
@@ -608,7 +615,11 @@ public class SportTypeDatabaseManager extends BaseDatabaseManager<SportTypeDatab
         cv.put(SportType.MIN_AVG_SPEED, 0.0);
         cv.put(SportType.MAX_AVG_SPEED, 0.0);
         cv.put(SportType.IS_PLACEHOLDER, 0);
-        return db.insert(SportType.TABLE, null, cv);
+        long insertedId = db.insert(SportType.TABLE, null, cv);
+        if (insertedId != -1L) {
+            SportTypesRepository.notifySportTypesChanged();
+        }
+        return insertedId;
     }
 
     public void delete(long id) {
@@ -616,9 +627,12 @@ public class SportTypeDatabaseManager extends BaseDatabaseManager<SportTypeDatab
             return;
         }
 
-        getDatabase().delete(SportType.TABLE,
+        int deletedRows = getDatabase().delete(SportType.TABLE,
                 SportType.C_ID + "=?",
                 new String[]{Long.toString(id)});
+        if (deletedRows > 0) {
+            SportTypesRepository.notifySportTypesChanged();
+        }
     }
 
     public static BSportType getBSportType(String ttSportTypeName) {

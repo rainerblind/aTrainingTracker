@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.ClusterNamingDialogPathPreviewTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-25T02:30:15.075Z" hostname="rainer-HP-EliteBook-850-G5" time="20.017">
+  <properties/>
+  <testcase name="testCreateSensorMarker_cachesNonNullDescriptorsAcrossConsecutiveQueuePresentations_TST_MIG_062" classname="com.atrainingtracker.trainingtracker.migration.ClusterNamingDialogPathPreviewTest" time="11.727"/>
+  <testcase name="testClusterNamingDialog_rendersPathPreviewMapAcrossConsecutiveQueueItems_TST_MIG_062" classname="com.atrainingtracker.trainingtracker.migration.ClusterNamingDialogPathPreviewTest" time="7.8"/>
+  <testcase name="testCreateSensorMarker_neverCachesNullDescriptorWhenMapsNotInitialized_TST_MIG_062" classname="com.atrainingtracker.trainingtracker.migration.ClusterNamingDialogPathPreviewTest" time="0.353"/>
+  <testcase name="testTryApplyPreviewBounds_handlesBothIllegalStateAndNullPointerException_TST_MIG_062" classname="com.atrainingtracker.trainingtracker.migration.ClusterNamingDialogPathPreviewTest" time="0.137"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeSpeedAndCadenceDeviceTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-25T01:11:22.748Z" hostname="rainer-HP-EliteBook-850-G5" time="6.742">
+  <properties/>
+  <testcase name="testANTBikeSpeedAndCadence_negativeSpeed_emitsNullPace_tstCon058_2" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeSpeedAndCadenceDeviceTest" time="0.894"/>
+  <testcase name="testANTBikeSpeedAndCadence_nullCalculatedSpeed_afterMotionPreservesValuesWithoutNpe_tstCon058_2" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeSpeedAndCadenceDeviceTest" time="0.718"/>
+  <testcase name="testANTBikeSpeedAndCadence_initialZeroSpeed_setsZeroSpeedAndNullPace_tstCon058_2" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeSpeedAndCadenceDeviceTest" time="0.729"/>
+  <testcase name="testReleaseAccess_whenSecondaryHandleNull_unconditionallyReleasesPrimaryHandle" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeSpeedAndCadenceDeviceTest" time="0.823"/>
+  <testcase name="testReleaseAccess_whenSecondaryHandleThrows_primaryHandleStillCleanedUp" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeSpeedAndCadenceDeviceTest" time="0.767"/>
+  <testcase name="testANTBikeSpeedAndCadence_zeroSpeedAfterMotion_decaysPaceToNullAtThreshold_tstCon058_2" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeSpeedAndCadenceDeviceTest" time="0.701"/>
+  <testcase name="testANTBikeSpeedAndCadence_nullCalculatedSpeed_initialRemainsNullWithoutNpe_tstCon058_2" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeSpeedAndCadenceDeviceTest" time="0.721"/>
+  <testcase name="testReleaseAccess_whenBothHandlesActive_releasesBothSafely" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeSpeedAndCadenceDeviceTest" time="0.69"/>
+  <testcase name="testANTBikeSpeedAndCadence_positiveSpeed_publishesMetersPerSecondAndFinitePace_tstCon058_2" classname="com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeSpeedAndCadenceDeviceTest" time="0.698"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

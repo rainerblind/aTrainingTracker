@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerLastActiveTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-25T01:07:35.651Z" hostname="rainer-HP-EliteBook-850-G5" time="0.993">
+  <properties/>
+  <testcase name="currentFormat_reusesSameInstanceOnThreadAndInvalidatesOnLocaleOrTimeZoneChange" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerLastActiveTest" time="0.13"/>
+  <testcase name="devicesDatabaseManager_setLastActivePersistsUtcIsoTimestamp_TST_DAT_044_3" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerLastActiveTest" time="0.596"/>
+  <testcase name="formatEpochMillis_persistsUtcIso8601ParseableAcrossLocalesAndSupportsLegacyFormats_TST_DAT_044_3" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerLastActiveTest" time="0.116"/>
+  <testcase name="formatEpochMillis_isThreadSafeAndThreadIsolatedUnderConcurrency" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerLastActiveTest" time="0.15"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

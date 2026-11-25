@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutClusterCorridorDetectorTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-25T02:30:00.275Z" hostname="rainer-HP-EliteBook-850-G5" time="0.027">
+  <properties/>
+  <testcase name="testDetectCorridors_splitsDivergingCorridorsAt500mThreshold" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCorridorDetectorTest" time="0.025"/>
+  <testcase name="testComputeCorridorDistance_identicalPathsYieldZeroDeviation" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCorridorDetectorTest" time="0.0"/>
+  <testcase name="testDetectCorridors_handlesEmptyAndSingleWorkoutGracefully" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCorridorDetectorTest" time="0.0"/>
+  <testcase name="testSamplePolylineStations_producesFiveStations" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCorridorDetectorTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -27,6 +27,7 @@ import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.graphics.Typeface
 import androidx.annotation.DrawableRes
+import androidx.annotation.VisibleForTesting
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.ContextCompat
@@ -38,6 +39,30 @@ import com.atrainingtracker.trainingtracker.segments.SegmentHelper
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
+import java.util.Collections
+
+private const val MAX_SENSOR_MARKER_CACHE_SIZE = 64
+
+private data class SensorMarkerCacheKey(
+    val iconResId: Int,
+    val pinColorArgb: Int,
+    val iconColorArgb: Int,
+    val densityBits: Int
+)
+
+private val sensorMarkerCache: MutableMap<SensorMarkerCacheKey, BitmapDescriptor> =
+    Collections.synchronizedMap(
+        object : LinkedHashMap<SensorMarkerCacheKey, BitmapDescriptor>(16, 0.75f, true) {
+            override fun removeEldestEntry(
+                eldest: MutableMap.MutableEntry<SensorMarkerCacheKey, BitmapDescriptor>?
+            ): Boolean = size > MAX_SENSOR_MARKER_CACHE_SIZE
+        }
+    )
+
+@VisibleForTesting
+internal fun clearSensorMarkerCache() {
+    sensorMarkerCache.clear()
+}
 
 fun createSensorMarker(
     context: Context,
@@ -46,8 +71,16 @@ fun createSensorMarker(
     iconColor: Color = Color.White
 ): BitmapDescriptor? {
     val density = context.resources.displayMetrics.density
-    val size = (36 * density).toInt()
-    val iconSize = (18 * density).toInt()
+    val cacheKey = SensorMarkerCacheKey(
+        iconResId = iconResId,
+        pinColorArgb = pinColor.toArgb(),
+        iconColorArgb = iconColor.toArgb(),
+        densityBits = java.lang.Float.floatToRawIntBits(density)
+    )
+    sensorMarkerCache[cacheKey]?.let { return it }
+
+    val size = (36 * density).toInt().coerceAtLeast(1)
+    val iconSize = (18 * density).toInt().coerceAtLeast(1)
 
     val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
@@ -68,7 +101,9 @@ fun createSensorMarker(
         it.draw(canvas)
     }
 
-    return saveBitmapDescriptorFactoryFromBitmap(bitmap)
+    return saveBitmapDescriptorFactoryFromBitmap(bitmap)?.also { descriptor ->
+        sensorMarkerCache[cacheKey] = descriptor
+    }
 }
 
 /**

@@ -147,6 +147,8 @@ object OfflineTelemetryReplayHarness {
 
         var currentSec = 0L
         var lastPhoneCadence: Double? = null
+        var phoneTotalStrides = 0
+        var lastEstimatorStrides = 0
         var lastH10Cadence: Double? = null
         var lastVerityCadence: Double? = null
         var lastH10Vo: Double? = null
@@ -154,12 +156,35 @@ object OfflineTelemetryReplayHarness {
         val h10VoValues = ArrayList<Double>()
         val h10GctValues = ArrayList<Double>()
 
-        val phoneCadenceEstimator = SmartphoneImuCadenceEstimator(
+        var hasRotVec = false
+        val rotVec = FloatArray(4)
+        var lastGyroMs = Long.MIN_VALUE
+        var lastWorldYawRate = 0.0
+        var sportHint = SportContextHint.UNKNOWN
+        var resolvedStateSport = BSportType.UNKNOWN
+        var cadenceSportHint = SportContextHint.UNKNOWN
+        var currentMode = PhoneCarriageMode.UNKNOWN
+        var lastInferredSport = BSportType.UNKNOWN
+        var lastClassifyMs = Long.MIN_VALUE
+        var hasStepEvent = false
+
+        lateinit var phoneCadenceEstimator: SmartphoneImuCadenceEstimator
+        phoneCadenceEstimator = SmartphoneImuCadenceEstimator(
             onCadence = { spm ->
-                if (spm != null && spm.isFinite() && spm > 0.0) {
+                if (spm == null) {
+                    lastPhoneCadence = null
+                } else if (spm.isFinite() && spm > 0.0) {
                     lastPhoneCadence = spm
                     phoneCadenceAcc.add(currentSec, spm)
                 }
+            },
+            onStride = { total ->
+                val stridesAllowed = cadenceSportHint == SportContextHint.RUNNING ||
+                    (cadenceSportHint == SportContextHint.UNKNOWN && phoneCadenceEstimator.isRunningOrWalkingActive)
+                if (stridesAllowed) {
+                    phoneTotalStrides += (total - lastEstimatorStrides).coerceAtLeast(0)
+                }
+                lastEstimatorStrides = total
             }
         )
         val h10CadenceEstimator = PolarLiveRunningCadenceEstimator(
@@ -194,16 +219,6 @@ object OfflineTelemetryReplayHarness {
                 }
             }
         )
-
-        var hasRotVec = false
-        val rotVec = FloatArray(4)
-        var lastGyroMs = Long.MIN_VALUE
-        var lastWorldYawRate = 0.0
-        var sportHint = SportContextHint.UNKNOWN
-        var currentMode = PhoneCarriageMode.UNKNOWN
-        var lastInferredSport = BSportType.UNKNOWN
-        var lastClassifyMs = Long.MIN_VALUE
-        var hasStepEvent = false
 
         var refLat: Double? = null
         var refLon: Double? = null
@@ -333,6 +348,16 @@ object OfflineTelemetryReplayHarness {
             }
         }
 
+        fun syncCadenceSportHint(tMs: Long) {
+            // Mirror production Tier 3 (kinematic) > Tier 4 (STATE auto-resolved) precedence (REQ-FIL-046.1).
+            val effectiveSport = if (lastInferredSport != BSportType.UNKNOWN) lastInferredSport else resolvedStateSport
+            val nextCadenceHint = SportContextHint.fromBSportType(effectiveSport)
+            if (nextCadenceHint != cadenceSportHint) {
+                cadenceSportHint = nextCadenceHint
+                phoneCadenceEstimator.onModeOrSportChanged(currentMode, cadenceSportHint, tMs)
+            }
+        }
+
         fun updateCarriageIfDue(tMs: Long, force: Boolean) {
             if (!force && lastClassifyMs != Long.MIN_VALUE && (tMs - lastClassifyMs) < 1_000L) return
             lastClassifyMs = tMs
@@ -340,9 +365,10 @@ object OfflineTelemetryReplayHarness {
             val newMode = classifier.classify(tMs)
             val inferred = sportDiscriminator.onCarriageMode(newMode, tMs)
             if (inferred != BSportType.UNKNOWN) lastInferredSport = inferred
+            syncCadenceSportHint(tMs)
             if (newMode != currentMode) {
                 currentMode = newMode
-                phoneCadenceEstimator.onModeOrSportChanged(currentMode, sportHint, tMs)
+                phoneCadenceEstimator.onModeOrSportChanged(currentMode, cadenceSportHint, tMs)
             }
         }
 
@@ -390,7 +416,7 @@ object OfflineTelemetryReplayHarness {
                         PhoneRawChannel.ACC -> {
                             sportDiscriminator.onAccSample(r.v0, r.v1, r.v2, tMs)
                             classifier.ingestAccelerometer(r.v0, r.v1, r.v2, tMs)
-                            phoneCadenceEstimator.onAccSample(r.v0, r.v1, r.v2, tMs, currentMode, sportHint)
+                            phoneCadenceEstimator.onAccSample(r.v0, r.v1, r.v2, tMs, currentMode, cadenceSportHint)
                             updateCarriageIfDue(tMs, force = false)
                         }
                         PhoneRawChannel.ROTVEC -> {
@@ -408,7 +434,7 @@ object OfflineTelemetryReplayHarness {
                             lastWorldYawRate = yawRate
                             classifier.ingestGyro(yawRate, rawMag, tMs)
                             sportDiscriminator.onGyroSample(rawMag, tMs)
-                            phoneCadenceEstimator.onGyroSample(r.v0, r.v1, r.v2, tMs, currentMode, sportHint)
+                            phoneCadenceEstimator.onGyroSample(r.v0, r.v1, r.v2, tMs, currentMode, cadenceSportHint)
                             if (lastGyroMs != Long.MIN_VALUE && tMs > lastGyroMs) {
                                 val dt = (tMs - lastGyroMs) / 1000.0
                                 if (dt in 0.001..0.5) {
@@ -450,7 +476,7 @@ object OfflineTelemetryReplayHarness {
                             if (firstMotionCueMs == null) firstMotionCueMs = tMs
                             classifier.ingestStepEvent(tMs)
                             sportDiscriminator.onStepDetected(tMs)
-                            phoneCadenceEstimator.onStepDetected(tMs, currentMode, sportHint)
+                            phoneCadenceEstimator.onStepDetected(tMs, currentMode, cadenceSportHint)
                         }
                         PhoneRawChannel.GNSS, PhoneRawChannel.GNSS_FUSED -> {
                             if (r.channel != activeGnssChannel) {
@@ -545,7 +571,10 @@ object OfflineTelemetryReplayHarness {
                             }
                             classifier.ingestWheelSpeed(speedMps, tMs)
                             val inferred = sportDiscriminator.onSpeedSample(speedMps, tMs)
-                            if (inferred != BSportType.UNKNOWN) lastInferredSport = inferred
+                            if (inferred != BSportType.UNKNOWN) {
+                                lastInferredSport = inferred
+                                syncCadenceSportHint(tMs)
+                            }
                             odometryEkf.updateSpeed(speedMps, variance, tMs)
                             updateCarriageIfDue(tMs, force = false)
                             noteMotion(tMs)
@@ -553,15 +582,13 @@ object OfflineTelemetryReplayHarness {
                         PhoneRawChannel.STATE -> {
                             val bSportOrd = r.v1.toInt()
                             val bSport = BSportType.entries.getOrNull(bSportOrd) ?: BSportType.UNKNOWN
+                            resolvedStateSport = bSport
                             val nextHint = SportContextHint.fromBSportType(bSport)
                             if (nextHint != sportHint) {
                                 sportHint = nextHint
                                 classifier.setSportContext(sportHint)
-                                phoneCadenceEstimator.onModeOrSportChanged(currentMode, sportHint, tMs)
                             }
-                            if (bSport != BSportType.UNKNOWN) {
-                                lastInferredSport = bSport
-                            }
+                            syncCadenceSportHint(tMs)
                         }
                     }
                 }
@@ -683,7 +710,7 @@ object OfflineTelemetryReplayHarness {
             dominantCarriageMode = dominantMode,
             dominantCarriagePct = dominantPct,
             carriageTransitionCount = transitions,
-            inferredSport = lastInferredSport,
+            inferredSport = if (lastInferredSport != BSportType.UNKNOWN) lastInferredSport else resolvedStateSport,
             phoneCadence = phoneCadenceAcc.toStats(),
             polarH10Cadence = h10CadenceAcc.toStats(),
             polarVerityCadence = verityCadenceAcc.toStats(),
@@ -700,7 +727,8 @@ object OfflineTelemetryReplayHarness {
             ertsDescentM = ertsDescM,
             ertsMinSlopePct = ertsMinSlope,
             ertsMaxSlopePct = ertsMaxSlope,
-            coldStartTimeToMotionSec = coldStartSec
+            coldStartTimeToMotionSec = coldStartSec,
+            phoneTotalStrides = phoneTotalStrides
         )
         return OfflineReplayResult(scorecard = scorecard, series = finalSeries)
     }

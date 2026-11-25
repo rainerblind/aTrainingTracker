@@ -200,4 +200,24 @@ class EquipmentViewModelLifecycleTest {
         val constructor = EquipmentViewModel::class.java.getConstructor(Application::class.java)
         assertNotNull("EquipmentViewModel must preserve public constructor accepting Application", constructor)
     }
+
+    @Test
+    fun testSportTypesChanged_refreshesBikeRunSportTypesAndReloadsEquipment_TST_SET_134_3() {
+        every { mockEquipmentRepo.getEquipmentItems(any<BSportType>()) } returns emptyList()
+        val roadBike = com.atrainingtracker.trainingtracker.repositories.SimpleSportTypeInfo(3L, "Bike", BSportType.BIKE)
+        val gravelBike = com.atrainingtracker.trainingtracker.repositories.SimpleSportTypeInfo(6L, "Gravel", BSportType.BIKE)
+        every { mockSportRepo.getSportTypes(BSportType.BIKE) } returns listOf(roadBike)
+
+        val viewModel = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(listOf(roadBike), viewModel.bikeSportTypes)
+        verify(exactly = 1) { mockEquipmentRepo.getEquipmentItems(BSportType.BIKE) }
+
+        every { mockSportRepo.getSportTypes(BSportType.BIKE) } returns listOf(roadBike, gravelBike)
+        SportTypesRepository.notifySportTypesChanged()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(listOf(roadBike, gravelBike), viewModel.bikeSportTypes)
+        verify(exactly = 2) { mockEquipmentRepo.getEquipmentItems(BSportType.BIKE) }
+    }
 }

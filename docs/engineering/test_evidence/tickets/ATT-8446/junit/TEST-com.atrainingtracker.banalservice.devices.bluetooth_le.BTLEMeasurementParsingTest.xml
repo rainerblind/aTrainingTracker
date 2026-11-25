@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEMeasurementParsingTest" tests="19" skipped="0" failures="0" errors="0" timestamp="2026-11-25T01:12:21.859Z" hostname="rainer-HP-EliteBook-850-G5" time="31.529">
+  <properties/>
+  <testcase name="testBikePower_truncatedPowerBalance_doesNotCrash" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEMeasurementParsingTest" time="1.653"/>
+  <testcase name="testBikeDevice_and_BikePower_identicalEventTimeZeroesAfterFourPackets" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEMeasurementParsingTest" time="1.685"/>
+  <testcase name="testBikePower_pedalPowerBalance_leftReference_automaticallyInvertedToRight" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEMeasurementParsingTest" time="1.581"/>
+  <testcase name="testRunSpeedDevice_truncatedPackets_doesNotCrash" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEMeasurementParsingTest" time="1.573"/>
+  <testcase name="testBikeDevice_crankRollover_calculates120RpmWithoutNegativeSpike" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEMeasurementParsingTest" time="1.555"/>
+  <testcase name="testBikeDevice_and_BikePower_implausibleCadenceOver250Rpm_isDiscarded" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEMeasurementParsingTest" time="1.58"/>
+  <testcase name="testBikePower_pedalPowerBalance_rightReference_parsedCleanly" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEMeasurementParsingTest" time="1.622"/>
+  <testcase name="testBikePower_truncatedCrankData_doesNotCrashAndDiscardsGracefully" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEMeasurementParsingTest" time="1.581"/>
+  <testcase name="testBikePower_uint16WheelAndCrankEventTimeRollover_computes2048HzSpeedCadenceAndOmitsNotifyWheel" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEMeasurementParsingTest" time="2.043"/>
+  <testcase name="testHeartRateDevice_truncatedPackets_doesNotCrash" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEMeasurementParsingTest" time="1.665"/>
+  <testcase name="testBikeDevice_uint16WheelAndCrankEventTimeRollover_computesSpeedDistanceCadenceAndNotifiesWheel" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEMeasurementParsingTest" time="2.072"/>
+  <testcase name="testBikeSpeedOnly_and_BikeCadenceOnly_ignoreMissingSensorsWithoutCrash" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEMeasurementParsingTest" time="1.625"/>
+  <testcase name="testBikePower_emptyOrTruncatedHeader_doesNotCrash" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEMeasurementParsingTest" time="1.619"/>
+  <testcase name="testBikePower_truncatedWheelData_doesNotCrash" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEMeasurementParsingTest" time="1.623"/>
+  <testcase name="testBikePower_validFullPacket_parsesAllSensorsCorrectly" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEMeasurementParsingTest" time="1.628"/>
+  <testcase name="testBikePower_crankRollover_calculates120RpmWithoutNegativeSpike" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEMeasurementParsingTest" time="1.602"/>
+  <testcase name="testBikePower_pedalPowerBalance_boundaryValues" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEMeasurementParsingTest" time="1.641"/>
+  <testcase name="testBikeDevice_and_BikePower_disconnect_resetsRevolutionValidFlags" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEMeasurementParsingTest" time="1.622"/>
+  <testcase name="testBikeDevice_truncatedPackets_doesNotCrash" classname="com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEMeasurementParsingTest" time="1.559"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

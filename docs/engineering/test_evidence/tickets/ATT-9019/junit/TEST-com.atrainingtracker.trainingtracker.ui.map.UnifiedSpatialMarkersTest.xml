@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.UnifiedSpatialMarkersTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-25T02:31:22.432Z" hostname="rainer-HP-EliteBook-850-G5" time="0.547">
+  <properties/>
+  <testcase name="createSensorMarker_rendersUnifiedStartEndAndApexMarkers_TST_SET_031" classname="com.atrainingtracker.trainingtracker.ui.map.UnifiedSpatialMarkersTest" time="0.547"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

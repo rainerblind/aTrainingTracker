@@ -32,6 +32,9 @@ import io.mockk.every
 import io.mockk.mockkStatic
 import io.mockk.spyk
 import io.mockk.unmockkAll
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -182,5 +185,109 @@ class SportTypeSwimTemplateTest {
 
         val stravaValues = context.resources.getStringArray(R.array.Strava_Sport_Types_Strava_Names)
         assertTrue("arrays.xml must include GravelRide", stravaValues.contains("GravelRide"))
+    }
+
+    /**
+     * TST-SET-134.1 (REQ-SET-134.1): SportTypesRepository.sportTypesChanged emits strictly on real
+     * SQLite mutations (ensureSwimSportTypeExists insert, updateSportType, delete) and stays silent on no-ops.
+     */
+    @Test
+    fun testEnsureSwimSportTypeExists_updateAndDelete_emitSportTypesChangedStrictlyOnMutation_TST_SET_134_1() = runBlocking<Unit> {
+        val repo = SportTypesRepository.getInstance(context)
+        val dbManager = SportTypeDatabaseManager.getInstance(context)
+        var events = 0
+        val collector = launch(Dispatchers.Unconfined) {
+            SportTypesRepository.sportTypesChanged.collect { events++ }
+        }
+        try {
+            // Initial Swim activation inserts row -> 1 event
+            val swimId = repo.ensureSwimSportTypeExists()
+            assertTrue(swimId > SportTypeDatabaseManager.SYSTEM_SPORT_ID_THRESHOLD)
+            assertEquals("Initial ensureSwimSportTypeExists() insert must emit 1 event", 1, events)
+
+            // Idempotent repeat -> 0 additional events
+            assertEquals(swimId, repo.ensureSwimSportTypeExists())
+            assertEquals("Idempotent ensureSwimSportTypeExists() no-op must emit 0 extra events", 1, events)
+
+            // Custom insert -> +1 event
+            val customId = dbManager.updateSportType(-1L, "Aqua Jog", BSportType.UNKNOWN, 0.0, 0.0, "Workout", "Other", "walk")
+            assertTrue(customId > 0L)
+            assertEquals("Insert via updateSportType(-1L) must emit event", 2, events)
+
+            // Update -> +1 event
+            dbManager.updateSportType(customId, "Aqua Jogging", BSportType.UNKNOWN, 0.0, 0.0, "Workout", "Other", "walk")
+            assertEquals("Update via updateSportType(id) must emit event", 3, events)
+
+            // Delete custom -> +1 event; delete protected system sport -> 0 extra events
+            dbManager.delete(customId)
+            assertEquals("Delete of custom sport must emit event", 4, events)
+            dbManager.delete(1L)
+            assertEquals("Protected system sport delete must emit 0 extra events", 4, events)
+        } finally {
+            collector.cancel()
+        }
+    }
+
+    /**
+     * TST-SET-134.1 (REQ-SET-134.1): SportTypeReconciliationHelper.reconcileOrphanSportTypes()
+     * emits sportTypesChanged strictly when insertedCount > 0 and stays silent when insertedCount == 0.
+     */
+    @Test
+    fun testReconcileOrphanSportTypes_emitsSportTypesChangedStrictlyWhenInserted_TST_SET_134_1() = runBlocking<Unit> {
+        val dbManager = SportTypeDatabaseManager.getInstance(context)
+        val summariesDb = android.database.sqlite.SQLiteDatabase.create(null)
+        val equipmentDb = android.database.sqlite.SQLiteDatabase.create(null)
+        val clusterDb = android.database.sqlite.SQLiteDatabase.create(null)
+        summariesDb.execSQL("CREATE TABLE WorkoutSummaries (sportId INTEGER)")
+        equipmentDb.execSQL("CREATE TABLE SportTypeEquipmentLink (sport_type_id INTEGER)")
+        clusterDb.execSQL("CREATE TABLE RouteClusters (probable_sport_id INTEGER)")
+
+        var events = 0
+        val collector = launch(Dispatchers.Unconfined) {
+            SportTypesRepository.sportTypesChanged.collect { events++ }
+        }
+        try {
+            // No orphan IDs -> insertedCount == 0 -> 0 events
+            val zeroInserted = SportTypeReconciliationHelper.reconcileOrphanSportTypes(
+                context = context,
+                sportDb = dbManager.database,
+                summariesDb = summariesDb,
+                equipmentDb = equipmentDb,
+                clusterDb = clusterDb,
+                dispatcher = Dispatchers.Unconfined
+            )
+            assertEquals(0, zeroInserted)
+            assertEquals("Zero inserted placeholders must emit 0 events", 0, events)
+
+            // Add an orphan sportId > 5 -> insertedCount == 1 -> +1 event
+            summariesDb.execSQL("INSERT INTO WorkoutSummaries (sportId) VALUES (42)")
+            val oneInserted = SportTypeReconciliationHelper.reconcileOrphanSportTypes(
+                context = context,
+                sportDb = dbManager.database,
+                summariesDb = summariesDb,
+                equipmentDb = equipmentDb,
+                clusterDb = clusterDb,
+                dispatcher = Dispatchers.Unconfined
+            )
+            assertEquals(1, oneInserted)
+            assertEquals("Inserting 1 orphan placeholder must emit 1 event", 1, events)
+
+            // Re-running with same orphan already present -> insertedCount == 0 -> 0 extra events
+            val repeatInserted = SportTypeReconciliationHelper.reconcileOrphanSportTypes(
+                context = context,
+                sportDb = dbManager.database,
+                summariesDb = summariesDb,
+                equipmentDb = equipmentDb,
+                clusterDb = clusterDb,
+                dispatcher = Dispatchers.Unconfined
+            )
+            assertEquals(0, repeatInserted)
+            assertEquals("Idempotent re-run must emit 0 extra events", 1, events)
+        } finally {
+            collector.cancel()
+            summariesDb.close()
+            equipmentDb.close()
+            clusterDb.close()
+        }
     }
 }

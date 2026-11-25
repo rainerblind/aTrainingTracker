@@ -1,0 +1,19 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "85568db5c024324cbc184122900783d547b8eac2",
+  "files": {
+    "evidence_summary.json": "b6f70d1e3d7c612e458a97e5040519f6b7ad2d098163e1112df3aeca0ce9e2ed",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.EditIconConsistencyTest.xml": "fd7ee17fd0cea73806a513eb0001bf0cb024c79c3920042762b8133cf4d8f73a",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileContractAndLocalizationTest.xml": "95fedc00e3d373a5414fece51c38fa972c3eec0ad7bbd478b4ca23b87a6efd63",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.branding.SupporterBadgeContractTest.xml": "9fddb0c09ff4fb4d85bf7b8972015274a05002705948275d318e80dfb32a5a56",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.navigation.AppNavigationDrawerAssetResilienceTest.xml": "f172ebcb404a7f2b2e61f26ced140e15e625cbdbe2a33ed3c6c1b97dd7b2cab1",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.navigation.AppNavigationDrawerContractTest.xml": "fccadb258ca73d5432552f436d37637fc054d6da95986210bbc084feed13665c",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.navigation.AppNavigationDrawerTest.xml": "d5f65ef837c53caed932972e0e56a6282374e74537dd2d983982ab03e4e4f07e",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.navigation.NavigationDrawerAndDialogContractTest.xml": "a903c4f72c769244845e883a32ab83a2ac6eeb64f40664946431f83334b50879",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.navigation.NavigationDrawerStateTest.xml": "8d450ffb8766f22b5e53c03a23c15d7d79670f6192fd0960ed67d5d47cf8a70d",
+    "screenshots/ATT-8106_drawer_after.png": "f2155f7638bf45e35634db22592ecd3f848b167dfb2b0ca265c75ffe40917072"
+  },
+  "run_started_utc": "2026-11-24T22:48:49.328590+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-8106"
+}

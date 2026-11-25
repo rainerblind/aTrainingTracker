@@ -1,14 +1,14 @@
 # Detailed Design: TrackerService (ASPICE SWE.3)
 
 **Document ID**: `DOC-ARC-DD-TRK`  
-**Version**: 1.0.13  
+**Version**: 1.0.14  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
-**Unit**: `TrackerService` (`app/src/main/java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java`, 3,186 LOC)  
+**Unit**: `TrackerService` (`app/src/main/java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java`, 3,193 LOC)  
 **Collaborators**: `TrackingMode` (`TrackingMode.kt`), `AutoPauseManager` / `AutoPauseState` (`AutoPauseManager.kt`), `LiveWorkoutBroadcastTracker` (`LiveWorkoutBroadcastTracker.kt`), `DebugHeapWatchdog` (`DebugHeapWatchdog.kt`), `MultisportLapCoordinator` (`MultisportLapCoordinator.kt`), `LapTelemetryExtractor` (`LapTelemetryExtractor.kt`), `PostWorkoutFinalizer` (`PostWorkoutFinalizer.kt`), `PostWorkoutPhysiologyRecomputer` (`PostWorkoutPhysiologyRecomputer.kt`), `WorkoutPostProcessingCoordinator` (`WorkoutPostProcessingCoordinator.kt`), `WorkoutPostProcessingService` (`WorkoutPostProcessingService.kt`), `WorkoutPostProcessingNotificationManager` (`WorkoutPostProcessingNotificationManager.kt`), `TrainingApplication`, `BANALServiceComm`, `LiveWorkoutSession`, `WorkoutRepository`  
 **SWE.2 Alignment**: `docs/architecture.md` §3.1, §3.3, §4.2, §4.9 (`IF-SWE-03`, `IF-SWE-05`, `IF-SWE-06`)  
-**Requirement Trace**: `REQ-PRO-114.1`, `REQ-ARC-008.1`, `REQ-CON-056.2`, `REQ-STB-020.1`, `REQ-STB-020.2`, `REQ-STB-022.1`, `REQ-STB-022.2`, `REQ-STB-025.1`, `REQ-STB-025.2`, `REQ-STB-025.3`, `REQ-TRK-009`, `REQ-TRK-010`, `REQ-TRK-018`, `REQ-TRK-026`, `REQ-TRK-033`, `REQ-TRK-034`, `REQ-TRK-076`, `REQ-TRK-090`, `REQ-TRK-091`, `REQ-TRK-093`, `REQ-TRK-094`, `REQ-TRK-095`, `REQ-TRK-096`
+**Requirement Trace**: `REQ-PRO-114.1`, `REQ-ARC-008.1`, `REQ-CON-056.2`, `REQ-FIL-046.1`, `REQ-STB-020.1`, `REQ-STB-020.2`, `REQ-STB-022.1`, `REQ-STB-022.2`, `REQ-STB-025.1`, `REQ-STB-025.2`, `REQ-STB-025.3`, `REQ-TRK-009`, `REQ-TRK-010`, `REQ-TRK-018`, `REQ-TRK-026`, `REQ-TRK-033`, `REQ-TRK-034`, `REQ-TRK-076`, `REQ-TRK-090`, `REQ-TRK-091`, `REQ-TRK-093`, `REQ-TRK-094`, `REQ-TRK-095`, `REQ-TRK-096`
 
 ---
 
@@ -97,7 +97,7 @@ stateDiagram-v2
 ### 4.1 Interfaces (`IF-SWE-03`, `IF-SWE-05`, `IF-SWE-06`)
 | Interface | Direction | Contract / Symbols |
 | :--- | :--- | :--- |
-| `IF-SWE-03` | `TrackerService` <-> `BANALService` | Binds `BANALServiceComm` via `mBanalConnection`; consumes `getBestSensorData`, `getAllSensorData`, `getSportTypeId`, `getBSportType`, `addRrBeatListener`, `SEARCHING_FINISHED_FOR_ALL_INTENT`, `LAP_SUMMARY`, `SPORT_TYPE_CHANGED_BY_USER_INTENT` |
+| `IF-SWE-03` | `TrackerService` <-> `BANALService` | Binds `BANALServiceComm` via `mBanalConnection`; consumes `getBestSensorData`, `getAllSensorData`, `getSportTypeId`, `getBSportType`, `setResolvedBSportType`, `addRrBeatListener`, `SEARCHING_FINISHED_FOR_ALL_INTENT`, `LAP_SUMMARY`, `SPORT_TYPE_CHANGED_BY_USER_INTENT` |
 | `IF-SWE-05` | `TrackerService` -> Domain | Synchronous calls to `AutoPauseManager.evaluateTick`, `AutoPauseManager.onManualResume`, `AutoPauseManager.shouldStartInAutoPause`, `LiveWorkoutSession.addSample` |
 | `IF-SWE-06` | `TrackerService` -> SQLite | Asynchronous writes via `WorkoutRepository` (`createSamplesTable`, `recordLiveSample`, `updateWorkoutTotalTime`, `markWorkoutFinishedBlocking`, `getResumedWorkoutState`), `WorkoutRrRepository`, `KnownLocationsRepository` |
 
@@ -148,3 +148,4 @@ stateDiagram-v2
 | `1.0.11` | 2026-11-22 | Lane 1 Author (`ATT-9498`, `--as agent1`) | `ATT-9498` | Added `sFgsStartPending`/`sPendingStopBeforeStart`/`mIsForegroundPromoted` handshake (`markForegroundStartRequested`, `requestStopIfForegroundStartPending`, early `promoteForegroundForStart()` before `mDbExecutor.submit()`, stale-teardown `!sFgsStartPending` guard, FIFO `mWorkoutID` resolution in `enqueueAsyncFinalization()`) and generation-guarded `WorkoutPostProcessingService` FGS lifecycle (`TrackerService.java` `3,207 / 3,220 LOC`, `REQ-TRK-095`, `TST-TRK-095`). |
 | `1.0.12` | 2026-11-23 | Lane 1 Author (`ATT-8132`, `--as agent1`) | `ATT-8132` | Removed stale `mCachedAutoPauseConfig` 5-s cache & `invalidateAutoPauseCache()` so `getAutoPauseConfig()` reads directly from in-memory `TuningPreferencesDataStore` `StateFlow` via `SettingsDataStoreJavaHelper.getAutoPauseConfig(this)` (`TrackerService.java` `3,184 / 3,220 LOC`, `REQ-CON-056.2`). |
 | `1.0.13` | 2026-11-24 | Lane 2 Author (`ATT-9468`, `--as agent1`) | `ATT-9468` | Wired `mMultisportLapCoordinator.enforceMonotonicLapNr(mBaseFileName, samplingValues, summaryValues)` on `mDbExecutor` immediately before `recordLiveSample()` and `reconcileWorkoutSamplesOnFinalization(getSafeContext(), baseFileName)` in `endWorkout()`, eliminating the retroactive multisport `LAP_NR` backfill race with leaf-only lock ordering (`TrackerService.java` `3,186 / 3,220 LOC`, `REQ-TRK-096`, `TST-TRK-096`). |
+| `1.0.14` | 2026-11-25 | Lane 3 Author (`ATT-9695`, `--as agent1`) | `ATT-9695` | Propagated auto-resolved `BSportType` (`propagateResolvedBSportType()` -> `BANALServiceComm.setResolvedBSportType()` / `BANALService.updateActiveResolvedBSportType()`) in `createNewWorkout()`, `onSearchingFinished()`, and `applyResumedState()` so phone-only walks (`Spaziergang` -> `RUN`) activate `SpeedAndLocationDevice_ATTFused` walking `CADENCE`/`STRIDES` (`TrackerService.java` `3,193 / 3,220 LOC`, `REQ-FIL-046.1`, `TST-FIL-046.1`). |

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceSortOrderTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-25T01:15:26.936Z" hostname="rainer-HP-EliteBook-850-G5" time="0.019">
+  <properties/>
+  <testcase name="testFirstSeenComparator_ordersByIdDescending" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceSortOrderTest" time="0.002"/>
+  <testcase name="testDeviceSortOrder_enumEntries" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceSortOrderTest" time="0.0"/>
+  <testcase name="testLastUsageComparator_connectedFirstThenRecentTimestampThenNeverSeen" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceSortOrderTest" time="0.006"/>
+  <testcase name="testParseLastSeenTimestamp_handlesVariousFormats" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceSortOrderTest" time="0.003"/>
+  <testcase name="testAlphabeticalComparator_ordersCaseInsensitiveWithIdTieBreaker" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceSortOrderTest" time="0.002"/>
+  <testcase name="testBatteryLevelComparator_lowestKnownFirstThenUnknownTieBrokenByName" classname="com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceSortOrderTest" time="0.005"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

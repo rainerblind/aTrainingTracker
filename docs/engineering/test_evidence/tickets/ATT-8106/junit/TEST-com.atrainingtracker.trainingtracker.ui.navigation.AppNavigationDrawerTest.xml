@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.navigation.AppNavigationDrawerTest" tests="16" skipped="0" failures="0" errors="0" timestamp="2026-11-24T22:57:44.091Z" hostname="rainer-HP-EliteBook-850-G5" time="0.125">
+  <properties/>
+  <testcase name="testDrawerMapsGroupItemOrderingAndIcons" classname="com.atrainingtracker.trainingtracker.ui.navigation.AppNavigationDrawerTest" time="0.001"/>
+  <testcase name="testDrawerGroups_partnerBrandItems_exemptFromTinting" classname="com.atrainingtracker.trainingtracker.ui.navigation.AppNavigationDrawerTest" time="0.001"/>
+  <testcase name="testDrawerGroups_monochromeItems_enableTinting" classname="com.atrainingtracker.trainingtracker.ui.navigation.AppNavigationDrawerTest" time="0.005"/>
+  <testcase name="testDeveloperMenuDrawerItem_presentWhenDebug_absentWhenRelease" classname="com.atrainingtracker.trainingtracker.ui.navigation.AppNavigationDrawerTest" time="0.0"/>
+  <testcase name="testStartLocationsRouteResolution" classname="com.atrainingtracker.trainingtracker.ui.navigation.AppNavigationDrawerTest" time="0.0"/>
+  <testcase name="testDrawerGroups_expertSettings_placedInDedicatedBottomGroup" classname="com.atrainingtracker.trainingtracker.ui.navigation.AppNavigationDrawerTest" time="0.0"/>
+  <testcase name="testRootFallbackAssets_stravaAndDropbox_exist" classname="com.atrainingtracker.trainingtracker.ui.navigation.AppNavigationDrawerTest" time="0.0"/>
+  <testcase name="testThemeTokens_contrastRatioExceedsWcagAA" classname="com.atrainingtracker.trainingtracker.ui.navigation.AppNavigationDrawerTest" time="0.002"/>
+  <testcase name="testStartLocationsDrawerItemDoesNotTriggerBottomSheet" classname="com.atrainingtracker.trainingtracker.ui.navigation.AppNavigationDrawerTest" time="0.0"/>
+  <testcase name="testDrawerGroups_allDrawerItems_haveNonZeroResourceIds" classname="com.atrainingtracker.trainingtracker.ui.navigation.AppNavigationDrawerTest" time="0.003"/>
+  <testcase name="testDrawerGroups_settingsContainsTipsGuide" classname="com.atrainingtracker.trainingtracker.ui.navigation.AppNavigationDrawerTest" time="0.001"/>
+  <testcase name="testDrawerItemView_appliesConditionalColorFilter" classname="com.atrainingtracker.trainingtracker.ui.navigation.AppNavigationDrawerTest" time="0.001"/>
+  <testcase name="testDeveloperMenuRouteResolution" classname="com.atrainingtracker.trainingtracker.ui.navigation.AppNavigationDrawerTest" time="0.001"/>
+  <testcase name="testDrawerItemView_defensiveExceptionHandling_sourceCodeInspection" classname="com.atrainingtracker.trainingtracker.ui.navigation.AppNavigationDrawerTest" time="0.001"/>
+  <testcase name="testDrawerControllerSelectionAndCloseTransition" classname="com.atrainingtracker.trainingtracker.ui.navigation.AppNavigationDrawerTest" time="0.104"/>
+  <testcase name="testDrawerGroups_generalSettings_doesNotContainAdvancedTuning" classname="com.atrainingtracker.trainingtracker.ui.navigation.AppNavigationDrawerTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

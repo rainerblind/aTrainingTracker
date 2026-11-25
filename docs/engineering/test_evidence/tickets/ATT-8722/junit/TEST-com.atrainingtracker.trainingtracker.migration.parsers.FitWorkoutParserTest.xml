@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.parsers.FitWorkoutParserTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-24T23:50:04.089Z" hostname="rainer-HP-EliteBook-850-G5" time="5.256">
+  <properties/>
+  <testcase name="testResolveLapIndex_handlesSortedDuplicateNullAndUnsortedLaps_TST_MIG_058_1" classname="com.atrainingtracker.trainingtracker.migration.parsers.FitWorkoutParserTest" time="0.688"/>
+  <testcase name="testParseFit_legacySignedByteRadarAppIdRemainsBackwardCompatible_TST_MIG_058_1" classname="com.atrainingtracker.trainingtracker.migration.parsers.FitWorkoutParserTest" time="0.769"/>
+  <testcase name="testParseFit_mixedForeignAndOwnDeveloperFieldsInSameFile_isolatesCleanly_TST_MIG_058_1" classname="com.atrainingtracker.trainingtracker.migration.parsers.FitWorkoutParserTest" time="0.782"/>
+  <testcase name="testParseMultiLapFit_assignsExactLapNrFromEpochBounds_TST_MIG_058_1" classname="com.atrainingtracker.trainingtracker.migration.parsers.FitWorkoutParserTest" time="0.75"/>
+  <testcase name="testParseValidFit" classname="com.atrainingtracker.trainingtracker.migration.parsers.FitWorkoutParserTest" time="0.774"/>
+  <testcase name="testParseFit_redefinedDeveloperDataIndexUsesMesgDefBoundAppId_TST_MIG_058_1" classname="com.atrainingtracker.trainingtracker.migration.parsers.FitWorkoutParserTest" time="0.782"/>
+  <testcase name="testParseFit_ignoresForeignConnectIqDeveloperFieldsAndAcceptsOwnAppIds_TST_MIG_058_1" classname="com.atrainingtracker.trainingtracker.migration.parsers.FitWorkoutParserTest" time="0.711"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

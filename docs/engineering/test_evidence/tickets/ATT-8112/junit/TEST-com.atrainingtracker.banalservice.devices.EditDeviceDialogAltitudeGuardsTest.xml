@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.EditDeviceDialogAltitudeGuardsTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-25T01:00:38.522Z" hostname="rainer-HP-EliteBook-850-G5" time="10.584">
+  <properties/>
+  <testcase name="testDemGuard_whenNotPaired_isUnavailableAndInactive" classname="com.atrainingtracker.banalservice.devices.EditDeviceDialogAltitudeGuardsTest" time="7.593"/>
+  <testcase name="testBarometerGuard_whenNoHardwareOrNotPaired_isUnavailableAndInactive" classname="com.atrainingtracker.banalservice.devices.EditDeviceDialogAltitudeGuardsTest" time="0.905"/>
+  <testcase name="testAllSensorsAvailable_allowsUserPreferencesToControlState" classname="com.atrainingtracker.banalservice.devices.EditDeviceDialogAltitudeGuardsTest" time="1.326"/>
+  <testcase name="testGpsGuard_whenLocationUnpairedOrPermissionDenied_isUnavailableAndInactive" classname="com.atrainingtracker.banalservice.devices.EditDeviceDialogAltitudeGuardsTest" time="0.748"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (/home/rainer/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.18.2/62f38a6faf7f069d661b79a07d566f504b0b20c4/byte-buddy-agent-1.18.2.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+</testsuite>

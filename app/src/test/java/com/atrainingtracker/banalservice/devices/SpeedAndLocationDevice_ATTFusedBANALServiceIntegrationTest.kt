@@ -437,6 +437,173 @@ class SpeedAndLocationDevice_ATTFusedBANALServiceIntegrationTest {
         }
     }
 
+    /**
+     * TST-FIL-046.3: End-to-end Robolectric verification on real `BANALService` +
+     * `SpeedAndLocationDevice_ATTFused` with ZERO test hints:
+     * 1. Tier 4 `comm.setResolvedBSportType(BSportType.RUN)` activates walking `CADENCE` & `STRIDES`
+     *    within `<= 1.0 s` in `WALKING_TRANSITION` (zero `SPORT_TYPE_CHANGED_BY_USER_INTENT`,
+     *    zero per-sample SQLite lookups, `getAuthoritativeBSportType() == UNKNOWN`).
+     * 2. Explicit Tier 1 user `OTHER` (`sportId = 1`, `UNKNOWN`) suppresses walking `CADENCE`/`STRIDES`.
+     * 3. Tier 3 `BIKE` overrides Tier 4 `RUN` and immediately unregisters `STRIDES`.
+     * 4. Watchpoint 1: `WALKING_TRANSITION (UNKNOWN)` -> `BIKE_FRONT_POCKET (UNKNOWN)` immediately
+     *    unregisters `STRIDES` before Tier 3 infers `BIKE`.
+     */
+    @Test
+    fun tier4ResolvedWalk_activatesCadenceAndStridesAndRespectsOtherAndBikeGuards_tstFil046_3() {
+        shadowOf(appContext as android.app.Application).grantPermissions(
+            android.Manifest.permission.ACCESS_FINE_LOCATION
+        )
+        val realRepo = SportTypesRepository.getInstance(appContext)
+        val spyRepo = spyk(realRepo)
+        SportTypesRepository.resetForTesting(spyRepo)
+
+        val controller = Robolectric.buildService(BANALService::class.java)
+        val service = controller.create().get()
+        val comm = service.onBind(Intent()) as BANALService.BANALServiceComm
+        var fakeClockMs = 1000L
+        val sensorManager = MySensorManager(service)
+        val device = object : SpeedAndLocationDevice_ATTFused(service, sensorManager) {
+            override fun currentTimeMillis(): Long = fakeClockMs
+            override fun elapsedRealtimeNanos(): Long = fakeClockMs * 1_000_000L
+            override fun hasActivityRecognitionPermission(): Boolean = false
+            fun triggerResetForTest() { onAccumulatorsReset() }
+        }
+        val userChangedCount = java.util.concurrent.atomic.AtomicInteger(0)
+        val userChangedReceiver = object : android.content.BroadcastReceiver() {
+            override fun onReceive(context: android.content.Context?, intent: Intent?) {
+                if (intent?.action == BANALService.SPORT_TYPE_CHANGED_BY_USER_INTENT) {
+                    userChangedCount.incrementAndGet()
+                }
+            }
+        }
+        androidx.core.content.ContextCompat.registerReceiver(
+            service,
+            userChangedReceiver,
+            android.content.IntentFilter(BANALService.SPORT_TYPE_CHANGED_BY_USER_INTENT),
+            androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+
+        try {
+            val walkStepHz = 1.75 // 105 steps/min = 52.5 strides/min
+            // Phase 1: Establish WALKING_TRANSITION via 5 s of 1.3 m/s GNSS + 50-Hz ACC (zero STEP_DETECTOR)
+            for (sec in 0 until 5) {
+                for (k in 0 until 50) {
+                    fakeClockMs = 1000L + sec * 1000L + k * 20L
+                    val tSec = fakeClockMs / 1000.0
+                    val halfTilt = (Math.toRadians(18.0 + 4.0 * sin(2.0 * PI * (walkStepHz / 2.0) * tSec)) * 0.5).toFloat()
+                    device.onSensorChanged(createSyntheticSensorEvent(Sensor.TYPE_GAME_ROTATION_VECTOR, fakeClockMs * 1_000_000L, floatArrayOf(sin(halfTilt.toDouble()).toFloat(), 0f, 0f, cos(halfTilt.toDouble()).toFloat())))
+                    device.onSensorChanged(createSyntheticSensorEvent(Sensor.TYPE_ACCELEROMETER, fakeClockMs * 1_000_000L, floatArrayOf(0.3f, (9.81 + 2.2 * sin(2.0 * PI * walkStepHz * tSec)).toFloat(), 0.4f)))
+                }
+                val loc = android.location.Location(android.location.LocationManager.GPS_PROVIDER).apply {
+                    latitude = 48.137 + sec * 0.000012; longitude = 11.576; accuracy = 4.0f; speed = 1.3f; time = fakeClockMs; elapsedRealtimeNanos = fakeClockMs * 1_000_000L
+                }
+                device.onLocationChanged(loc)
+            }
+            assertEquals(PhoneCarriageMode.WALKING_TRANSITION.code, device.mActivityAndCarriageModeSensor?.value)
+            assertNull("Prior to Tier 4 RUN and < 6 s dwell, STRIDES must stay null", device.mStridesSensor)
+
+            // Phase 2: TrackerService.onSearchingFinished() sets Tier 4 RUN -> activates within <= 1 s, 0 SQLite, 0 user broadcast
+            comm.setResolvedBSportType(BSportType.RUN)
+            assertEquals(BSportType.UNKNOWN, service.bSportType)
+            assertEquals(BSportType.UNKNOWN, service.authoritativeBSportType)
+            assertEquals(BSportType.RUN, service.effectiveBSportType)
+
+            val walkStart2 = fakeClockMs
+            for (sec in 0 until 7) {
+                for (k in 1..50) {
+                    fakeClockMs = walkStart2 + sec * 1000L + k * 20L
+                    val tSec = fakeClockMs / 1000.0
+                    val halfTilt = (Math.toRadians(18.0 + 4.0 * sin(2.0 * PI * (walkStepHz / 2.0) * tSec)) * 0.5).toFloat()
+                    device.onSensorChanged(createSyntheticSensorEvent(Sensor.TYPE_GAME_ROTATION_VECTOR, fakeClockMs * 1_000_000L, floatArrayOf(sin(halfTilt.toDouble()).toFloat(), 0f, 0f, cos(halfTilt.toDouble()).toFloat())))
+                    device.onSensorChanged(createSyntheticSensorEvent(Sensor.TYPE_ACCELEROMETER, fakeClockMs * 1_000_000L, floatArrayOf(0.3f, (9.81 + 2.2 * sin(2.0 * PI * walkStepHz * tSec)).toFloat(), 0.4f)))
+                }
+                val loc = android.location.Location(android.location.LocationManager.GPS_PROVIDER).apply {
+                    latitude = 48.1371 + sec * 0.000012; longitude = 11.576; accuracy = 4.0f; speed = 1.3f; time = fakeClockMs; elapsedRealtimeNanos = fakeClockMs * 1_000_000L
+                }
+                device.onLocationChanged(loc)
+            }
+            shadowOf(Looper.getMainLooper()).idle()
+
+            assertEquals("Tier 4 resolved RUN must NEVER emit SPORT_TYPE_CHANGED_BY_USER_INTENT", 0, userChangedCount.get())
+            verify(exactly = 0) { spyRepo.getBSportType(any()) }
+            assertNotNull("Tier 4 RUN must register CADENCE in WALKING_TRANSITION", device.mCadenceSensor)
+            assertNotNull("Tier 4 RUN must register STRIDES in WALKING_TRANSITION", device.mStridesSensor)
+            val walkCad = (sensorManager.getSensor(SensorType.CADENCE)?.value as? Number)?.toDouble()
+            val walkStrides = (sensorManager.getSensor(SensorType.STRIDES)?.value as? Number)?.toInt() ?: 0
+            assertNotNull(walkCad)
+            assertTrue("Expected walking cadence in 45..60 spm (got $walkCad)", walkCad!! in 45.0..60.0)
+            assertTrue("Expected walking strides >= 2 (got $walkStrides)", walkStrides >= 2)
+
+            // Phase 3: Tier 3 kinematic BIKE overrides Tier 4 RUN and immediately tears down STRIDES
+            service.setInferredSportTelemetry(BSportType.BIKE, null)
+            fakeClockMs += 1100L
+            device.handleSportTypeChanged(fakeClockMs)
+            assertNull("Tier 3 BIKE must immediately unregister STRIDES", device.mStridesSensor)
+
+            // Phase 4: Explicit Tier 1 user OTHER (sportId = 1, UNKNOWN) suppresses walking CADENCE & STRIDES
+            device.triggerResetForTest()
+            comm.setUserSelectedSportTypeId(1L)
+            shadowOf(Looper.getMainLooper()).idle()
+            val otherStart = fakeClockMs
+            for (sec in 0 until 8) {
+                for (k in 1..50) {
+                    fakeClockMs = otherStart + sec * 1000L + k * 20L
+                    val tSec = fakeClockMs / 1000.0
+                    device.onSensorChanged(createSyntheticSensorEvent(Sensor.TYPE_ACCELEROMETER, fakeClockMs * 1_000_000L, floatArrayOf(0.3f, (9.81 + 2.2 * sin(2.0 * PI * walkStepHz * tSec)).toFloat(), 0.4f)))
+                }
+                val loc = android.location.Location(android.location.LocationManager.GPS_PROVIDER).apply {
+                    latitude = 48.138 + sec * 0.000012; longitude = 11.576; accuracy = 4.0f; speed = 1.3f; time = fakeClockMs; elapsedRealtimeNanos = fakeClockMs * 1_000_000L
+                }
+                device.onLocationChanged(loc)
+            }
+            assertNull("Explicit user OTHER must suppress walking STRIDES", device.mStridesSensor)
+            assertNull("Explicit user OTHER must suppress walking CADENCE", device.mCadenceSensor)
+
+            // Phase 5 (Watchpoint 1): Sustained UNKNOWN walk (>= 25 s) -> BIKE_FRONT_POCKET (still UNKNOWN) unregisters STRIDES
+            device.triggerResetForTest()
+            BANALService::class.java.getDeclaredField("mHaveUserSelectedSportType").apply { isAccessible = true; setBoolean(service, false) }
+            val wpStart = fakeClockMs
+            for (sec in 0 until 34) { // 4 s classify + 30 s (>= 25 s UNKNOWN walk dwell)
+                for (k in 1..50) {
+                    fakeClockMs = wpStart + sec * 1000L + k * 20L
+                    val tSec = fakeClockMs / 1000.0
+                    val halfTilt = (Math.toRadians(18.0 + 4.0 * sin(2.0 * PI * (walkStepHz / 2.0) * tSec)) * 0.5).toFloat()
+                    device.onSensorChanged(createSyntheticSensorEvent(Sensor.TYPE_GAME_ROTATION_VECTOR, fakeClockMs * 1_000_000L, floatArrayOf(sin(halfTilt.toDouble()).toFloat(), 0f, 0f, cos(halfTilt.toDouble()).toFloat())))
+                    device.onSensorChanged(createSyntheticSensorEvent(Sensor.TYPE_ACCELEROMETER, fakeClockMs * 1_000_000L, floatArrayOf(0.3f, (9.81 + 2.2 * sin(2.0 * PI * walkStepHz * tSec)).toFloat(), 0.4f)))
+                }
+                val loc = android.location.Location(android.location.LocationManager.GPS_PROVIDER).apply {
+                    latitude = 48.139 + sec * 0.000012; longitude = 11.576; accuracy = 4.0f; speed = 1.3f; time = fakeClockMs; elapsedRealtimeNanos = fakeClockMs * 1_000_000L
+                }
+                device.onLocationChanged(loc)
+            }
+            assertNotNull("Sustained UNKNOWN walk (>= 25 s) must register STRIDES without Tier 4", device.mStridesSensor)
+            // Transition carriage mode to BIKE_FRONT_POCKET while sportHint stays UNKNOWN (before Tier 3 infers BIKE)
+            device.setSportContextHintForTesting(com.atrainingtracker.banalservice.odometry.SportContextHint.UNKNOWN)
+            val bikeStart = fakeClockMs
+            for (sec in 0 until 7) {
+                for (k in 1..50) {
+                    fakeClockMs = bikeStart + sec * 1000L + k * 20L
+                    val tSec = fakeClockMs / 1000.0
+                    val halfTilt = (Math.toRadians(55.0 + 25.0 * sin(2.0 * PI * 1.25 * tSec)) * 0.5).toFloat()
+                    device.onSensorChanged(createSyntheticSensorEvent(Sensor.TYPE_GAME_ROTATION_VECTOR, fakeClockMs * 1_000_000L, floatArrayOf(sin(halfTilt.toDouble()).toFloat(), 0f, 0f, cos(halfTilt.toDouble()).toFloat())))
+                    device.onSensorChanged(createSyntheticSensorEvent(Sensor.TYPE_GYROSCOPE, fakeClockMs * 1_000_000L, floatArrayOf((2.2 * sin(2.0 * PI * 1.25 * tSec)).toFloat(), 0.5f, 0.3f)))
+                    device.onSensorChanged(createSyntheticSensorEvent(Sensor.TYPE_ACCELEROMETER, fakeClockMs * 1_000_000L, floatArrayOf((2.2 * sin(2.0 * PI * 1.25 * tSec)).toFloat(), 9.81f, (1.5 * cos(2.0 * PI * 1.25 * tSec)).toFloat())))
+                }
+                val loc = android.location.Location(android.location.LocationManager.GPS_PROVIDER).apply {
+                    latitude = 48.140 + sec * 0.000055; longitude = 11.576; accuracy = 4.0f; speed = 6.0f; time = fakeClockMs; elapsedRealtimeNanos = fakeClockMs * 1_000_000L
+                }
+                device.onLocationChanged(loc)
+            }
+            assertEquals(PhoneCarriageMode.BIKE_FRONT_POCKET.code, device.mActivityAndCarriageModeSensor?.value)
+            assertNull("Switching WALKING_TRANSITION -> BIKE_FRONT_POCKET under UNKNOWN must immediately unregister STRIDES", device.mStridesSensor)
+        } finally {
+            try { service.unregisterReceiver(userChangedReceiver) } catch (_: Throwable) {}
+            device.shutDown()
+            sensorManager.shutDown()
+            controller.destroy()
+        }
+    }
+
     private fun createSyntheticSensorEvent(sensorType: Int, timestampNs: Long, data: FloatArray): SensorEvent {
         val mockSensor = mockk<Sensor>(relaxed = true) {
             every { type } returns sensorType

@@ -1,0 +1,24 @@
+{
+  "ci_run_url": null,
+  "commit_sha": "aa2bfa7066b2379e07972785e93cd94a1c65f3e5",
+  "files": {
+    "evidence_summary.json": "31411df21087b12c48e0202518dff13884d1bcbd6c2845231491af8ad2eb194e",
+    "junit/TEST-com.atrainingtracker.banalservice.database.SportTypeSwimTemplateTest.xml": "591d5bc918152dd9bbffcc0af240e42ae6c6ad481d579eaec57ecd22eae10bbc",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.sporttype.SportTypeViewModelRefreshTest.xml": "e0adcbf93aa47430b6a806cfe063ef1e4099d85e0d214fc97584ad6bbd257edc",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.sporttype.SportTypeViewModelRetiredTest.xml": "dd6a07458e457163682693a9e9deb7478abc07c9112c492e333c7dfe131b564b",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.sporttype.SportTypesTabsScreenComposeTest.xml": "5634cabf53fabd10c37778ac16af0c9697e268ccc64356c5195df0565274cc44",
+    "junit/TEST-com.atrainingtracker.banalservice.ui.sporttype.SportTypesTabsScreenContractTest.xml": "65c68ec82908c2aa6e5f5118d6031ccc396fd475c9a95eb2d52364e469227db5",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.AndroidViewModelReflectionContractTest.xml": "6c3a2f65a02d0e4a8bdc5bfe92116c7dff8c5eb57ebce1e8c0ab251a667e0e22",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest.xml": "4a520e73672837d2cdd0a2f6251b2b7c140113a915ce977e6e8093f36e9591c6",
+    "junit/TEST-com.atrainingtracker.trainingtracker.build.UiReflectionOnlyTestAuditContractTest.xml": "6e007e40d4cb751b51d22082444ec53c18b1ffa7cc5171812819590ddf3013b4",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.RepositoryUiCleanlinessContractTest.xml": "9a8e2a80f0c5062862705d05511c261d4f4a16b8bb74544db5ce2be8df4fbede",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelTest.xml": "eaff53883afab80081cef58c3bf256416bc62514e7f510cd96447c4df5a7b917",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.common.SportTypesComposeHelpersTest.xml": "a4cd3fbc015cae5cec1f893c7c6c57da996426f2359e04fdfe32aafad510ad86",
+    "junit/TEST-com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModelLifecycleTest.xml": "920e782544133a97145d6d56bffe5892a32ec4bf11152861f207ea8a45f4aeb6",
+    "screenshots/ATT-8445_sport_types_after.png": "7556bc8fb1d8cba39abe51ed179d646bb591bb780a36e1c6832da179af053a76",
+    "screenshots/ATT-8445_sport_types_before.png": "e87881ff657f755da4a97ffa7e7fc5ff08724923550f867edcaad762c71f0512"
+  },
+  "run_started_utc": "2026-11-25T03:49:57.836949+00:00",
+  "schema_version": "1.0.0",
+  "ticket_key": "ATT-8445"
+}
