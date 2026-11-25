@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileTabFlowIsolationTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-25T09:21:11.197Z" hostname="rainer-HP-EliteBook-850-G5" time="28.736">
+  <properties/>
+  <testcase name="testAthleteProfileContent_pmcTimeRangeClickInvokesCallbackOnceWithoutDoubleMutation_tstUi2803_3" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileTabFlowIsolationTest" time="24.234"/>
+  <testcase name="testLthrAndSportHrMaxEntries_reactivelyRecomputePmc_whileWeightRemainsIsolated_tstSet135_3" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileTabFlowIsolationTest" time="2.043"/>
+  <testcase name="testResolveWorkoutThresholdsInMemory_enforcesHistoricalPrecedenceAndRunFtpExclusion_tstSet135_3" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileTabFlowIsolationTest" time="1.019"/>
+  <testcase name="testNonPmcChipToggles_triggerZeroPmcRecomputations_andHrMaxFlowUpdatesReactively_tstUi2803_3" classname="com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileTabFlowIsolationTest" time="1.44"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

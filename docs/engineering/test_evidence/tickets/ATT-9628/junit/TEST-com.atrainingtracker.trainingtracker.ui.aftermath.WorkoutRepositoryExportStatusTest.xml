@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryExportStatusTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:19:09.058Z" hostname="rainer-HP-EliteBook-850-G5" time="4.905">
+  <properties/>
+  <testcase name="testLoadWorkout_uncachedWorkout_insertsSortedDescendingAndEmitsInitialWorkout_TST_DAT_042_2" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryExportStatusTest" time="2.169"/>
+  <testcase name="testLoadWorkout_cachedWorkout_preservesExportStatusesAndTransientFieldsWhileUpdatingDbFields_TST_DAT_042_1" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryExportStatusTest" time="1.421"/>
+  <testcase name="testReloadExportStatuses_refreshesWorkoutNameFromDatabase" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryExportStatusTest" time="1.315"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

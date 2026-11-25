@@ -645,5 +645,52 @@ class PowerPhysiologyCalculatorTest {
         assertEquals((3.0 * 60.0) / 140.0, runRes.efFirstHalf!!, 1e-9)
         assertEquals((3.0 * 60.0) / 150.0, runRes.efSecondHalf!!, 1e-9)
     }
+
+    @Test
+    fun calculateHrTss_usesConfiguredSportLthrAndPreservesBitForBit85PctHrrFallback_TST_SET_135_3() {
+        // 1 hour at configured LTHR = 172 bpm (HRrest = 50, HRmax = 190) -> exact hrTSS = 100.0
+        val hrTssAtConfiguredLthr = PowerPhysiologyCalculator.calculateHrTss(
+            activeTimeSeconds = 3600.0,
+            avgHrBpm = 172.0,
+            hrRestBpm = 50.0,
+            hrMaxBpm = 190.0,
+            lthrBpm = 172.0
+        )
+        assertNotNull(hrTssAtConfiguredLthr)
+        assertEquals(100.0, hrTssAtConfiguredLthr!!, 1e-9)
+
+        // When LTHR is unset (null), result MUST match legacy 85% HRR bit-for-bit
+        val hrTssDefaultArg = PowerPhysiologyCalculator.calculateHrTss(3600.0, 158.0, 50.0, 190.0)!!
+        val hrTssNullLthr = PowerPhysiologyCalculator.calculateHrTss(3600.0, 158.0, 50.0, 190.0, lthrBpm = null)!!
+        val expectedLegacy = run {
+            val hrr = (158.0 - 50.0) / (190.0 - 50.0)
+            val num = 60.0 * hrr * kotlin.math.exp(1.92 * hrr)
+            val den = 60.0 * 0.85 * kotlin.math.exp(1.92 * 0.85)
+            100.0 * (num / den)
+        }
+        assertEquals(java.lang.Double.doubleToRawLongBits(expectedLegacy), java.lang.Double.doubleToRawLongBits(hrTssDefaultArg))
+        assertEquals(java.lang.Double.doubleToRawLongBits(expectedLegacy), java.lang.Double.doubleToRawLongBits(hrTssNullLthr))
+
+        // Historical sport-specific PMC resolution: 2026-10-15 run uses LTHR_RUN = 172 & HR_MAX_RUN = 190
+        val oct15Ms = java.time.LocalDate.of(2026, 10, 15)
+            .atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli()
+        val runSample = WorkoutTrainingLoadSample(
+            timestampMs = oct15Ms,
+            activeTimeSeconds = 3600,
+            avgHrBpm = 172.0,
+            bSportType = com.atrainingtracker.banalservice.BSportType.RUN
+        )
+        val pmc = PowerPhysiologyCalculator.computePerformanceManagementChart(
+            workoutSamples = listOf(runSample),
+            nowMs = oct15Ms,
+            zoneId = java.time.ZoneOffset.UTC,
+            thresholdResolver = { sport, _ ->
+                if (sport == com.atrainingtracker.banalservice.BSportType.RUN) {
+                    WorkoutThresholds(hrRestBpm = 50.0, hrMaxBpm = 190.0, lthrBpm = 172.0)
+                } else null
+            }
+        )
+        assertEquals(100.0, pmc.dailyPoints.last().dailyTss, 1e-6)
+    }
 }
 

@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutClusterCounterTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:11:32.773Z" hostname="rainer-HP-EliteBook-850-G5" time="18.859">
+  <properties/>
+  <testcase name="formatClusterWorkoutName_whenCounterDisabled_hitCount2_returnsBaseNameWithoutCounter" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCounterTest" time="1.684"/>
+  <testcase name="assignClusterToWorkout_whenCounterDisabled_assignsCleanNameWithoutSuffixOnSubsequentHits" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCounterTest" time="1.666"/>
+  <testcase name="formatClusterWorkoutName_whenCounterEnabled_hitCount2_returnsNumberedName" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCounterTest" time="1.757"/>
+  <testcase name="workoutClusterModel_hasCounterDefaultsToTrue" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCounterTest" time="1.663"/>
+  <testcase name="formatClusterWorkoutName_whenCounterEnabled_hitCount1_returnsBaseName" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCounterTest" time="1.811"/>
+  <testcase name="assignClusterToWorkout_whenCounterEnabled_assignsNumberedNameOnSubsequentHits" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCounterTest" time="1.706"/>
+  <testcase name="formatClusterWorkoutName_defaultParameter_preservesBackwardCompatibilityWithCounterEnabled" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCounterTest" time="1.693"/>
+  <testcase name="formatClusterWorkoutName_whenCounterDisabled_hitCount1_returnsBaseName" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCounterTest" time="1.692"/>
+  <testcase name="formatClusterWorkoutName_whenCounterDisabled_hitCount15_returnsBaseNameWithoutCounter" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCounterTest" time="1.778"/>
+  <testcase name="workoutClusterModel_hasCounterCanBeExplicitlyFalse" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCounterTest" time="1.731"/>
+  <testcase name="formatClusterWorkoutName_whenCounterEnabled_hitCount10_returnsNumberedName" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterCounterTest" time="1.678"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[System.logW: A resource was acquired at attached stack trace but never released. See java.io.Closeable for information on avoiding resource leaks.
+java.lang.Throwable: Explicit termination method 'SQLiteConnectionPool.close' not called
+	at dalvik.system.CloseGuard.$$robo$$dalvik_system_CloseGuard$openWithCallSite(CloseGuard.java:288)
+	at dalvik.system.CloseGuard.openWithCallSite(CloseGuard.java)
+	at dalvik.system.CloseGuard.$$robo$$dalvik_system_CloseGuard$open(CloseGuard.java:257)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.robolectric.shadows.ShadowCloseGuard$CloseGuardReflector$$Reflector17.open(Unknown Source)
+	at org.robolectric.shadows.ShadowCloseGuard.open(ShadowCloseGuard.java:38)
+	at dalvik.system.CloseGuard.open(CloseGuard.java)
+	at android.database.sqlite.SQLiteConnectionPool.$$robo$$android_database_sqlite_SQLiteConnectionPool$open(SQLiteConnectionPool.java:226)
+	at android.database.sqlite.SQLiteConnectionPool.open(SQLiteConnectionPool.java)
+	at android.database.sqlite.SQLiteConnectionPool.$$robo$$android_database_sqlite_SQLiteConnectionPool$open(SQLiteConnectionPool.java:207)
+	at android.database.sqlite.SQLiteConnectionPool.open(SQLiteConnectionPool.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openInner(Unknown Source)
+	at android.database.sqlite.SQLiteDatabase.openInner(Unknown Source)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$open(Unknown Source)
+	at android.database.sqlite.SQLiteDatabase.open(Unknown Source)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openDatabase(Unknown Source)
+	at android.database.sqlite.SQLiteDatabase.openDatabase(Unknown Source)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openDatabase(Unknown Source)
+	at android.database.sqlite.SQLiteDatabase.openDatabase(Unknown Source)
+	at android.database.sqlite.SQLiteOpenHelper.$$robo$$android_database_sqlite_SQLiteOpenHelper$getDatabaseLocked(SQLiteOpenHelper.java:373)
+	at android.database.sqlite.SQLiteOpenHelper.getDatabaseLocked(SQLiteOpenHelper.java)
+	at android.database.sqlite.SQLiteOpenHelper.$$robo$$android_database_sqlite_SQLiteOpenHelper$getWritableDatabase(SQLiteOpenHelper.java:316)
+	at android.database.sqlite.SQLiteOpenHelper.getWritableDatabase(SQLiteOpenHelper.java)
+	at com.atrainingtracker.database.TrackingSQLiteOpenHelper.getWritableDatabase(TrackingSQLiteOpenHelper.kt:126)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager.getDatabase(WorkoutClusterDatabaseManager.kt:514)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager.getAllClusters(WorkoutClusterDatabaseManager.kt:520)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository.getAllClustersSync(WorkoutClusterRepository.kt:1001)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine$dbManager$1.getAllClusters(WorkoutClusterEngine.kt:50)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.migrateHistory(WorkoutClusterEngine.kt:641)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.migrateHistory$default(WorkoutClusterEngine.kt:620)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.migrateHistory(WorkoutClusterEngine.kt)
+	at com.atrainingtracker.trainingtracker.TrainingApplication.lambda$runWorkoutClusterMigration$0(Unknown Source)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+
+System.logW: A resource was acquired at attached stack trace but never released. See java.io.Closeable for information on avoiding resource leaks.
+java.lang.Throwable: Explicit termination method 'SQLiteConnection.close' not called
+	at dalvik.system.CloseGuard.$$robo$$dalvik_system_CloseGuard$openWithCallSite(CloseGuard.java:288)
+	at dalvik.system.CloseGuard.openWithCallSite(CloseGuard.java)
+	at dalvik.system.CloseGuard.$$robo$$dalvik_system_CloseGuard$open(CloseGuard.java:257)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.robolectric.shadows.ShadowCloseGuard$CloseGuardReflector$$Reflector17.open(Unknown Source)
+	at org.robolectric.shadows.ShadowCloseGuard.open(ShadowCloseGuard.java:38)
+	at dalvik.system.CloseGuard.open(CloseGuard.java)
+	at android.database.sqlite.SQLiteConnection.$$robo$$android_database_sqlite_SQLiteConnection$__constructor__(SQLiteConnection.java:182)
+	at android.database.sqlite.SQLiteConnection.<init>(SQLiteConnection.java:173)
+	at android.database.sqlite.SQLiteConnection.$$robo$$android_database_sqlite_SQLiteConnection$open(SQLiteConnection.java:202)
+	at android.database.sqlite.SQLiteConnection.open(SQLiteConnection.java)
+	at android.database.sqlite.SQLiteConnectionPool.$$robo$$android_database_sqlite_SQLiteConnectionPool$openConnectionLocked(SQLiteConnectionPool.java:528)
+	at android.database.sqlite.SQLiteConnectionPool.openConnectionLocked(SQLiteConnectionPool.java)
+	at android.database.sqlite.SQLiteConnectionPool.$$robo$$android_database_sqlite_SQLiteConnectionPool$open(SQLiteConnectionPool.java:215)
+	at android.database.sqlite.SQLiteConnectionPool.open(SQLiteConnectionPool.java)
+	at android.database.sqlite.SQLiteConnectionPool.$$robo$$android_database_sqlite_SQLiteConnectionPool$open(SQLiteConnectionPool.java:207)
+	at android.database.sqlite.SQLiteConnectionPool.open(SQLiteConnectionPool.java)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openInner(Unknown Source)
+	at android.database.sqlite.SQLiteDatabase.openInner(Unknown Source)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$open(Unknown Source)
+	at android.database.sqlite.SQLiteDatabase.open(Unknown Source)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openDatabase(Unknown Source)
+	at android.database.sqlite.SQLiteDatabase.openDatabase(Unknown Source)
+	at android.database.sqlite.SQLiteDatabase.$$robo$$android_database_sqlite_SQLiteDatabase$openDatabase(Unknown Source)
+	at android.database.sqlite.SQLiteDatabase.openDatabase(Unknown Source)
+	at android.database.sqlite.SQLiteOpenHelper.$$robo$$android_database_sqlite_SQLiteOpenHelper$getDatabaseLocked(SQLiteOpenHelper.java:373)
+	at android.database.sqlite.SQLiteOpenHelper.getDatabaseLocked(SQLiteOpenHelper.java)
+	at android.database.sqlite.SQLiteOpenHelper.$$robo$$android_database_sqlite_SQLiteOpenHelper$getWritableDatabase(SQLiteOpenHelper.java:316)
+	at android.database.sqlite.SQLiteOpenHelper.getWritableDatabase(SQLiteOpenHelper.java)
+	at com.atrainingtracker.database.TrackingSQLiteOpenHelper.getWritableDatabase(TrackingSQLiteOpenHelper.kt:126)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager.getDatabase(WorkoutClusterDatabaseManager.kt:514)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager.getAllClusters(WorkoutClusterDatabaseManager.kt:520)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository.getAllClustersSync(WorkoutClusterRepository.kt:1001)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine$dbManager$1.getAllClusters(WorkoutClusterEngine.kt:50)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.migrateHistory(WorkoutClusterEngine.kt:641)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.migrateHistory$default(WorkoutClusterEngine.kt:620)
+	at com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.migrateHistory(WorkoutClusterEngine.kt)
+	at com.atrainingtracker.trainingtracker.TrainingApplication.lambda$runWorkoutClusterMigration$0(Unknown Source)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+
+]]></system-err>
+</testsuite>

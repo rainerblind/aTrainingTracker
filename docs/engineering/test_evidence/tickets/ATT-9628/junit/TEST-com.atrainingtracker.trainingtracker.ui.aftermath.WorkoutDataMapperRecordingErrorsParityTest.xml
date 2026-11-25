@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapperRecordingErrorsParityTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:17:51.256Z" hostname="rainer-HP-EliteBook-850-G5" time="0.373">
+  <properties/>
+  <testcase name="testRule20MappingSymmetryWithNullErrors" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapperRecordingErrorsParityTest" time="0.179"/>
+  <testcase name="testRule20MappingSymmetryWithNonNullErrors" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapperRecordingErrorsParityTest" time="0.194"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[System.logW: A resource failed to call AbstractCursor.close. 
+]]></system-err>
+</testsuite>

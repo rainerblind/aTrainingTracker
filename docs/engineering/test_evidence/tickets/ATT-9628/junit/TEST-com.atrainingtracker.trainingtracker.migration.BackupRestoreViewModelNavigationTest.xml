@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModelNavigationTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:13:59.502Z" hostname="rainer-HP-EliteBook-850-G5" time="4.744">
+  <properties/>
+  <testcase name="uiStateSuccess_defaultsImportedWorkoutIdToNull" classname="com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModelNavigationTest" time="0.856"/>
+  <testcase name="importFitFiles_whenWorkoutImported_emitsSuccessWithWorkoutId" classname="com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModelNavigationTest" time="1.945"/>
+  <testcase name="importFitFiles_whenOnlyDuplicatesSkipped_emitsSuccessWithNullWorkoutId" classname="com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModelNavigationTest" time="1.943"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

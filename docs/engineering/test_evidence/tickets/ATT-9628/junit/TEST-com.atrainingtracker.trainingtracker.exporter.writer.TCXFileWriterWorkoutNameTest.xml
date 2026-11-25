@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.exporter.writer.TCXFileWriterWorkoutNameTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:13:31.113Z" hostname="rainer-HP-EliteBook-850-G5" time="12.658">
+  <properties/>
+  <testcase name="testTcxExportXmlCharacterEscaping" classname="com.atrainingtracker.trainingtracker.exporter.writer.TCXFileWriterWorkoutNameTest" time="2.092"/>
+  <testcase name="testTcxExportOmitsDefaultFileBaseName" classname="com.atrainingtracker.trainingtracker.exporter.writer.TCXFileWriterWorkoutNameTest" time="2.075"/>
+  <testcase name="testTcxExportSerializesWorkoutNameAndDescriptionInNotesAndExtensions" classname="com.atrainingtracker.trainingtracker.exporter.writer.TCXFileWriterWorkoutNameTest" time="2.085"/>
+  <testcase name="testBaseFileWriterQueriesWorkoutName" classname="com.atrainingtracker.trainingtracker.exporter.writer.TCXFileWriterWorkoutNameTest" time="2.112"/>
+  <testcase name="testTcxExportDescriptionOnly" classname="com.atrainingtracker.trainingtracker.exporter.writer.TCXFileWriterWorkoutNameTest" time="2.102"/>
+  <testcase name="testTcxExportNameOnly" classname="com.atrainingtracker.trainingtracker.exporter.writer.TCXFileWriterWorkoutNameTest" time="2.191"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

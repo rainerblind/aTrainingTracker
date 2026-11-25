@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculatorTest" tests="19" skipped="0" failures="0" errors="0" timestamp="2026-11-25T09:20:27.323Z" hostname="rainer-HP-EliteBook-850-G5" time="0.623">
+  <properties/>
+  <testcase name="calculateSessionRpe_computesFosterScoreCorrectly" classname="com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculatorTest" time="0.025"/>
+  <testcase name="estimateCpAndWPrime_handlesReversedDurationOrderAndRejectsInvalidInputs" classname="com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculatorTest" time="0.002"/>
+  <testcase name="computePerformanceManagementChart_gatesAcwrStrictlyAtMinCtl15_tstWko039_1" classname="com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculatorTest" time="0.102"/>
+  <testcase name="computePerformanceManagementChart_localTimezoneBucketsLateWorkoutIntoLocalCalendarDay" classname="com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculatorTest" time="0.003"/>
+  <testcase name="computeWPrimeBalanceSeries_leadingNullsAndMidGapRecharge_exactNumericParity_TST_PRO_137_3" classname="com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculatorTest" time="0.249"/>
+  <testcase name="importAndHistoricalThresholdResolution_sourceContractsArePresent" classname="com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculatorTest" time="0.127"/>
+  <testcase name="calculateNormalizedPower_and_cyclingEfficiencyFactor_and_PwHrDecoupling" classname="com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculatorTest" time="0.038"/>
+  <testcase name="calculateNormalizedPower_scalesRollingWindowWithSampleInterval" classname="com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculatorTest" time="0.01"/>
+  <testcase name="computeAerobicEfficiencyAndDecoupling_powerVsSpeedAsymmetricPredicatesAndAggregators_TST_PRO_137_3" classname="com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculatorTest" time="0.0"/>
+  <testcase name="calculateHrTss_usesConfiguredSportLthrAndPreservesBitForBit85PctHrrFallback_TST_SET_135_3" classname="com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculatorTest" time="0.002"/>
+  <testcase name="computeWPrimeBalanceSeries_calculatesMinPctAndEmptyTankWarning" classname="com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculatorTest" time="0.002"/>
+  <testcase name="calculateRpeTss_mapsAllTenBorgCr10LevelsScalesLinearlyAndGuardsInvalidInputs_tstWko039_2" classname="com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculatorTest" time="0.022"/>
+  <testcase name="calculateHrTssAndResolveWorkoutTrainingLoad_followThreeTierHierarchy" classname="com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculatorTest" time="0.0"/>
+  <testcase name="estimateCpAndWPrime_solvesTwoPointWorkTimeModelAccurately" classname="com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculatorTest" time="0.0"/>
+  <testcase name="computePowerTrainingMetrics_steadyAndVariablePower_matchesCogganFormulas" classname="com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculatorTest" time="0.024"/>
+  <testcase name="computePerformanceManagementChart_computesCtlAtlTsbAcwrRampRateAndZones" classname="com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculatorTest" time="0.005"/>
+  <testcase name="stepWPrimeBalanceJoules_clampsAtZeroUnderExcessiveSupraCpEffort" classname="com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculatorTest" time="0.001"/>
+  <testcase name="computeAerobicEfficiencyAndDecoupling_runningPaHrCoupledResponseAndEdgeCases" classname="com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculatorTest" time="0.0"/>
+  <testcase name="stepWPrimeBalanceJoules_depletesLinearlyAboveCpAndRechargesExponentiallyBelowCp" classname="com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculatorTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

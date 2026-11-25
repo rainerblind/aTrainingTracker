@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.MilestoneAutoNamingManagerTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:10:35.686Z" hostname="rainer-HP-EliteBook-850-G5" time="7.942">
+  <properties/>
+  <testcase name="testEvaluateAndApplyMilestone_nonMilestoneDoesNotUpdateNameOrPrompt" classname="com.atrainingtracker.trainingtracker.database.MilestoneAutoNamingManagerTest" time="1.62"/>
+  <testcase name="testEvaluateAndApplyMilestone_subsequentJubileeUpdatesNameWithoutPrompting" classname="com.atrainingtracker.trainingtracker.database.MilestoneAutoNamingManagerTest" time="1.483"/>
+  <testcase name="testFormatMilestoneTitle_formatsCorrectly" classname="com.atrainingtracker.trainingtracker.database.MilestoneAutoNamingManagerTest" time="1.292"/>
+  <testcase name="testEvaluateAndApplyMilestone_firstJubileeUpdatesNameAndReturnsCelebrationData" classname="com.atrainingtracker.trainingtracker.database.MilestoneAutoNamingManagerTest" time="1.198"/>
+  <testcase name="testFormatMilestoneTitle_preventsDoublePrefixing" classname="com.atrainingtracker.trainingtracker.database.MilestoneAutoNamingManagerTest" time="1.174"/>
+  <testcase name="testIsMilestone_exactThresholdEvaluation" classname="com.atrainingtracker.trainingtracker.database.MilestoneAutoNamingManagerTest" time="1.173"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

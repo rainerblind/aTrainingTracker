@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineGpxTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:14:43.027Z" hostname="rainer-HP-EliteBook-850-G5" time="11.367">
+  <properties/>
+  <testcase name="importFromGpx_parsesGarminTpxExtensionsAndPower" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineGpxTest" time="3.041"/>
+  <testcase name="importFromGpx_multiSegmentCreatesDistinctLaps" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineGpxTest" time="2.792"/>
+  <testcase name="importFromGpx_parsesTrackpointsElevationAndTimestamps" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineGpxTest" time="2.751"/>
+  <testcase name="importFromGpx_skipsExistingWorkout" classname="com.atrainingtracker.trainingtracker.migration.LegacyImportEngineGpxTest" time="2.783"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

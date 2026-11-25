@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.integration.PersistenceSqliteIntegrationTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:13:01.846Z" hostname="rainer-HP-EliteBook-850-G5" time="1.195">
+  <properties/>
+  <testcase name="testKnownLocationsDbHelper_onUpgradeV1ToV5_preservesExistingData" classname="com.atrainingtracker.trainingtracker.integration.PersistenceSqliteIntegrationTest" time="0.336"/>
+  <testcase name="testKnownLocationsRepository_recordWorkoutStart_persistsToRealSqlite" classname="com.atrainingtracker.trainingtracker.integration.PersistenceSqliteIntegrationTest" time="0.546"/>
+  <testcase name="testSqliteManagers_dynamicSamplesTable_lapsAndWalConcurrency" classname="com.atrainingtracker.trainingtracker.integration.PersistenceSqliteIntegrationTest" time="0.313"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

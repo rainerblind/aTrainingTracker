@@ -193,7 +193,8 @@ class AthleteProfileTabFlowIsolationTest {
                     ftpWatts = any(),
                     hrRestBpm = any(),
                     hrMaxBpm = any(),
-                    zoneId = any()
+                    zoneId = any(),
+                    thresholdResolver = any()
                 )
             } answers {
                 observedHrMaxArgs.add(arg(4))
@@ -269,10 +270,131 @@ class AthleteProfileTabFlowIsolationTest {
             )
 
             verify(exactly = baselinePmcCalls + 1) {
-                PowerPhysiologyCalculator.computePerformanceManagementChart(any(), any(), any(), any(), any(), any())
+                PowerPhysiologyCalculator.computePerformanceManagementChart(any(), any(), any(), any(), any(), any(), any())
             }
             job.cancel()
         }
+
+    @Test
+    fun testLthrAndSportHrMaxEntries_reactivelyRecomputePmc_whileWeightRemainsIsolated_tstSet135_3() =
+        runTest(testDispatcher) {
+            val now = System.currentTimeMillis()
+            val dayMs = 86_400_000L
+            every { mockWorkoutRepo.getWorkoutTrainingLoadRecords() } returns listOf(
+                WorkoutTrainingLoadSample(
+                    timestampMs = now - 2 * dayMs,
+                    activeTimeSeconds = 3600,
+                    powerTss = null,
+                    avgHrBpm = 165.0,
+                    avgPowerWatts = null,
+                    rpe = 7,
+                    bSportType = com.atrainingtracker.banalservice.BSportType.RUN
+                )
+            )
+            mockkStatic(PowerPhysiologyCalculator::class)
+            var pmcCalls = 0
+            every {
+                PowerPhysiologyCalculator.computePerformanceManagementChart(
+                    workoutSamples = any(),
+                    nowMs = any(),
+                    ftpWatts = any(),
+                    hrRestBpm = any(),
+                    hrMaxBpm = any(),
+                    zoneId = any(),
+                    thresholdResolver = any()
+                )
+            } answers {
+                pmcCalls++
+                callOriginal()
+            }
+
+            val viewModel = AthleteProfileViewModel(
+                application = mockApplication,
+                workoutRepository = mockWorkoutRepo,
+                ioDispatcher = testDispatcher
+            )
+            val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                viewModel.uiState.collect()
+            }
+            advanceUntilIdle()
+
+            val baselineCalls = pmcCalls
+            assertTrue("Initial PMC computation must run", baselineCalls >= 1)
+            val ctlBeforeLthr = viewModel.pmcUiState.value.pmcSummary.currentCtl
+
+            // Emitting WEIGHT_KG must still trigger 0 PMC recomputations
+            entriesFlow.value = listOf(
+                AthleteMetricEntry(id = 10L, metricType = AthleteMetricType.WEIGHT_KG, value = 70.5, timestampMs = now - dayMs)
+            ) + entriesFlow.value
+            advanceUntilIdle()
+            assertEquals("WEIGHT_KG emission must not recompute PMC", baselineCalls, pmcCalls)
+
+            // Emitting LTHR_RUN_BPM on entriesFlow MUST reactively recompute PMC and update CTL
+            entriesFlow.value = listOf(
+                AthleteMetricEntry(id = 11L, metricType = AthleteMetricType.LTHR_RUN_BPM, value = 165.0, timestampMs = now - 5 * dayMs)
+            ) + entriesFlow.value
+            advanceUntilIdle()
+            assertEquals("LTHR_RUN_BPM emission must trigger exactly 1 PMC recomputation", baselineCalls + 1, pmcCalls)
+            val ctlAfterLthr = viewModel.pmcUiState.value.pmcSummary.currentCtl
+            assertTrue("LTHR_RUN_BPM must alter HR-based CTL ($ctlBeforeLthr -> $ctlAfterLthr)", ctlAfterLthr != ctlBeforeLthr)
+
+            // Emitting HR_MAX_RUN_BPM on entriesFlow MUST reactively recompute PMC
+            entriesFlow.value = listOf(
+                AthleteMetricEntry(id = 12L, metricType = AthleteMetricType.HR_MAX_RUN_BPM, value = 196.0, timestampMs = now - 5 * dayMs)
+            ) + entriesFlow.value
+            advanceUntilIdle()
+            assertEquals("HR_MAX_RUN_BPM emission must trigger exactly 1 PMC recomputation", baselineCalls + 2, pmcCalls)
+
+            job.cancel()
+        }
+
+    @Test
+    fun testResolveWorkoutThresholdsInMemory_enforcesHistoricalPrecedenceAndRunFtpExclusion_tstSet135_3() {
+        val tOct1 = 1_700_000_000_000L
+        val tOct15 = 1_701_200_000_000L
+        val tNov1 = 1_702_600_000_000L
+        // Sorted DESC by (timestampMs, id) matching repository.entriesFlow
+        val entries = listOf(
+            AthleteMetricEntry(id = 9L, metricType = AthleteMetricType.HR_MAX_RUN_BPM, value = 198.0, timestampMs = tNov1),
+            AthleteMetricEntry(id = 8L, metricType = AthleteMetricType.HR_MAX_BIKE_BPM, value = 190.0, timestampMs = tNov1),
+            AthleteMetricEntry(id = 7L, metricType = AthleteMetricType.LTHR_RUN_BPM, value = 178.0, timestampMs = tNov1),
+            AthleteMetricEntry(id = 6L, metricType = AthleteMetricType.FTP_WATTS, value = 300.0, timestampMs = tNov1),
+            AthleteMetricEntry(id = 5L, metricType = AthleteMetricType.HR_MAX_RUN_BPM, value = 190.0, timestampMs = tOct1),
+            AthleteMetricEntry(id = 4L, metricType = AthleteMetricType.HR_MAX_BIKE_BPM, value = 184.0, timestampMs = tOct1),
+            AthleteMetricEntry(id = 3L, metricType = AthleteMetricType.LTHR_RUN_BPM, value = 172.0, timestampMs = tOct1),
+            AthleteMetricEntry(id = 2L, metricType = AthleteMetricType.LTHR_BIKE_BPM, value = 166.0, timestampMs = tOct1),
+            AthleteMetricEntry(id = 1L, metricType = AthleteMetricType.FTP_WATTS, value = 280.0, timestampMs = tOct1),
+            AthleteMetricEntry(id = 0L, metricType = AthleteMetricType.HR_REST_BPM, value = 50.0, timestampMs = tOct1)
+        )
+
+        // RUN at Oct 15: gets Oct 1 RUN HRmax/LTHR and strictly null cycling FTP_WATTS
+        val runOct15 = resolveWorkoutThresholdsInMemory(entries, com.atrainingtracker.banalservice.BSportType.RUN, tOct15, fallbackHrMaxBpm = 198.0)
+        assertEquals(190.0, runOct15.hrMaxBpm!!, 1e-6)
+        assertEquals(172.0, runOct15.lthrBpm!!, 1e-6)
+        assertEquals(50.0, runOct15.hrRestBpm!!, 1e-6)
+        assertEquals("RUN workouts must NOT inherit cycling FTP_WATTS", null, runOct15.ftpWatts)
+
+        // BIKE at Oct 15: gets Oct 1 BIKE HRmax/LTHR and cycling FTP_WATTS
+        val bikeOct15 = resolveWorkoutThresholdsInMemory(entries, com.atrainingtracker.banalservice.BSportType.BIKE, tOct15, fallbackHrMaxBpm = 198.0)
+        assertEquals(184.0, bikeOct15.hrMaxBpm!!, 1e-6)
+        assertEquals(166.0, bikeOct15.lthrBpm!!, 1e-6)
+        assertEquals(280.0, bikeOct15.ftpWatts!!, 1e-6)
+
+        // UNKNOWN at Oct 15: historical max(RUN=190, BIKE=184)=190 MUST take precedence over latest fallbackHrMaxBpm=198
+        val unknownOct15 = resolveWorkoutThresholdsInMemory(entries, com.atrainingtracker.banalservice.BSportType.UNKNOWN, tOct15, fallbackHrMaxBpm = 198.0)
+        assertEquals(190.0, unknownOct15.hrMaxBpm!!, 1e-6)
+        assertEquals(null, unknownOct15.lthrBpm)
+
+        // UNKNOWN with no sport HRmax rows: falls back to legacy fallbackHrMaxBpm
+        val unknownFallback = resolveWorkoutThresholdsInMemory(
+            entries = listOf(AthleteMetricEntry(id = 0L, metricType = AthleteMetricType.HR_REST_BPM, value = 50.0, timestampMs = tOct1)),
+            sportType = com.atrainingtracker.banalservice.BSportType.UNKNOWN,
+            timestampMs = tOct15,
+            fallbackHrMaxBpm = 185.0
+        )
+        assertEquals(185.0, unknownFallback.hrMaxBpm!!, 1e-6)
+        assertEquals(null, unknownFallback.lthrBpm)
+    }
 
     @Test
     fun testAthleteProfileContent_pmcTimeRangeClickInvokesCallbackOnceWithoutDoubleMutation_tstUi2803_3() {

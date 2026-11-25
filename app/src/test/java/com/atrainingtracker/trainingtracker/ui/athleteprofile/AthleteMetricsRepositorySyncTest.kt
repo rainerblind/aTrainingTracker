@@ -20,6 +20,8 @@ package com.atrainingtracker.trainingtracker.ui.athleteprofile
 
 import android.content.Context
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.edit
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.AthleteMetricEntry
 import com.atrainingtracker.trainingtracker.database.AthleteMetricType
 import com.atrainingtracker.trainingtracker.database.ZoneSnapshotEntry
@@ -32,6 +34,7 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -53,6 +56,15 @@ private class FakeAthleteMetricsDataSource : AthleteMetricsDataSource {
     override fun getLatestEntry(metricType: AthleteMetricType): AthleteMetricEntry? =
         rows.filter { it.metricType == metricType }
             .maxWithOrNull(compareBy<AthleteMetricEntry> { it.timestampMs }.thenBy { it.id })
+
+    override fun getEntryEffectiveAt(metricType: AthleteMetricType, timestampMs: Long): AthleteMetricEntry? {
+        if (timestampMs > 0L) {
+            val historical = rows.filter { it.metricType == metricType && it.timestampMs <= timestampMs }
+                .maxWithOrNull(compareBy<AthleteMetricEntry> { it.timestampMs }.thenBy { it.id })
+            if (historical != null) return historical
+        }
+        return getLatestEntry(metricType)
+    }
 
     override fun insertEntry(timestampMs: Long, metricType: AthleteMetricType, value: Double): Long {
         require(metricType.isValidMetricValue(value))
@@ -296,5 +308,242 @@ class AthleteMetricsRepositorySyncTest {
         // 6. Delete latest snapshot (id2) -> DataStore projection reverts to next latest (id1)
         repository.deleteZoneSnapshot(id2, SettingsDataStore.ZoneType.HR_RUN)
         assertEquals(130, settingsDataStore.getZone1MaxFlow(SettingsDataStore.ZoneType.HR_RUN).first())
+    }
+
+    @Test
+    fun `legacy KEY_HR_MAX seeds HR_MAX_RUN and HR_MAX_BIKE idempotently even when athlete_metrics_seeded is true (TST-SET-135_1)`() = runTest {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val dataStoreScope = TestScope(testDispatcher + Job())
+        val testDataStore = PreferenceDataStoreFactory.create(
+            scope = dataStoreScope,
+            produceFile = { tmpFolder.newFile("legacy_hrmax_seed.preferences_pb") }
+        )
+        testDataStore.edit { prefs ->
+            prefs[SettingsDataStore.KEY_ATHLETE_METRICS_SEEDED] = true
+            prefs[SettingsDataStore.KEY_HR_MAX] = 188
+        }
+        val settingsDataStore = SettingsDataStore.createForTesting(mockk<Context>(relaxed = true), testDataStore, dataStoreScope)
+        val fakeDb = FakeAthleteMetricsDataSource()
+        val repository = AthleteMetricsRepository(fakeDb, settingsDataStore, testDispatcher)
+
+        val t0 = 1_760_000_000_000L
+        repository.initializeAndRefresh(nowMs = t0)
+        assertTrue(settingsDataStore.sportHrMaxSeededFlow.first())
+        assertEquals(1, fakeDb.seedTransactionCallCount)
+
+        val seededRun = fakeDb.getLatestEntry(AthleteMetricType.HR_MAX_RUN_BPM)
+        val seededBike = fakeDb.getLatestEntry(AthleteMetricType.HR_MAX_BIKE_BPM)
+        assertEquals(188.0, seededRun!!.value, 1e-3)
+        assertEquals(188.0, seededBike!!.value, 1e-3)
+        assertEquals(188, settingsDataStore.hrMaxRunFlow.first())
+        assertEquals(188, settingsDataStore.hrMaxBikeFlow.first())
+        assertEquals(188, settingsDataStore.hrMaxFlow.first())
+
+        // Re-initializing produces zero duplicate rows
+        repository.initializeAndRefresh(nowMs = t0 + 10_000L)
+        assertEquals(1, fakeDb.seedTransactionCallCount)
+        assertEquals(2, repository.entriesFlow.value.size)
+
+        // Deleting both sport HRmax entries clears hrMaxFlow and is NOT resurrected on subsequent initialize
+        repository.deleteEntry(seededRun.id, AthleteMetricType.HR_MAX_RUN_BPM)
+        assertEquals(188, settingsDataStore.hrMaxFlow.first())
+        repository.deleteEntry(seededBike.id, AthleteMetricType.HR_MAX_BIKE_BPM)
+        assertNull(settingsDataStore.hrMaxRunFlow.first())
+        assertNull(settingsDataStore.hrMaxBikeFlow.first())
+        assertNull(settingsDataStore.hrMaxFlow.first())
+
+        repository.initializeAndRefresh(nowMs = t0 + 20_000L)
+        assertTrue(repository.entriesFlow.value.isEmpty())
+        dataStoreScope.coroutineContext[Job]?.cancel()
+    }
+
+    @Test
+    fun `all 7 sport threshold types sync atomically to DataStore and resolve historically via getEffectiveThresholdsAt (TST-SET-135_2)`() = runTest {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val dataStoreScope = TestScope(testDispatcher + Job())
+        val testDataStore = PreferenceDataStoreFactory.create(
+            scope = dataStoreScope,
+            produceFile = { tmpFolder.newFile("sport_thresholds_sync.preferences_pb") }
+        )
+        val settingsDataStore = SettingsDataStore.createForTesting(mockk<Context>(relaxed = true), testDataStore, dataStoreScope)
+        val fakeDb = FakeAthleteMetricsDataSource()
+        val repository = AthleteMetricsRepository(fakeDb, settingsDataStore, testDispatcher)
+
+        val tOct1 = 1_790_812_800_000L
+        val tOct15 = 1_792_022_400_000L
+        val tNov1 = 1_793_491_200_000L
+
+        repository.addEntry(AthleteMetricType.HR_REST_BPM, 50.0, tOct1)
+        val hrMaxRun1 = repository.addEntry(AthleteMetricType.HR_MAX_RUN_BPM, 190.0, tOct1)
+        val hrMaxBike1 = repository.addEntry(AthleteMetricType.HR_MAX_BIKE_BPM, 184.0, tOct1)
+        val lthrRun1 = repository.addEntry(AthleteMetricType.LTHR_RUN_BPM, 172.0, tOct1)
+        val lthrBike1 = repository.addEntry(AthleteMetricType.LTHR_BIKE_BPM, 166.0, tOct1)
+        val lt1Run1 = repository.addEntry(AthleteMetricType.LT1_HR_RUN_BPM, 148.0, tOct1)
+        val lt1Bike1 = repository.addEntry(AthleteMetricType.LT1_HR_BIKE_BPM, 142.0, tOct1)
+        val lt1Pwr1 = repository.addEntry(AthleteMetricType.LT1_PWR_BIKE_WATTS, 210.0, tOct1)
+        repository.addEntry(AthleteMetricType.FTP_WATTS, 285.0, tOct1)
+
+        // Newer Nov 1 thresholds should update DataStore without altering Oct 15 historical lookup
+        val lthrRun2 = repository.addEntry(AthleteMetricType.LTHR_RUN_BPM, 176.0, tNov1)
+        val hrMaxRun2 = repository.addEntry(AthleteMetricType.HR_MAX_RUN_BPM, 194.0, tNov1)
+
+        assertEquals(194, settingsDataStore.hrMaxRunFlow.first())
+        assertEquals(184, settingsDataStore.hrMaxBikeFlow.first())
+        assertEquals(194, settingsDataStore.hrMaxFlow.first())
+        assertEquals(176, settingsDataStore.lthrRunFlow.first())
+        assertEquals(166, settingsDataStore.lthrBikeFlow.first())
+        assertEquals(148, settingsDataStore.lt1HrRunFlow.first())
+        assertEquals(142, settingsDataStore.lt1HrBikeFlow.first())
+        assertEquals(210, settingsDataStore.lt1PwrBikeFlow.first())
+
+        val runOct15 = repository.getEffectiveThresholdsAt(BSportType.RUN, tOct15)
+        assertEquals(190, runOct15.hrMaxBpm)
+        assertEquals(50, runOct15.hrRestBpm)
+        assertEquals(172, runOct15.lthrBpm)
+        assertEquals(148, runOct15.lt1HrBpm)
+        assertNull(runOct15.ftpWatts)
+
+        val bikeOct15 = repository.getEffectiveThresholdsAt(BSportType.BIKE, tOct15)
+        assertEquals(184, bikeOct15.hrMaxBpm)
+        assertEquals(166, bikeOct15.lthrBpm)
+        assertEquals(142, bikeOct15.lt1HrBpm)
+        assertEquals(285, bikeOct15.ftpWatts)
+        assertEquals(210, bikeOct15.lt1PowerWatts)
+
+        val unknownOct15 = repository.getEffectiveThresholdsAt(BSportType.UNKNOWN, tOct15)
+        assertEquals(190, unknownOct15.hrMaxBpm)
+        assertNull(unknownOct15.lthrBpm)
+
+        // Delete newer Nov 1 entries -> DataStore reverts cleanly to Oct 1
+        repository.deleteEntry(lthrRun2, AthleteMetricType.LTHR_RUN_BPM)
+        repository.deleteEntry(hrMaxRun2, AthleteMetricType.HR_MAX_RUN_BPM)
+        assertEquals(172, settingsDataStore.lthrRunFlow.first())
+        assertEquals(190, settingsDataStore.hrMaxRunFlow.first())
+        assertEquals(190, settingsDataStore.hrMaxFlow.first())
+
+        // Delete remaining sport entries -> keys clear cleanly
+        repository.deleteEntry(hrMaxRun1, AthleteMetricType.HR_MAX_RUN_BPM)
+        assertEquals(184, settingsDataStore.hrMaxFlow.first())
+        repository.deleteEntry(hrMaxBike1, AthleteMetricType.HR_MAX_BIKE_BPM)
+        assertNull(settingsDataStore.hrMaxFlow.first())
+        repository.deleteEntry(lthrRun1, AthleteMetricType.LTHR_RUN_BPM)
+        repository.deleteEntry(lthrBike1, AthleteMetricType.LTHR_BIKE_BPM)
+        repository.deleteEntry(lt1Run1, AthleteMetricType.LT1_HR_RUN_BPM)
+        repository.deleteEntry(lt1Bike1, AthleteMetricType.LT1_HR_BIKE_BPM)
+        repository.deleteEntry(lt1Pwr1, AthleteMetricType.LT1_PWR_BIKE_WATTS)
+        assertNull(settingsDataStore.lthrRunFlow.first())
+        assertNull(settingsDataStore.lthrBikeFlow.first())
+        assertNull(settingsDataStore.lt1HrRunFlow.first())
+        assertNull(settingsDataStore.lt1HrBikeFlow.first())
+        assertNull(settingsDataStore.lt1PwrBikeFlow.first())
+        dataStoreScope.coroutineContext[Job]?.cancel()
+    }
+
+    @Test
+    fun `upgraded user saving HR_BIKE before first profile open preserves legacy HR_MAX_RUN without duplicate HR_MAX_BIKE rows`() = runTest {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val dataStoreScope = TestScope(testDispatcher + Job())
+        val testDataStore = PreferenceDataStoreFactory.create(
+            scope = dataStoreScope,
+            produceFile = { tmpFolder.newFile("upgrade_save_bike_first.preferences_pb") }
+        )
+        // Pre-upgrade state: legacy KEY_HR_MAX=188, sport keys unset, sport_hr_max_seeded=false
+        testDataStore.edit { prefs ->
+            prefs[SettingsDataStore.KEY_ATHLETE_METRICS_SEEDED] = true
+            prefs[SettingsDataStore.KEY_HR_MAX] = 188
+        }
+        val settingsDataStore = SettingsDataStore.createForTesting(mockk<Context>(relaxed = true), testDataStore, dataStoreScope)
+        val fakeDb = FakeAthleteMetricsDataSource()
+        val repository = AthleteMetricsRepository(fakeDb, settingsDataStore, testDispatcher)
+        assertFalse(settingsDataStore.sportHrMaxSeededFlow.first())
+
+        // ZoneSettingsScreen.onSaveHeartRate order: persist via repository BEFORE saveCalculatedHeartRateZones
+        repository.addEntry(AthleteMetricType.HR_MAX_BIKE_BPM, 180.0, timestampMs = 1_760_000_000_000L)
+        settingsDataStore.saveCalculatedHeartRateZones(
+            zoneType = SettingsDataStore.ZoneType.HR_BIKE,
+            hrMax = 180,
+            hrRest = 50,
+            method = "KARVONEN",
+            cutoffs = listOf(128, 141, 154, 167)
+        )
+
+        val runRows = repository.entriesFlow.value.filter { it.metricType == AthleteMetricType.HR_MAX_RUN_BPM }
+        val bikeRows = repository.entriesFlow.value.filter { it.metricType == AthleteMetricType.HR_MAX_BIKE_BPM }
+        assertEquals("Legacy Run HRmax must be preserved as a single row", 1, runRows.size)
+        assertEquals(188.0, runRows.single().value, 1e-3)
+        assertEquals("Saved Bike HRmax must produce exactly 1 row (no duplicate seeded row)", 1, bikeRows.size)
+        assertEquals(180.0, bikeRows.single().value, 1e-3)
+        assertEquals(188, settingsDataStore.hrMaxRunFlow.first())
+        assertEquals(180, settingsDataStore.hrMaxBikeFlow.first())
+        assertEquals(188, settingsDataStore.hrMaxFlow.first())
+        assertTrue(settingsDataStore.sportHrMaxSeededFlow.first())
+        dataStoreScope.coroutineContext[Job]?.cancel()
+    }
+
+    @Test
+    fun `fresh install saving HR_BIKE creates zero HR_MAX_RUN rows and single HR_MAX_BIKE row`() = runTest {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val dataStoreScope = TestScope(testDispatcher + Job())
+        val testDataStore = PreferenceDataStoreFactory.create(
+            scope = dataStoreScope,
+            produceFile = { tmpFolder.newFile("fresh_save_bike_first.preferences_pb") }
+        )
+        val settingsDataStore = SettingsDataStore.createForTesting(mockk<Context>(relaxed = true), testDataStore, dataStoreScope)
+        val fakeDb = FakeAthleteMetricsDataSource()
+        val repository = AthleteMetricsRepository(fakeDb, settingsDataStore, testDispatcher)
+
+        assertNull(settingsDataStore.legacyHrMaxRawFlow.first())
+        assertFalse(settingsDataStore.sportHrMaxSeededFlow.first())
+
+        repository.addEntry(AthleteMetricType.HR_MAX_BIKE_BPM, 180.0, timestampMs = 1_760_000_000_000L)
+        settingsDataStore.saveCalculatedHeartRateZones(
+            zoneType = SettingsDataStore.ZoneType.HR_BIKE,
+            hrMax = 180,
+            hrRest = 52,
+            method = "KARVONEN",
+            cutoffs = listOf(129, 142, 155, 168)
+        )
+
+        val runRows = repository.entriesFlow.value.filter { it.metricType == AthleteMetricType.HR_MAX_RUN_BPM }
+        val bikeRows = repository.entriesFlow.value.filter { it.metricType == AthleteMetricType.HR_MAX_BIKE_BPM }
+        assertTrue("Fresh install must NOT fabricate HR_MAX_RUN_BPM", runRows.isEmpty())
+        assertEquals("Fresh install must insert exactly 1 HR_MAX_BIKE_BPM row", 1, bikeRows.size)
+        assertEquals(180.0, bikeRows.single().value, 1e-3)
+        assertNull(settingsDataStore.hrMaxRunFlow.first())
+        assertEquals(180, settingsDataStore.hrMaxBikeFlow.first())
+        assertEquals(180, settingsDataStore.hrMaxFlow.first())
+        dataStoreScope.coroutineContext[Job]?.cancel()
+    }
+
+    @Test
+    fun `fresh install calling saveCalculatedHeartRateZones before ensureSeeded never fabricates other sport HRmax`() = runTest {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val dataStoreScope = TestScope(testDispatcher + Job())
+        val testDataStore = PreferenceDataStoreFactory.create(
+            scope = dataStoreScope,
+            produceFile = { tmpFolder.newFile("fresh_save_before_seed_guard.preferences_pb") }
+        )
+        val settingsDataStore = SettingsDataStore.createForTesting(mockk<Context>(relaxed = true), testDataStore, dataStoreScope)
+        val fakeDb = FakeAthleteMetricsDataSource()
+        val repository = AthleteMetricsRepository(fakeDb, settingsDataStore, testDispatcher)
+
+        // Even if a caller writes sport zones directly before ensureSeededFromDataStore runs,
+        // ensureSeededLocked sees hr_max_bike != null and refuses to fabricate HR_MAX_RUN_BPM.
+        settingsDataStore.saveCalculatedHeartRateZones(
+            zoneType = SettingsDataStore.ZoneType.HR_BIKE,
+            hrMax = 180,
+            hrRest = 52,
+            method = "KARVONEN",
+            cutoffs = listOf(129, 142, 155, 168)
+        )
+        repository.ensureSeededFromDataStore(nowMs = 1_760_000_000_000L)
+
+        assertTrue(
+            "ensureSeededFromDataStore must not fabricate HR_MAX_RUN_BPM from freshly saved HR_BIKE",
+            repository.entriesFlow.value.none { it.metricType == AthleteMetricType.HR_MAX_RUN_BPM }
+        )
+        assertNull(settingsDataStore.hrMaxRunFlow.first())
+        assertEquals(180, settingsDataStore.hrMaxBikeFlow.first())
+        dataStoreScope.coroutineContext[Job]?.cancel()
     }
 }

@@ -93,6 +93,7 @@ fun HrvThresholdSummaryCard(
     hrZoneThresholds: HeartRateZoneThresholds? = null,
     recentSessions: List<HrvSessionThreshold> = emptyList(),
     onUpdateFtp: ((newFtp: Int) -> Unit)? = null,
+    onUpdatePowerThresholds: ((newFtp: Int, lt1PowerWatts: Int?) -> Unit)? = null,
     onUpdateHrZones: ((newHrvt1: Int, newHrvt2: Int) -> Unit)? = null,
     onCalibrateMader: ((pT1: Int?, pT2: Int?) -> Unit)? = null,
     modifier: Modifier = Modifier
@@ -730,7 +731,7 @@ fun HrvThresholdSummaryCard(
                             val suggestedFtp = comparison.consensusGate.suggestedFtp
                             Button(
                                 onClick = { showConfirmDialog = true },
-                                enabled = isUnlocked && suggestedFtp != null && onUpdateFtp != null,
+                                enabled = isUnlocked && suggestedFtp != null && (onUpdatePowerThresholds != null || onUpdateFtp != null),
                                 modifier = Modifier
                                     .weight(1f)
                                     .testTag("hrv_btn_update_power_zones")
@@ -806,7 +807,12 @@ fun HrvThresholdSummaryCard(
             confirmButton = {
                 Button(
                     onClick = {
-                        onUpdateFtp?.invoke(targetFtp)
+                        val estimatedLt1Watts = powerEstimate?.hrvt1?.intensity?.roundToInt()
+                        if (onUpdatePowerThresholds != null) {
+                            onUpdatePowerThresholds.invoke(targetFtp, estimatedLt1Watts)
+                        } else {
+                            onUpdateFtp?.invoke(targetFtp)
+                        }
                         showConfirmDialog = false
                     },
                     modifier = Modifier.testTag("hrv_btn_dialog_confirm")

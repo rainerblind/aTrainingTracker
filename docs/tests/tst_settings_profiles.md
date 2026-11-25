@@ -1,14 +1,14 @@
 # Living Test Specification: Settings, Profiles & Localization
 
 **Document ID**: `DOC-TST-SET`  
-**Version**: 1.0.54  
+**Version**: 1.0.56  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Tests**: 120
+**Total Tests**: 121
 
 ---
 
@@ -1809,6 +1809,27 @@
 
 ---
 
+### TST-SET-135: **Unified Sport-Specific Physiological Thresholds Storage, History & hrTSS/HRV Sync Verification Suite (`ATT-9628`)** [Verified]
+- **Requirement(s)**: `REQ-SET-135`
+- **Component**: `ZoneCalculationMath.kt`, `AthleteMetricsDatabaseManager.kt`, `SettingsDataStore.kt`, `AthleteMetricsRepository.kt`, `PowerPhysiologyCalculator.kt`, `WorkoutSummariesDatabaseManager.java`, `AthleteProfileViewModel.kt`, `AthleteProfileScreen.kt`, `TrackOnMapAftermathViewModel.kt`, `TrackOnMapScreen.kt`, `HrvThresholdSummaryCard.kt`, `ZoneSettingsScreen.kt`
+- **Jira**: `ATT-9628`
+- **Priority**: High | **Type**: Functional | **Verification Method**: Unit, Integration
+- **Test Description**:
+  1. *Extended `AthleteMetricType` Bounds, Unknown Enum Safety & Upgrade Seeding (`TST-SET-135.1`, `AthleteMetricsDtoAndMathTest#sport-specific AthleteMetricType bounds and unknown token batch skip (TST-SET-135_1)`, `AthleteMetricsRepositorySyncTest#legacy KEY_HR_MAX seeds HR_MAX_RUN and HR_MAX_BIKE idempotently even when athlete_metrics_seeded is true (TST-SET-135_1)`, `AthleteMetricsRealSqliteMigrationTest`)*:
+     • Verify exact min/max canonical bounds for `HR_MAX_RUN_BPM` (`80..240`), `HR_MAX_BIKE_BPM` (`80..240`), `LTHR_RUN_BPM` (`80..230`), `LTHR_BIKE_BPM` (`80..230`), `LT1_HR_RUN_BPM` (`60..220`), `LT1_HR_BIKE_BPM` (`60..220`), and `LT1_PWR_BIKE_WATTS` (`30..500`); verify `fromCursorBatch` skips unknown future enum tokens cleanly.
+     • Verify `ensureSeededFromDataStore` seeds `HR_MAX_RUN_BPM = 188` and `HR_MAX_BIKE_BPM = 188` from legacy `KEY_HR_MAX = 188` even when `KEY_ATHLETE_METRICS_SEEDED == true`, produces 0 duplicates on subsequent calls, and never resurrects deleted rows; verify `AthleteMetricsDbHelper.DB_VERSION == 2` and `DatabaseSchemaRegistry` parity.
+  2. *Atomic `SettingsDataStore` Projection, `hrMaxFlow` Fallback, Non-Blocking Snapshot & Historical Lookup (`TST-SET-135.2`, `AthleteMetricsRepositorySyncTest#all 7 sport threshold types sync atomically to DataStore and resolve historically via getEffectiveThresholdsAt (TST-SET-135_2)`, `SettingsDataStoreBaselinesTest#sportSpecificThresholdKeys_syncHrMaxFallbackAndSnapshotGetters_TST_SET_135_2`, `DataStoreHotPathContractTest`)*:
+     • Verify add, backdated add, update, and delete across all 7 new threshold types project latest entries to `SettingsDataStore` and clear keys on last delete; verify `hrMaxFlow` resolves `max(hr_max_run, hr_max_bike)` falling back to `KEY_HR_MAX`; verify `SettingsSnapshot` $O(1)$ sync getters & zero `runBlocking`; verify `getEffectiveThresholdsAt(sportType, timestampMs)` resolves historical thresholds at/before `timestampMs` with `null` `lthrBpm` when unset.
+  3. *Sport-Specific Historical `hrTSS` & PMC Resolution (`TST-SET-135.3`, `PowerPhysiologyCalculatorTest#calculateHrTss_usesConfiguredSportLthrAndPreservesBitForBit85PctHrrFallback_TST_SET_135_3`, `AthleteProfileTabFlowIsolationTest#testNonPmcChipToggles_triggerZeroPmcRecomputations_andHrMaxFlowUpdatesReactively_tstUi2803_3`)*:
+     • Verify `calculateHrTss(3600.0, 172.0, 50.0, 190.0, lthrBpm = 172.0) == 100.0`; verify `lthrBpm = null` matches legacy `85% HRR` result bit-for-bit (`Double.doubleToRawLongBits`); verify `computePerformanceManagementChart` with `thresholdResolver` uses `LTHR_RUN_BPM = 172` and `HR_MAX_RUN_BPM = 190` effective `2026-10-01` for a `2026-10-15` run; verify `AthleteProfileViewModel` recomputes PMC on sport threshold updates while preserving 0 recomputations on `WEIGHT_KG` or tab chip toggles.
+  4. *Aftermath HRV Threshold Acceptance Persistence & 9-Locale Parity (`TST-SET-135.4`, `TrackOnMapAftermathViewModelTest#updateHrZones_persistsHeartRateZonesAndUpdatesUiState`, `TrackOnMapAftermathViewModelTest#updateHrZonesAndFtp_persistSportSpecificHrvThresholdsAndOptionalZoneRecalc_TST_SET_135_4`, `HrvThresholdSummaryCardTest`, `TranslationParityTest`)*:
+     • Verify `updateHrZones(142, 168)` on `BIKE` persists `LT1_HR_BIKE_BPM = 142` and `LTHR_BIKE_BPM = 168` (and `RUN` persists `LT1_HR_RUN_BPM`/`LTHR_RUN_BPM`) in `AthleteMetricsRepository` + `SettingsDataStore`, and verify `recalculateZones = false` skips overwriting zones; verify `updateFtp(280, lt1PowerWatts = 210)` persists `FTP_WATTS` and `LT1_PWR_BIKE_WATTS`; verify 9/9 locale parity for `strings_athlete_thresholds.xml`.
+  5. *`.attbackup` Full Round-Trip & Governance Contracts (`TST-SET-135.5`, `AthleteThresholdsBackupRoundTripTest#attbackupRoundTrip_preservesAllSportSpecificThresholdsAndIgnoresUnknownFutureEnumTokens_TST_SET_135_5`, `ArchitectureConformanceContractTest`)*:
+     • Robolectric `BackupManager.createBackup` -> wipe -> `MigrationEngine.performFullRestore` round-trip asserting identical timestamped histories across all 7 new `AthleteMetricType` types + all 7 `SettingsDataStore` keys, unknown future enum resilience, and `ArchitectureConformanceContractTest` LoC/layering ceilings (`SettingsDataStore <= 1,500`, `AthleteProfileScreen <= 1,975`, `WorkoutSummariesDatabaseManager <= 3,148`).
+- **Verification Evidence**: Tier-1 targeted `:app:testDebugUnitTest --rerun` `149/149 PASS` (`0` fail, `0` err, `0` skip) across 20 suites (`AthleteMetricsRealSqliteMigrationTest` `3/3`, `AthleteMetricsDtoAndMathTest` `11/11`, `AthleteMetricsRepositorySyncTest` `5/5`, `AthleteProfileContractAndLocalizationTest` `8/8`, `AthleteProfileTabFlowIsolationTest` `2/2`, `AthleteProfileViewModelCardioPowerTest` `6/6`, `AthleteProfileViewModelHrvTest` `5/5`, `AthleteProfileViewModelPmcDeletionTest` `6/6`, `CardioPowerTrendsCardTest` `3/3`, `CardioPowerTrendsPlotMathTest` `6/6`, `PerformanceManagementChartCardTest` `8/8`, `PowerPhysiologyCalculatorTest` `19/19`, `DataStoreHotPathContractTest` `4/4`, `SettingsDataStoreBaselinesTest` `9/9`, `SettingsDataStoreConfiguredTest` `8/8`, `TrackOnMapAftermathViewModelTest` `12/12`, `HrvThresholdSummaryCardTest` `11/11`, `AthleteThresholdsBackupRoundTripTest` `1/1`, `TranslationParityTest` `11/11`, `ArchitectureConformanceContractTest` `11/11`; `0` new compiler warnings); live `emulator-5554` (`Pixel_8_Android_15`) `installDebug` + Fitness & Physiology navigation smoke PASS (`CRASH_COUNT=0`, screenshot visually verified via `read_file`); evidence bundle `docs/engineering/test_evidence/tickets/ATT-9628/` and `docs/engineering/walkthroughs/ATT-9628_walkthrough.md`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -1865,3 +1886,5 @@
 | `1.0.51` | 2026-11-25 | Lane 2 Author (`ATT-8445`, `--as agent1`) | `ATT-8445` | Added `TST-SET-134` (`[Planned]`, `.1`–`.3`, strictly symmetric `REQ-SET-134`) covering `SportTypesRepository.sportTypesChanged` emission/idempotency, `SportTypeViewModel`/`SportTypesTabsScreen` live Swimming refresh, downstream picker reactivity, and architecture/reflection contracts (`N/A - 0 string changes`). |
 | `1.0.52` | 2026-11-25 | Lane 2 Author (`ATT-8445`, `--as agent1`) | `ATT-8445` | Promoted `TST-SET-134` to `[Verified]` with verbatim `TestClass#testMethod` citations (`68/68 PASS` across 12 suites, `0` new compiler warnings, live `emulator-5554` Swimming activation & immediate Sport Types refresh `CRASH_COUNT=0`, `Rule 8.5` before/after PNGs inspected, evidence bundle `docs/engineering/test_evidence/tickets/ATT-8445/`). |
 | `1.0.53` | 2026-11-25 | Lane 2 Author (`ATT-8445`, `--as agent1`) | `ATT-8445` | Stage 6 Bounce 1/5 heal: added `testReconcileOrphanSportTypes_emitsSportTypesChangedStrictlyWhenInserted_TST_SET_134_1` verifying `reconcileOrphanSportTypes()` mutation-gated `sportTypesChanged` emission (`insertedCount > 0` vs `0`). |
+| `1.0.55` | 2026-11-25 | Lane 1 Author (`ATT-9628`, `--as agent1`) | `ATT-9628` | Added `TST-SET-135` (`[Planned]`, `.1`–`.5`, symmetric `REQ-SET-135`) covering 7 new `AthleteMetricType` bounds & unknown-token skip, `KEY_SPORT_HR_MAX_SEEDED` upgrade seeding, atomic `SettingsDataStore` + `SettingsSnapshot` sync & historical lookup, sport-specific `hrTSS` (with bit-for-bit 85% HRR fallback) & PMC resolution, Aftermath HRV threshold persistence, 9-locale `strings_athlete_thresholds.xml`, and `.attbackup` round-trip verification. |
+| `1.0.56` | 2026-11-25 | Lane 1 Author (`ATT-9628`, `--as agent1`) | `ATT-9628` | Promoted `TST-SET-135` to `[Verified]` with verbatim `TestClass#testMethod` citations (`149/149 PASS` across 20 targeted unit/Robolectric/contract suites, `0` new compiler warnings, live `emulator-5554` Athlete Profile verification `CRASH_COUNT=0`, evidence bundle `docs/engineering/test_evidence/tickets/ATT-9628/`). |

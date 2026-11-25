@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.tracker.TrackerServiceMultisportMonotonicLapTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:16:47.951Z" hostname="rainer-HP-EliteBook-850-G5" time="0.842">
+  <properties/>
+  <testcase name="sampleAndWriteToDbAndEndWorkout_enforcesMonotonicLapNrAndReconcilesOnFinalization_tstTrk096_3" classname="com.atrainingtracker.trainingtracker.tracker.TrackerServiceMultisportMonotonicLapTest" time="0.842"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[System.logW: A resource failed to call close. 
+Intent = Intent { act=de.rainerblind.trainingtracker.TrackerService.TRACKING_FINISHED_INTENT pkg=com.atrainingtracker.debug (has extras) }; Matching wrappers: [Wrapper[receiver=[com.atrainingtracker.trainingtracker.TrainingApplication$2@60e1e045], context=[android.app.ContextImpl@61fa37b2], intentFilter=[android.content.IntentFilter@47474990]]]
+]]></system-err>
+</testsuite>

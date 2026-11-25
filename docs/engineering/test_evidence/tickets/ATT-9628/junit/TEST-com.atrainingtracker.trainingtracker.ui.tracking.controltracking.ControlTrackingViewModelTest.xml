@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest" tests="15" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:27:59.988Z" hostname="rainer-HP-EliteBook-850-G5" time="39.598">
+  <properties/>
+  <testcase name="isMorningHrvCheckVisible_whenNeitherHrvNorWellnessEnabled_emitsFalse" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest" time="6.314"/>
+  <testcase name="testHasPairedRemoteDevices_initialValueSeededFromDatabase" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest" time="2.465"/>
+  <testcase name="testHasPairedRemoteDevices_whenRealPairedDeviceAdded_emitsTrue" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest" time="2.471"/>
+  <testcase name="testOnStartTracking_sendsBroadcast_whenNoUnfinishedWorkout" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest" time="2.503"/>
+  <testcase name="isMorningHrvCheckVisible_defaultCutoffHour8" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest" time="2.579"/>
+  <testcase name="isMorningHrvCheckVisible_whenPastCutoffHour_emitsFalse" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest" time="2.712"/>
+  <testcase name="isMorningHrvCheckVisible_whenPolarVeritySensePaired_remainsEligibleAndHidesAfterOpticalSave_TST_HRV_049" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest" time="2.492"/>
+  <testcase name="testOnStartTracking_sendsBroadcast_whenAlreadyTracking" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest" time="2.386"/>
+  <testcase name="testHasPairedRemoteDevices_whenRealDeviceIsUnpaired_emitsFalse" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest" time="2.315"/>
+  <testcase name="testHasPairedRemoteDevices_whenOnlySmartphoneDevicesExist_emitsFalse" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest" time="2.31"/>
+  <testcase name="testRemoteDevices_filtersOutOrphanedOrDeletedConnectedSensors" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest" time="2.259"/>
+  <testcase name="isMorningHrvCheckVisible_whenWellnessModeWithoutHrm_emitsTrue" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest" time="2.261"/>
+  <testcase name="testOnStartTracking_emitsShowRecoveryDialog_whenUnfinishedWorkoutExistsAndNotTracking" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest" time="2.184"/>
+  <testcase name="testNavigationEvent_buffersEventsAcrossStoppedLifecycle" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest" time="2.131"/>
+  <testcase name="isMorningHrvCheckVisible_whenAllConditionsMet_emitsTrue" classname="com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingViewModelTest" time="2.213"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

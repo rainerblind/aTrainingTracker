@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseRaceMigrationTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:11:27.059Z" hostname="rainer-HP-EliteBook-850-G5" time="2.464">
+  <properties/>
+  <testcase name="testDbVersion_isAtLeast23" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseRaceMigrationTest" time="0.439"/>
+  <testcase name="testUpdateWorkoutData_persistsRaceTrueAsOne" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseRaceMigrationTest" time="0.558"/>
+  <testcase name="testRaceColumnConstant_isRace" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseRaceMigrationTest" time="0.436"/>
+  <testcase name="testUpdateWorkoutData_persistsRaceFalseAsZero" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseRaceMigrationTest" time="0.46"/>
+  <testcase name="testOnUpgrade_fromV22ToV23_addsRaceColumn" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseRaceMigrationTest" time="0.571"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

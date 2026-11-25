@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutClusterRepositoryTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:11:57.115Z" hostname="rainer-HP-EliteBook-850-G5" time="16.548">
+  <properties/>
+  <testcase name="testRefreshClusters_exceptionAndCancellationClearMigrationStatusAndPreserveRetryProgress_TST_PER_057_3" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterRepositoryTest" time="1.284"/>
+  <testcase name="testClusterMutations_propagateToWorkoutRepositoryRoutesAndEmitEvents_TST_PER_048_2" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterRepositoryTest" time="2.777"/>
+  <testcase name="testLoadAllClustersLightweight_hydratesClusterStatsWhenEmpty_TST_UI_282_13" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterRepositoryTest" time="1.003"/>
+  <testcase name="testRefreshAndUpdate_healsTrimsAndRejectsBlank_TST_PER_049_1" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterRepositoryTest" time="1.028"/>
+  <testcase name="testRefreshClusters_emptyDbBootstrapAndRecalculate_emitsMultiPhaseProgress_TST_PERF_003_007" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterRepositoryTest" time="1.17"/>
+  <testcase name="testLoadAllClustersLightweight_respectsDeletionSyncAndRetriesOnceWhenEmpty_TST_PER_057_2" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterRepositoryTest" time="1.009"/>
+  <testcase name="testRefreshClusters_unlinkedZeroWorkoutOrphan_purgesCluster" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterRepositoryTest" time="0.99"/>
+  <testcase name="testLoadAllClustersLightweight_populatesAllClustersWithoutHeavyAggregation" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterRepositoryTest" time="1.038"/>
+  <testcase name="testRefreshClusters_initialEnrichmentEmitsProgress_thenSilentOnRevisit_TST_PERF_003_009" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterRepositoryTest" time="1.153"/>
+  <testcase name="testLoadAllClustersLightweight_staleReadAbortsWritebackAndDoesNotClobberRefresh_TST_PER_057_2" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterRepositoryTest" time="1.02"/>
+  <testcase name="testOnRouteSyncedClusterRename_propagatesWithoutCallingRoutesRepository_TST_PER_048_2" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterRepositoryTest" time="1.042"/>
+  <testcase name="testRefreshClusters_survivingCluster_preservesHitCountUntouched" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterRepositoryTest" time="1.019"/>
+  <testcase name="testRefreshClusters_indoorUnenrichableClusterSilentOnRevisit_TST_PER_057_3" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterRepositoryTest" time="1.024"/>
+  <testcase name="testLoadAllClusters_selfHealsUntrimmedNamesWithCollision_TST_PER_049_2" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterRepositoryTest" time="0.991"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseSourceMigrationTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:12:23.780Z" hostname="rainer-HP-EliteBook-850-G5" time="3.232">
+  <properties/>
+  <testcase name="testCountColumnConstant_isCount" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseSourceMigrationTest" time="0.405"/>
+  <testcase name="testDbVersion_isAtLeast26" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseSourceMigrationTest" time="0.387"/>
+  <testcase name="testGetEncodedStreams_extractsMapPolylineAndElevationStreams" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseSourceMigrationTest" time="0.391"/>
+  <testcase name="testOnUpgrade_fromV24ToV25_addsCountColumnToExtremaValues" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseSourceMigrationTest" time="0.389"/>
+  <testcase name="testUpdateWorkoutData_persistsSource" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseSourceMigrationTest" time="0.496"/>
+  <testcase name="testOnUpgrade_fromV25ToV26_addsIndexes" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseSourceMigrationTest" time="0.391"/>
+  <testcase name="testOnUpgrade_fromV23ToV24_addsSourceColumn" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseSourceMigrationTest" time="0.389"/>
+  <testcase name="testSourceColumnConstant_isSource" classname="com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseSourceMigrationTest" time="0.384"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

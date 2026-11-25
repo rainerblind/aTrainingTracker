@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.tracker.PostWorkoutFinalizerTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:15:57.646Z" hostname="rainer-HP-EliteBook-850-G5" time="17.961">
+  <properties/>
+  <testcase name="finalizeLiveSession_isolatesStage1FailureSoDownstreamStagesStillExecute" classname="com.atrainingtracker.trainingtracker.tracker.PostWorkoutFinalizerTest" time="3.62"/>
+  <testcase name="finalizeLiveSession_activeSessionDeviceIdsProviderIsLazyAndStage5FaultIsolated" classname="com.atrainingtracker.trainingtracker.tracker.PostWorkoutFinalizerTest" time="2.874"/>
+  <testcase name="finalizeLiveSession_whenDeferHrPhysiologyTrue_skipsEfAndDynamicsWhilePersistingPowerMetrics" classname="com.atrainingtracker.trainingtracker.tracker.PostWorkoutFinalizerTest" time="2.874"/>
+  <testcase name="guessCommuteAndTrainer_verifiesXorTruthTable" classname="com.atrainingtracker.trainingtracker.tracker.PostWorkoutFinalizerTest" time="2.866"/>
+  <testcase name="finalizeLiveSession_runsAll7StagesAndReturnsMilestoneCelebration" classname="com.atrainingtracker.trainingtracker.tracker.PostWorkoutFinalizerTest" time="2.89"/>
+  <testcase name="finalizeLiveSession_lazyProvidersNotEvaluatedWhenNotNeededAndFaultIsolatedWhenThrowing" classname="com.atrainingtracker.trainingtracker.tracker.PostWorkoutFinalizerTest" time="2.836"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

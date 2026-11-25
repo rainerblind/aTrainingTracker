@@ -125,7 +125,7 @@ enum class AcwrZone {
 }
 
 /**
- * Lightweight workout training load summary used as input to the Performance Management Chart (`REQ-UI-401.1`, `REQ-UI-401.2`).
+ * Lightweight workout training load summary used as input to the Performance Management Chart (`REQ-UI-401.1`, `REQ-UI-401.2`, `REQ-SET-135.3`).
  */
 data class WorkoutTrainingLoadSample @JvmOverloads constructor(
     val timestampMs: Long,
@@ -134,7 +134,18 @@ data class WorkoutTrainingLoadSample @JvmOverloads constructor(
     val normalizedPowerWatts: Double? = null,
     val avgPowerWatts: Double? = null,
     val avgHrBpm: Double? = null,
-    val rpe: Int? = null
+    val rpe: Int? = null,
+    val bSportType: BSportType = BSportType.UNKNOWN
+)
+
+/**
+ * Sport- and date-specific physiological thresholds resolved for a single workout (`REQ-SET-135.3`).
+ */
+data class WorkoutThresholds(
+    val ftpWatts: Double? = null,
+    val hrRestBpm: Double? = null,
+    val hrMaxBpm: Double? = null,
+    val lthrBpm: Double? = null
 )
 
 /**
@@ -907,7 +918,8 @@ object PowerPhysiologyCalculator {
         activeTimeSeconds: Double,
         avgHrBpm: Double,
         hrRestBpm: Double = DEFAULT_HR_REST_BPM,
-        hrMaxBpm: Double = DEFAULT_HR_MAX_BPM
+        hrMaxBpm: Double = DEFAULT_HR_MAX_BPM,
+        lthrBpm: Double? = null
     ): Double? {
         if (!activeTimeSeconds.isFinite() || activeTimeSeconds <= 0.0 ||
             !avgHrBpm.isFinite() || avgHrBpm <= 0.0
@@ -924,15 +936,21 @@ object PowerPhysiologyCalculator {
 
         val durationMinutes = activeTimeSeconds / 60.0
         val trimpNumerator = durationMinutes * hrr * exp(1.92 * hrr)
-        val trimpThreshold1h = 60.0 * LTHR_HR_RESERVE_FRACTION * exp(1.92 * LTHR_HR_RESERVE_FRACTION)
+        val thresholdHrr = if (lthrBpm != null && lthrBpm.isFinite() && lthrBpm > safeHrRest && lthrBpm <= safeHrMax) {
+            (lthrBpm - safeHrRest) / hrSpan
+        } else {
+            LTHR_HR_RESERVE_FRACTION
+        }
+        val trimpThreshold1h = 60.0 * thresholdHrr * exp(1.92 * thresholdHrr)
         return 100.0 * (trimpNumerator / trimpThreshold1h)
     }
 
     /**
-     * Resolves a workout's effective training stress score ($\text{TSS}$ or $\text{hrTSS}$) using the 3-tier hierarchy (`REQ-UI-401.1`):
+     * Resolves a workout's effective training stress score ($\text{TSS}$ or $\text{hrTSS}$) using the 4-tier hierarchy (`REQ-UI-401.1`, `REQ-SET-135.3`):
      * 1. Stored `powerTss` ($> 0.0$).
      * 2. Power-derived $\text{TSS}$ from `normalizedPowerWatts` (or `avgPowerWatts`), `activeTimeSeconds`, and `ftpWatts`.
-     * 3. Multi-sport Heart-Rate fallback ($\text{hrTSS}$) from `avgHrBpm`, `activeTimeSeconds`, `hrRestBpm`, and `hrMaxBpm`.
+     * 3. Multi-sport Heart-Rate fallback ($\text{hrTSS}$) from `avgHrBpm`, `activeTimeSeconds`, `hrRestBpm`, `hrMaxBpm`, and optional sport-specific `lthrBpm`.
+     * 4. TSS-normalized Session-RPE fallback.
      */
     @JvmStatic
     @JvmOverloads
@@ -940,7 +958,8 @@ object PowerPhysiologyCalculator {
         sample: WorkoutTrainingLoadSample,
         ftpWatts: Double? = null,
         hrRestBpm: Double? = null,
-        hrMaxBpm: Double? = null
+        hrMaxBpm: Double? = null,
+        lthrBpm: Double? = null
     ): Double {
         val directTss = sample.powerTss
         if (directTss != null && directTss.isFinite() && directTss > 0.0) {
@@ -965,7 +984,8 @@ object PowerPhysiologyCalculator {
                 activeTimeSeconds = activeSec,
                 avgHrBpm = avgHr,
                 hrRestBpm = hrRestBpm ?: DEFAULT_HR_REST_BPM,
-                hrMaxBpm = hrMaxBpm ?: DEFAULT_HR_MAX_BPM
+                hrMaxBpm = hrMaxBpm ?: DEFAULT_HR_MAX_BPM,
+                lthrBpm = lthrBpm
             )
             if (hrTss != null && hrTss > 0.0) {
                 return hrTss
@@ -1037,7 +1057,8 @@ object PowerPhysiologyCalculator {
         ftpWatts: Double? = null,
         hrRestBpm: Double? = null,
         hrMaxBpm: Double? = null,
-        zoneId: ZoneId = ZoneId.systemDefault()
+        zoneId: ZoneId = ZoneId.systemDefault(),
+        thresholdResolver: ((BSportType, Long) -> WorkoutThresholds?)? = null
     ): PmcSummaryResult {
         if (workoutSamples.isEmpty()) {
             return PmcSummaryResult()
@@ -1049,11 +1070,13 @@ object PowerPhysiologyCalculator {
 
         for (sample in workoutSamples) {
             if (sample.timestampMs <= 0L) continue
+            val resolved = thresholdResolver?.invoke(sample.bSportType, sample.timestampMs)
             val load = resolveWorkoutTrainingLoad(
                 sample = sample,
-                ftpWatts = ftpWatts,
-                hrRestBpm = hrRestBpm,
-                hrMaxBpm = hrMaxBpm
+                ftpWatts = resolved?.ftpWatts ?: ftpWatts,
+                hrRestBpm = resolved?.hrRestBpm ?: hrRestBpm,
+                hrMaxBpm = resolved?.hrMaxBpm ?: hrMaxBpm,
+                lthrBpm = resolved?.lthrBpm
             )
             if (load <= 0.0) continue
             val dayIdx = Instant.ofEpochMilli(sample.timestampMs).atZone(zoneId).toLocalDate().toEpochDay()

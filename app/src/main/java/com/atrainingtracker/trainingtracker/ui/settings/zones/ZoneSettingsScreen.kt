@@ -594,7 +594,14 @@ fun ZoneProfileTabContent(
 
     val isCustomized by dataStore.isZoneCustomizedFlow(zoneType).collectAsState(initial = false)
     val storedFtp by dataStore.ftpFlow.collectAsState(initial = null)
-    val storedHrMax by dataStore.hrMaxFlow.collectAsState(initial = null)
+    val storedHrMaxRun by dataStore.hrMaxRunFlow.collectAsState(initial = null)
+    val storedHrMaxBike by dataStore.hrMaxBikeFlow.collectAsState(initial = null)
+    val storedHrMaxLegacy by dataStore.hrMaxFlow.collectAsState(initial = null)
+    val storedHrMax = when (zoneType) {
+        ZoneType.HR_RUN -> storedHrMaxRun ?: storedHrMaxLegacy
+        ZoneType.HR_BIKE -> storedHrMaxBike ?: storedHrMaxLegacy
+        ZoneType.PWR_BIKE -> storedHrMaxLegacy
+    }
     val storedHrRest by dataStore.hrRestFlow.collectAsState(initial = null)
     val storedHrMethod by dataStore.hrCalcMethodFlow.collectAsState(initial = null)
 
@@ -639,13 +646,14 @@ fun ZoneProfileTabContent(
             onSavePower = { ftp, cutoffs ->
                 scope.launch(Dispatchers.IO) {
                     try {
-                        dataStore.saveCalculatedPowerZones(ftp, cutoffs)
+                        com.atrainingtracker.trainingtracker.zones.ZoneValidator.validatePowerZoneStack(cutoffs)
                         com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepository
                             .getInstance(context)
                             .addEntry(
                                 metricType = com.atrainingtracker.trainingtracker.database.AthleteMetricType.FTP_WATTS,
                                 value = ftp.toDouble()
                             )
+                        dataStore.saveCalculatedPowerZones(ftp, cutoffs)
                         withContext(Dispatchers.Main) {
                             holder.onSaveCompleted()
                             onDismissCalculatorDialog()
@@ -661,15 +669,30 @@ fun ZoneProfileTabContent(
             onSaveHeartRate = { zType, hrMax, hrRest, method, cutoffs ->
                 scope.launch(Dispatchers.IO) {
                     try {
-                        dataStore.saveCalculatedHeartRateZones(zType, hrMax, hrRest, method, cutoffs)
-                        if (hrRest != null && hrRest > 0) {
-                            com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepository
-                                .getInstance(context)
-                                .addEntry(
-                                    metricType = com.atrainingtracker.trainingtracker.database.AthleteMetricType.HR_REST_BPM,
-                                    value = hrRest.toDouble()
-                                )
+                        require(
+                            com.atrainingtracker.trainingtracker.zones.ZoneValidator.validateHrBaselines(hrMax, hrRest)
+                                is com.atrainingtracker.trainingtracker.zones.ValidationResult.Valid
+                        ) { "Invalid HR baselines: hrMax=$hrMax, hrRest=$hrRest" }
+                        com.atrainingtracker.trainingtracker.zones.ZoneValidator.validateHeartRateZoneStack(cutoffs)
+                        val metricsRepo = com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepository
+                            .getInstance(context)
+                        val hrMaxMetric = if (zType == ZoneType.HR_RUN) {
+                            com.atrainingtracker.trainingtracker.database.AthleteMetricType.HR_MAX_RUN_BPM
+                        } else {
+                            com.atrainingtracker.trainingtracker.database.AthleteMetricType.HR_MAX_BIKE_BPM
                         }
+                        // Persist through AthleteMetricsRepository BEFORE overwriting legacy KEY_HR_MAX
+                        // so upgraded users preserve the other sport's legacy HRmax without duplicate rows.
+                        if (hrMaxMetric.isValidMetricValue(hrMax.toDouble())) {
+                            metricsRepo.addEntry(metricType = hrMaxMetric, value = hrMax.toDouble())
+                        }
+                        if (hrRest != null && hrRest > 0) {
+                            metricsRepo.addEntry(
+                                metricType = com.atrainingtracker.trainingtracker.database.AthleteMetricType.HR_REST_BPM,
+                                value = hrRest.toDouble()
+                            )
+                        }
+                        dataStore.saveCalculatedHeartRateZones(zType, hrMax, hrRest, method, cutoffs)
                         withContext(Dispatchers.Main) {
                             holder.onSaveCompleted()
                             onDismissCalculatorDialog()

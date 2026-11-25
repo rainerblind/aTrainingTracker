@@ -740,6 +740,13 @@ fun AthleteProfileContent(
             AthleteMetricType.FTP_WATTS -> uiState.latestFtpEntry?.value
             AthleteMetricType.CP_WATTS -> uiState.latestCpEntry?.value ?: uiState.latestFtpEntry?.value
             AthleteMetricType.W_PRIME_KJ -> uiState.latestWPrimeEntry?.value ?: SettingsDataStore.DEFAULT_W_PRIME_KJ.toDouble()
+            AthleteMetricType.HR_MAX_RUN_BPM,
+            AthleteMetricType.HR_MAX_BIKE_BPM,
+            AthleteMetricType.LTHR_RUN_BPM,
+            AthleteMetricType.LTHR_BIKE_BPM,
+            AthleteMetricType.LT1_HR_RUN_BPM,
+            AthleteMetricType.LT1_HR_BIKE_BPM,
+            AthleteMetricType.LT1_PWR_BIKE_WATTS -> uiState.filteredHistory.firstOrNull { it.metricType == initialMetric }?.value
         }
         AthleteMetricEntryDialog(
             isEditMode = false,
@@ -1258,8 +1265,15 @@ fun AthleteMetricEntryDialog(
         } else {
             when (selectedMetric) {
                 AthleteMetricType.WEIGHT_KG -> AthleteMetricsPlotMath.formatWeightValue(initialCanonicalValue, isImperial)
-                AthleteMetricType.HR_REST_BPM -> AthleteMetricsPlotMath.formatHrRestValue(initialCanonicalValue)
-                AthleteMetricType.FTP_WATTS -> AthleteMetricsPlotMath.formatFtpValue(initialCanonicalValue)
+                AthleteMetricType.HR_REST_BPM,
+                AthleteMetricType.HR_MAX_RUN_BPM,
+                AthleteMetricType.HR_MAX_BIKE_BPM,
+                AthleteMetricType.LTHR_RUN_BPM,
+                AthleteMetricType.LTHR_BIKE_BPM,
+                AthleteMetricType.LT1_HR_RUN_BPM,
+                AthleteMetricType.LT1_HR_BIKE_BPM -> AthleteMetricsPlotMath.formatHrRestValue(initialCanonicalValue)
+                AthleteMetricType.FTP_WATTS,
+                AthleteMetricType.LT1_PWR_BIKE_WATTS -> AthleteMetricsPlotMath.formatFtpValue(initialCanonicalValue)
                 AthleteMetricType.CP_WATTS -> AthleteMetricsPlotMath.formatCpValue(initialCanonicalValue)
                 AthleteMetricType.W_PRIME_KJ -> AthleteMetricsPlotMath.formatWPrimeValue(initialCanonicalValue)
             }
@@ -1289,8 +1303,16 @@ fun AthleteMetricEntryDialog(
 
     val unitStr = when (selectedMetric) {
         AthleteMetricType.WEIGHT_KG -> AthleteMetricsPlotMath.weightUnitLabel(isImperial)
-        AthleteMetricType.HR_REST_BPM -> "bpm"
-        AthleteMetricType.FTP_WATTS, AthleteMetricType.CP_WATTS -> "W"
+        AthleteMetricType.HR_REST_BPM,
+        AthleteMetricType.HR_MAX_RUN_BPM,
+        AthleteMetricType.HR_MAX_BIKE_BPM,
+        AthleteMetricType.LTHR_RUN_BPM,
+        AthleteMetricType.LTHR_BIKE_BPM,
+        AthleteMetricType.LT1_HR_RUN_BPM,
+        AthleteMetricType.LT1_HR_BIKE_BPM -> "bpm"
+        AthleteMetricType.FTP_WATTS,
+        AthleteMetricType.CP_WATTS,
+        AthleteMetricType.LT1_PWR_BIKE_WATTS -> "W"
         AthleteMetricType.W_PRIME_KJ -> "kJ"
     }
 
@@ -1516,15 +1538,29 @@ private fun metricDisplayName(metricType: AthleteMetricType): String = when (met
     AthleteMetricType.FTP_WATTS -> stringResource(R.string.athlete_profile_metric_ftp)
     AthleteMetricType.CP_WATTS -> stringResource(R.string.athlete_profile_metric_cp)
     AthleteMetricType.W_PRIME_KJ -> stringResource(R.string.athlete_profile_metric_w_prime)
+    AthleteMetricType.HR_MAX_RUN_BPM -> stringResource(R.string.athlete_profile_metric_hr_max_run)
+    AthleteMetricType.HR_MAX_BIKE_BPM -> stringResource(R.string.athlete_profile_metric_hr_max_bike)
+    AthleteMetricType.LTHR_RUN_BPM -> stringResource(R.string.athlete_profile_metric_lthr_run)
+    AthleteMetricType.LTHR_BIKE_BPM -> stringResource(R.string.athlete_profile_metric_lthr_bike)
+    AthleteMetricType.LT1_HR_RUN_BPM -> stringResource(R.string.athlete_profile_metric_lt1_hr_run)
+    AthleteMetricType.LT1_HR_BIKE_BPM -> stringResource(R.string.athlete_profile_metric_lt1_hr_bike)
+    AthleteMetricType.LT1_PWR_BIKE_WATTS -> stringResource(R.string.athlete_profile_metric_lt1_pwr_bike)
 }
 
 private fun formatEntryValueWithUnit(entry: AthleteMetricEntry, isImperial: Boolean): String =
     when (entry.metricType) {
         AthleteMetricType.WEIGHT_KG ->
             "${AthleteMetricsPlotMath.formatWeightValue(entry.value, isImperial)} ${AthleteMetricsPlotMath.weightUnitLabel(isImperial)}"
-        AthleteMetricType.HR_REST_BPM ->
+        AthleteMetricType.HR_REST_BPM,
+        AthleteMetricType.HR_MAX_RUN_BPM,
+        AthleteMetricType.HR_MAX_BIKE_BPM,
+        AthleteMetricType.LTHR_RUN_BPM,
+        AthleteMetricType.LTHR_BIKE_BPM,
+        AthleteMetricType.LT1_HR_RUN_BPM,
+        AthleteMetricType.LT1_HR_BIKE_BPM ->
             "${AthleteMetricsPlotMath.formatHrRestValue(entry.value)} bpm"
-        AthleteMetricType.FTP_WATTS ->
+        AthleteMetricType.FTP_WATTS,
+        AthleteMetricType.LT1_PWR_BIKE_WATTS ->
             "${AthleteMetricsPlotMath.formatFtpValue(entry.value)} W"
         AthleteMetricType.CP_WATTS ->
             "${AthleteMetricsPlotMath.formatCpValue(entry.value)} W"

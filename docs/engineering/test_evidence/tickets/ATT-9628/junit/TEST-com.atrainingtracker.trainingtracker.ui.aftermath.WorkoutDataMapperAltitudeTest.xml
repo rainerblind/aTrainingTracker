@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapperAltitudeTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:17:46.262Z" hostname="rainer-HP-EliteBook-850-G5" time="0.111">
+  <properties/>
+  <testcase name="testReconcileAltitudeExtrema_CorruptedLegacyExtrema_HealsFromStreamAndUpdatesDb" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapperAltitudeTest" time="0.026"/>
+  <testcase name="testReconcileAltitudeExtrema_StoredMinHigherThanStream_HealedToStreamMin" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapperAltitudeTest" time="0.017"/>
+  <testcase name="testReconcileAltitudeExtrema_MountainZeroGapArtifact_PreservesRecordedMin" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapperAltitudeTest" time="0.014"/>
+  <testcase name="testReconcileAltitudeExtrema_GenuineSeaLevel_ReconcilesToZero" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapperAltitudeTest" time="0.013"/>
+  <testcase name="testReconcileAltitudeExtrema_LegitimateExtremaMatchingStream_DoesNotUpdateDb" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapperAltitudeTest" time="0.014"/>
+  <testcase name="testReconcileAltitudeExtrema_EmptyStream_ReturnsRecordedValuesWithoutDbUpdate" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapperAltitudeTest" time="0.014"/>
+  <testcase name="testReconcileAltitudeExtrema_StoredMaxLowerThanStream_HealedToStreamMax" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapperAltitudeTest" time="0.012"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

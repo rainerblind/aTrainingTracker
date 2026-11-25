@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.WorkoutClusterApexMigrationTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:11:17.743Z" hostname="rainer-HP-EliteBook-850-G5" time="15.014">
+  <properties/>
+  <testcase name="testWorkoutClusterRepository_triggersApexMigrationOnce" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterApexMigrationTest" time="2.907"/>
+  <testcase name="testLegacyImportEngine_usesUnifiedApexAndForwardsPolyline" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterApexMigrationTest" time="2.678"/>
+  <testcase name="testHealLegacyPointToPointApexes_recomputesDegenerateApexAndUpdatesClusterCentroid" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterApexMigrationTest" time="2.391"/>
+  <testcase name="testHealLegacyPointToPointApexes_healsWorkoutWithOvershootGreaterThan50m" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterApexMigrationTest" time="2.417"/>
+  <testcase name="testHealLegacyPointToPointApexes_preservesClosedLoopRoute" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterApexMigrationTest" time="2.315"/>
+  <testcase name="testWorkoutDataMapper_resolveAuthoritativeApex_pointToPointParity" classname="com.atrainingtracker.trainingtracker.database.WorkoutClusterApexMigrationTest" time="2.305"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

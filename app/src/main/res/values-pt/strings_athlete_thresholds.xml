@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Sport-Specific Physiological Threshold Metric Labels (ATT-9628 / REQ-SET-135) -->
+    <string name="athlete_profile_metric_hr_max_run">FCmáx (Corrida)</string>
+    <string name="athlete_profile_metric_hr_max_bike">FCmáx (Ciclismo)</string>
+    <string name="athlete_profile_metric_lthr_run">LTHR (Corrida)</string>
+    <string name="athlete_profile_metric_lthr_bike">LTHR (Ciclismo)</string>
+    <string name="athlete_profile_metric_lt1_hr_run">LT1 FC (Corrida)</string>
+    <string name="athlete_profile_metric_lt1_hr_bike">LT1 FC (Ciclismo)</string>
+    <string name="athlete_profile_metric_lt1_pwr_bike">LT1 Potência (Ciclismo)</string>
+</resources>

@@ -1,14 +1,14 @@
 # Living Requirements: Settings, Profiles & Localization
 
 **Document ID**: `DOC-REQ-SET`  
-**Version**: 1.0.54  
+**Version**: 1.0.56  
 **Status**: Reviewed  
 **Approver**: Pending PO Sign-Off  
 
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Requirements**: 131
+**Total Requirements**: 132
 
 ---
 
@@ -3169,6 +3169,38 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 ---
 
+### REQ-SET-135: Unified Sport-Specific Physiological Thresholds Storage, History & hrTSS/HRV Sync (`ATT-9628`) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-SET-135`
+- **System Requirement(s)**: `Derived (SW-only)` — internal physiological threshold storage, Banister `hrTSS`/PMC computation, and Aftermath HRV threshold sync extending `REQ-UI-391`, `REQ-UI-401`, `REQ-PER-037`, `REQ-SET-079`, and `REQ-SET-082` without external hardware, HAL, SQLite DDL, or cloud API changes.
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
+- **Implementation**: `ZoneCalculationMath.kt`, `AthleteMetricsDatabaseManager.kt`, `SettingsDataStore.kt`, `AthleteMetricsRepository.kt`, `PowerPhysiologyCalculator.kt`, `WorkoutSummariesDatabaseManager.java`, `AthleteProfileViewModel.kt`, `AthleteProfileScreen.kt`, `TrackOnMapAftermathViewModel.kt`, `TrackOnMapScreen.kt`, `HrvThresholdSummaryCard.kt`, `WorkoutDetailTabbedContent.kt`, `ZoneSettingsScreen.kt`
+- **Localization Parity**: `9/9` locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) in `strings_athlete_thresholds.xml` (`Rule 9.4`, 7 concise metric labels, 0 format specifiers, 0 `&#10;`).
+- **Rationale**: Consolidating sport-specific `HRmax`, `LTHR` (`LT2`), and `LT1` (`AeT`) alongside existing `HRrest`, `FTP`, `CP`, and `W'` inside `AthleteMetrics.db` with atomic `SettingsDataStore` projection eliminates scattered threshold storage so historical `hrTSS`/PMC calculations, Aftermath HRV threshold acceptance, `.attbackup` archives, and downstream sync engines (`ATT-8026`, `ATT-9622`) share a single timestamped source of truth.
+- **Description**:
+  1. *Extended `AthleteMetricType` & Idempotent Legacy `KEY_HR_MAX` Seeding (`REQ-SET-135.1`)*: `AthleteMetricType` SHALL add 7 validated enum constants without incrementing `AthleteMetricsDbHelper.DB_VERSION` (`2`): `HR_MAX_RUN_BPM` (`80..240`), `HR_MAX_BIKE_BPM` (`80..240`), `LTHR_RUN_BPM` (`80..230`), `LTHR_BIKE_BPM` (`80..230`), `LT1_HR_RUN_BPM` (`60..220`), `LT1_HR_BIKE_BPM` (`60..220`), and `LT1_PWR_BIKE_WATTS` (`30..500`). `AthleteMetricType.fromNameOrNull()` SHALL use non-throwing `safeEnumValueOfOrNull` so `fromCursorBatch()` safely skips unknown future tokens. `AthleteMetricsRepository.ensureSeededLocked()` SHALL run an independent idempotent migration guarded by `KEY_SPORT_HR_MAX_SEEDED` (executing even when `KEY_ATHLETE_METRICS_SEEDED == true`) seeding missing `HR_MAX_RUN_BPM`/`HR_MAX_BIKE_BPM` entries from legacy `KEY_HR_MAX` in a single transaction without duplicating rows on subsequent launches or resurrecting user-deleted entries.
+  2. *Sport-Specific `SettingsDataStore` Sync, Non-Blocking Snapshot & Historical Lookup (`REQ-SET-135.2`)*: `SettingsDataStore` SHALL add keys `hr_max_run`, `hr_max_bike`, `lthr_run`, `lthr_bike`, `lt1_hr_run`, `lt1_hr_bike`, `lt1_pwr_bike`, reactive `Flow<Int?>` accessors, bounds-clamped setters, and $O(1)$ non-blocking `SettingsSnapshot` fields/sync getters (zero `runBlocking`, `REQ-SET-079`). Legacy `hrMaxFlow` SHALL resolve `max(hr_max_run, hr_max_bike)` falling back to `KEY_HR_MAX`; `setHrMaxRun`/`setHrMaxBike` and `saveCalculatedHeartRateZones` SHALL keep sport keys and `KEY_HR_MAX` atomically consistent. `AthleteMetricsRepository` SHALL project insert/update/delete across all 12 `AthleteMetricType` entries into `SettingsDataStore` and provide `getEffectiveThresholdsAt(sportType: BSportType, timestampMs: Long): EffectivePhysiologicalThresholds` backed by `AthleteMetricsDataSource.getEntryEffectiveAt()`.
+  3. *Sport-Specific Historical `hrTSS` & PMC Integration (`REQ-SET-135.3`)*: `PowerPhysiologyCalculator.calculateHrTss()` and `resolveWorkoutTrainingLoad()` SHALL accept optional `lthrBpm: Double? = null`, normalizing 1-hour TRIMP against `thresholdHrr = (lthrBpm - safeHrRest) / (safeHrMax - safeHrRest)` when valid (`hrTSS = 100.0` at `LTHR` for 1 h) and preserving the existing `85% HRR` (`LTHR_HR_RESERVE_FRACTION`) result bit-for-bit when `lthrBpm` is unset or invalid. `WorkoutTrainingLoadSample` SHALL carry `bSportType: BSportType = BSportType.UNKNOWN` populated from `WorkoutSummaries.B_SPORT` in `WorkoutSummariesDatabaseManager.getWorkoutTrainingLoadRecords()`. `computePerformanceManagementChart()` SHALL accept an optional `thresholdResolver` wired from `AthleteProfileViewModel`'s in-memory `repository.entriesFlow` (recomputing PMC only on physiological threshold changes and preserving 0 recomputations on `WEIGHT_KG`/tab toggles).
+  4. *Aftermath HRV Threshold Acceptance Persistence & Exhaustive Metric Handling (`REQ-SET-135.4`)*: `TrackOnMapAftermathViewModel.updateHrZones(newHrvt1, newHrvt2, recalculateZones = true)` and `TrackOnMapScreen` fallback SHALL persist accepted `HRVT1`/`HRVT2` into `LT1_HR_*`/`LTHR_*` by workout `BSportType` via `AthleteMetricsRepository` (syncing `SettingsDataStore`) alongside optional zone recalculation. `updateFtp(newFtp, lt1PowerWatts = null, recalculateZones = true)` and `HrvThresholdSummaryCard` (`onUpdatePowerThresholds`) SHALL persist `FTP_WATTS` and optional valid `LT1_PWR_BIKE_WATTS`. `ZoneSettingsScreen` HR calculator save SHALL persist `HR_MAX_*`. `AthleteProfileScreen` SHALL handle all 12 `AthleteMetricType` entries cleanly via 9-locale `strings_athlete_thresholds.xml`.
+  5. *`.attbackup` Round-Trip Parity, Forward-Compatibility & Governance Invariants (`REQ-SET-135.5`)*: `.attbackup` backup (`BackupManager`) and restore (`MigrationEngine`) SHALL preserve all 12 `AthleteMetricType` timestamped histories in `AthleteMetrics.db` (`DB_VERSION = 2`) and all sport-specific `SettingsDataStore` keys identically while safely ignoring unknown future `metric_type` tokens, preserving `DataStoreHotPathContractTest`, `TranslationParityTest` (9 locales), `DatabaseSchemaRegistry`, and `ArchitectureConformanceContractTest` ceilings (`SettingsDataStore <= 1,500`, `AthleteProfileScreen <= 1,975`, `WorkoutSummariesDatabaseManager <= 3,148` LoC).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Extends `REQ-UI-391` (`AthleteMetrics.db` & unidirectional `SettingsDataStore` sync), `REQ-UI-401` (`hrTSS` & Banister PMC), `REQ-PER-037` (Aftermath HRV zone updates), `REQ-SET-079` (non-blocking `SettingsSnapshot`), and `REQ-SET-082` (`AthleteMetrics.db` v2).
+  2. *Historical Origin & Commit Trace*: `ATT-3704`, `61ccb801` (`ATT-3862`), `e5d9225e` (`ATT-3860`), `ATT-3859`, `ecd33130` (`ATT-4844`), `01f03b20` (`ATT-8122`).
+  3. *Root Reason for Existing Formulation*: Unidirectional SQLite->DataStore SSoT guaranteed $O(1)$ lock-free cockpit reads, while `85% HRR` was used before sport-specific `LTHR` persistence existed.
+  4. *Preservation of Core Invariants*: Zero SQLite schema bump (`DB_VERSION = 2`), bit-for-bit `85% HRR` fallback when `LTHR` unset, zero `runBlocking` in hot paths, `hrMaxFlow` fallback intact, `WEIGHT_KG`/tab toggles trigger 0 PMC recomputations, and all monolith LoC ceilings preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an existing user has legacy `KEY_HR_MAX = 188` in `SettingsDataStore` (including with `KEY_ATHLETE_METRICS_SEEDED = true`), *When* `AthleteMetricsRepository` initializes, *Then* `HR_MAX_RUN_BPM = 188` and `HR_MAX_BIKE_BPM = 188` are idempotently seeded without duplicates on subsequent launches.
+• *Given* `LTHR_RUN_BPM = 172` and `HR_MAX_RUN_BPM = 190` effective `2026-10-01`, *When* `PowerPhysiologyCalculator` computes `hrTSS` for a running workout on `2026-10-15`, *Then* it uses `LTHR = 172` and `HRmax = 190`; when `LTHR` is unset, it preserves the existing `85% HRR` result bit-for-bit.
+• *Given* an athlete accepts Aftermath HRV thresholds (`HRVT1 = 142 bpm`, `HRVT2 = 168 bpm`) on a cycling workout, *When* the update completes, *Then* `LT1_HR_BIKE_BPM = 142` and `LTHR_BIKE_BPM = 168` are persisted in `AthleteMetrics.db` and reflected in `SettingsDataStore`.
+• *Given* an `.attbackup` archive is created after recording all 7 new threshold types and restored, *When* restore finishes, *Then* all timestamped threshold histories and `SettingsDataStore` values match identically and unknown future enum tokens are ignored safely.
+
+**Invariants**: `AthleteMetricsDbHelper.DB_VERSION = 2` unchanged; bit-for-bit `85% HRR` fallback; zero `runBlocking` in hot paths; `SettingsDataStore <= 1,500`, `AthleteProfileScreen <= 1,975`, `WorkoutSummariesDatabaseManager <= 3,148` LoC; `9/9` locale parity in `strings_athlete_thresholds.xml`.
+
+---
+
 ## Change History
 
 | Version | Date | Author | Ticket | Summary of Changes |
@@ -3225,3 +3257,5 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 | `1.0.51` | 2026-11-25 | Lane 2 Author (`ATT-8445`, `--as agent1`) | `ATT-8445` | Added `REQ-SET-134` (`[Planned]`, `.1`–`.3`, refining `REQ-SET-107` & `REQ-UI-257`) for reactive `SportTypesRepository.sportTypesChanged` signaling, `SportTypeViewModel`/`SportTypesTabsScreen` live refresh on Swimming activation and `ON_RESUME`, and downstream picker reactivity (`N/A - 0 string changes`). |
 | `1.0.52` | 2026-11-25 | Lane 2 Author (`ATT-8445`, `--as agent1`) | `ATT-8445` | Promoted `REQ-SET-134` to `[Verified]` following Stage 4/5 construction & verification (`68/68 PASS` across 12 targeted unit/Compose/contract suites, `0` new production/test compiler warnings, live `emulator-5554` Swimming activation & immediate Sport Types refresh `CRASH_COUNT=0`, `Rule 8.5` before/after PNGs verified). |
 | `1.0.53` | 2026-11-25 | Lane 2 Author (`ATT-8445`, `--as agent1`) | `ATT-8445` | Stage 6 Bounce 1/5 heal: grounded `REQ-SET-134.1` against authentic `SportTypeReconciliationHelper.reconcileOrphanSportTypes()` (`insertedCount > 0`) and `claimPlaceholder()` (`Rule 8.7`) and wired `notifySportTypesChanged()` in `reconcileOrphanSportTypes()`. |
+| `1.0.55` | 2026-11-25 | Lane 1 Author (`ATT-9628`, `--as agent1`) | `ATT-9628` | Added `REQ-SET-135` (`[Planned]`, `.1`–`.5`, `Derived (SW-only)`) for 7 sport-specific `AthleteMetricType` threshold entries, independent `KEY_SPORT_HR_MAX_SEEDED` legacy `KEY_HR_MAX` seeding, atomic `SettingsDataStore` + `SettingsSnapshot` sync & `getEffectiveThresholdsAt()`, sport-specific historical `hrTSS`/PMC integration with bit-for-bit 85% HRR fallback, Aftermath HRV threshold persistence, 9-locale `strings_athlete_thresholds.xml`, and `.attbackup` round-trip/forward-compatibility parity. |
+| `1.0.56` | 2026-11-25 | Lane 1 Author (`ATT-9628`, `--as agent1`) | `ATT-9628` | Promoted `REQ-SET-135` to `[Verified]` following Stage 4/5 construction & verification (`149/149 PASS` across 20 targeted unit/Robolectric/contract suites, `0` new compiler warnings, `SettingsDataStore.kt` `1,386/1,500` LoC, `AthleteProfileScreen.kt` `1,626/1,975` LoC, `WorkoutSummariesDatabaseManager.java` `3,105/3,148` LoC, `AthleteMetrics.db` `DB_VERSION = 2` unchanged, 9/9 locale `TranslationParityTest` `11/11`, live `emulator-5554` Athlete Profile verification `CRASH_COUNT=0`, and `docs/engineering/walkthroughs/ATT-9628_walkthrough.md`). |

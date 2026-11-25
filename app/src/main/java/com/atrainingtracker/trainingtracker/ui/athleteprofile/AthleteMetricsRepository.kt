@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.athleteprofile
 
 import android.content.Context
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.AthleteMetricEntry
 import com.atrainingtracker.trainingtracker.database.AthleteMetricType
 import com.atrainingtracker.trainingtracker.database.AthleteMetricsDatabaseManager
@@ -36,12 +37,30 @@ import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
 /**
+ * Resolved physiological threshold snapshot for a given [sportType] effective at [timestampMs] (`REQ-SET-135.2`).
+ */
+data class EffectivePhysiologicalThresholds(
+    val sportType: BSportType,
+    val timestampMs: Long,
+    val hrMaxBpm: Int? = null,
+    val hrRestBpm: Int? = null,
+    val lthrBpm: Int? = null,
+    val lt1HrBpm: Int? = null,
+    val ftpWatts: Int? = null,
+    val cpWatts: Int? = null,
+    val wPrimeKj: Float? = null,
+    val lt1PowerWatts: Int? = null
+)
+
+/**
  * Storage abstraction used by [AthleteMetricsRepository] so pure JVM unit tests can verify the
  * unidirectional state machine without requiring an Android SQLite runtime (`TST-UI-354.2`).
  */
 interface AthleteMetricsDataSource {
     fun getAllEntries(): List<AthleteMetricEntry>
     fun getLatestEntry(metricType: AthleteMetricType): AthleteMetricEntry?
+    fun getEntryEffectiveAt(metricType: AthleteMetricType, timestampMs: Long): AthleteMetricEntry? =
+        getLatestEntry(metricType)
     fun insertEntry(timestampMs: Long, metricType: AthleteMetricType, value: Double): Long
     fun updateEntry(id: Long, metricType: AthleteMetricType, timestampMs: Long, value: Double): Int
     fun deleteEntry(id: Long): Int
@@ -67,6 +86,8 @@ class SqliteAthleteMetricsDataSource(
     override fun getAllEntries(): List<AthleteMetricEntry> = dbManager.getAllEntries()
     override fun getLatestEntry(metricType: AthleteMetricType): AthleteMetricEntry? =
         dbManager.getLatestEntry(metricType)
+    override fun getEntryEffectiveAt(metricType: AthleteMetricType, timestampMs: Long): AthleteMetricEntry? =
+        dbManager.getEntryEffectiveAt(metricType, timestampMs)
     override fun insertEntry(timestampMs: Long, metricType: AthleteMetricType, value: Double): Long =
         dbManager.insertEntry(timestampMs, metricType, value)
     override fun updateEntry(
@@ -134,48 +155,96 @@ class AthleteMetricsRepository(
         }
     }
 
-    private suspend fun ensureSeededLocked(nowMs: Long) {
+    private suspend fun ensureSeededLocked(
+        nowMs: Long,
+        excludeSportHrMaxType: AthleteMetricType? = null
+    ) {
         val alreadySeeded = settingsDataStore.athleteMetricsSeededFlow.first()
-        if (alreadySeeded) return
+        if (!alreadySeeded) {
+            val candidates = mutableListOf<AthleteMetricEntry>()
 
-        val candidates = mutableListOf<AthleteMetricEntry>()
-
-        val currentWeightKg = settingsDataStore.athleteWeightKgFlow.first().toDouble()
-        if (AthleteMetricType.WEIGHT_KG.isValidMetricValue(currentWeightKg)) {
-            candidates.add(
-                AthleteMetricEntry(
-                    timestampMs = nowMs,
-                    metricType = AthleteMetricType.WEIGHT_KG,
-                    value = currentWeightKg
+            val currentWeightKg = settingsDataStore.athleteWeightKgFlow.first().toDouble()
+            if (AthleteMetricType.WEIGHT_KG.isValidMetricValue(currentWeightKg)) {
+                candidates.add(
+                    AthleteMetricEntry(
+                        timestampMs = nowMs,
+                        metricType = AthleteMetricType.WEIGHT_KG,
+                        value = currentWeightKg
+                    )
                 )
-            )
+            }
+
+            val currentHrRest = settingsDataStore.hrRestFlow.first()?.toDouble()
+            if (currentHrRest != null && AthleteMetricType.HR_REST_BPM.isValidMetricValue(currentHrRest)) {
+                candidates.add(
+                    AthleteMetricEntry(
+                        timestampMs = nowMs,
+                        metricType = AthleteMetricType.HR_REST_BPM,
+                        value = currentHrRest
+                    )
+                )
+            }
+
+            val currentFtp = settingsDataStore.ftpFlow.first()?.toDouble()
+            val ftpTimestamp = settingsDataStore.ftpUpdatedAtFlow.first() ?: nowMs
+            if (currentFtp != null && AthleteMetricType.FTP_WATTS.isValidMetricValue(currentFtp)) {
+                candidates.add(
+                    AthleteMetricEntry(
+                        timestampMs = ftpTimestamp,
+                        metricType = AthleteMetricType.FTP_WATTS,
+                        value = currentFtp
+                    )
+                )
+            }
+
+            dataSource.seedEntriesInTransaction(candidates)
+            settingsDataStore.setAthleteMetricsSeeded(true)
         }
 
-        val currentHrRest = settingsDataStore.hrRestFlow.first()?.toDouble()
-        if (currentHrRest != null && AthleteMetricType.HR_REST_BPM.isValidMetricValue(currentHrRest)) {
-            candidates.add(
-                AthleteMetricEntry(
-                    timestampMs = nowMs,
-                    metricType = AthleteMetricType.HR_REST_BPM,
-                    value = currentHrRest
-                )
-            )
+        // Independent idempotent migration for legacy KEY_HR_MAX -> HR_MAX_RUN_BPM & HR_MAX_BIKE_BPM (REQ-SET-135.1).
+        // Guard against fabricating cross-sport entries when either sport-specific key is already populated.
+        val sportHrMaxSeeded = settingsDataStore.sportHrMaxSeededFlow.first()
+        if (!sportHrMaxSeeded) {
+            val existingRunHrMax = settingsDataStore.hrMaxRunFlow.first()
+            val existingBikeHrMax = settingsDataStore.hrMaxBikeFlow.first()
+            val legacyHrMax = if (existingRunHrMax == null && existingBikeHrMax == null) {
+                settingsDataStore.legacyHrMaxRawFlow.first()?.toDouble()
+            } else {
+                null
+            }
+            val sportCandidates = mutableListOf<AthleteMetricEntry>()
+            if (legacyHrMax != null) {
+                if (excludeSportHrMaxType != AthleteMetricType.HR_MAX_RUN_BPM &&
+                    AthleteMetricType.HR_MAX_RUN_BPM.isValidMetricValue(legacyHrMax) &&
+                    dataSource.getLatestEntry(AthleteMetricType.HR_MAX_RUN_BPM) == null
+                ) {
+                    sportCandidates.add(
+                        AthleteMetricEntry(
+                            timestampMs = nowMs,
+                            metricType = AthleteMetricType.HR_MAX_RUN_BPM,
+                            value = legacyHrMax
+                        )
+                    )
+                }
+                if (excludeSportHrMaxType != AthleteMetricType.HR_MAX_BIKE_BPM &&
+                    AthleteMetricType.HR_MAX_BIKE_BPM.isValidMetricValue(legacyHrMax) &&
+                    dataSource.getLatestEntry(AthleteMetricType.HR_MAX_BIKE_BPM) == null
+                ) {
+                    sportCandidates.add(
+                        AthleteMetricEntry(
+                            timestampMs = nowMs,
+                            metricType = AthleteMetricType.HR_MAX_BIKE_BPM,
+                            value = legacyHrMax
+                        )
+                    )
+                }
+            }
+            if (sportCandidates.isNotEmpty()) {
+                dataSource.seedEntriesInTransaction(sportCandidates)
+                sportCandidates.forEach { syncLatestToDataStoreLocked(it.metricType) }
+            }
+            settingsDataStore.setSportHrMaxSeeded(true)
         }
-
-        val currentFtp = settingsDataStore.ftpFlow.first()?.toDouble()
-        val ftpTimestamp = settingsDataStore.ftpUpdatedAtFlow.first() ?: nowMs
-        if (currentFtp != null && AthleteMetricType.FTP_WATTS.isValidMetricValue(currentFtp)) {
-            candidates.add(
-                AthleteMetricEntry(
-                    timestampMs = ftpTimestamp,
-                    metricType = AthleteMetricType.FTP_WATTS,
-                    value = currentFtp
-                )
-            )
-        }
-
-        dataSource.seedEntriesInTransaction(candidates)
-        settingsDataStore.setAthleteMetricsSeeded(true)
     }
 
     /**
@@ -188,7 +257,7 @@ class AthleteMetricsRepository(
         timestampMs: Long = System.currentTimeMillis()
     ): Long = withContext(ioDispatcher) {
         mutex.withLock {
-            ensureSeededLocked(timestampMs)
+            ensureSeededLocked(timestampMs, excludeSportHrMaxType = metricType)
             val id = dataSource.insertEntry(timestampMs, metricType, value)
             syncLatestToDataStoreLocked(metricType)
             _entriesFlow.value = dataSource.getAllEntries()
@@ -249,7 +318,87 @@ class AthleteMetricsRepository(
             AthleteMetricType.W_PRIME_KJ -> {
                 settingsDataStore.setWPrimeKj(latest?.value?.toFloat())
             }
+            AthleteMetricType.HR_MAX_RUN_BPM -> {
+                settingsDataStore.setHrMaxRun(latest?.value?.roundToInt())
+            }
+            AthleteMetricType.HR_MAX_BIKE_BPM -> {
+                settingsDataStore.setHrMaxBike(latest?.value?.roundToInt())
+            }
+            AthleteMetricType.LTHR_RUN_BPM -> {
+                settingsDataStore.setLthrRun(latest?.value?.roundToInt())
+            }
+            AthleteMetricType.LTHR_BIKE_BPM -> {
+                settingsDataStore.setLthrBike(latest?.value?.roundToInt())
+            }
+            AthleteMetricType.LT1_HR_RUN_BPM -> {
+                settingsDataStore.setLt1HrRun(latest?.value?.roundToInt())
+            }
+            AthleteMetricType.LT1_HR_BIKE_BPM -> {
+                settingsDataStore.setLt1HrBike(latest?.value?.roundToInt())
+            }
+            AthleteMetricType.LT1_PWR_BIKE_WATTS -> {
+                settingsDataStore.setLt1PwrBike(latest?.value?.roundToInt())
+            }
         }
+    }
+
+    /**
+     * Resolves the sport-specific physiological thresholds effective at [timestampMs] (`REQ-SET-135.2`).
+     * Uses timestamped SQLite lookups (`getEntryEffectiveAt`) with DataStore snapshot fallbacks;
+     * strictly leaves [EffectivePhysiologicalThresholds.lthrBpm] as `null` when unconfigured so
+     * callers fall back bit-for-bit to the standard 85% HRR formula.
+     */
+    fun getEffectiveThresholdsAt(
+        sportType: BSportType,
+        timestampMs: Long
+    ): EffectivePhysiologicalThresholds {
+        fun effectiveInt(type: AthleteMetricType): Int? =
+            dataSource.getEntryEffectiveAt(type, timestampMs)?.value?.roundToInt()?.takeIf { it > 0 }
+
+        fun effectiveFloat(type: AthleteMetricType): Float? =
+            dataSource.getEntryEffectiveAt(type, timestampMs)?.value?.toFloat()?.takeIf { it > 0.0f }
+
+        val hrRest = effectiveInt(AthleteMetricType.HR_REST_BPM) ?: settingsDataStore.getHrRestSync()
+        val hrMax = when (sportType) {
+            BSportType.RUN -> effectiveInt(AthleteMetricType.HR_MAX_RUN_BPM)
+                ?: settingsDataStore.getHrMaxRunSync()
+                ?: settingsDataStore.getHrMaxSync()
+            BSportType.BIKE -> effectiveInt(AthleteMetricType.HR_MAX_BIKE_BPM)
+                ?: settingsDataStore.getHrMaxBikeSync()
+                ?: settingsDataStore.getHrMaxSync()
+            else -> listOfNotNull(
+                effectiveInt(AthleteMetricType.HR_MAX_RUN_BPM),
+                effectiveInt(AthleteMetricType.HR_MAX_BIKE_BPM)
+            ).maxOrNull() ?: settingsDataStore.getHrMaxSync()
+        }
+        val lthr = when (sportType) {
+            BSportType.RUN -> effectiveInt(AthleteMetricType.LTHR_RUN_BPM) ?: settingsDataStore.getLthrRunSync()
+            BSportType.BIKE -> effectiveInt(AthleteMetricType.LTHR_BIKE_BPM) ?: settingsDataStore.getLthrBikeSync()
+            else -> null
+        }
+        val lt1Hr = when (sportType) {
+            BSportType.RUN -> effectiveInt(AthleteMetricType.LT1_HR_RUN_BPM) ?: settingsDataStore.getLt1HrRunSync()
+            BSportType.BIKE -> effectiveInt(AthleteMetricType.LT1_HR_BIKE_BPM) ?: settingsDataStore.getLt1HrBikeSync()
+            else -> null
+        }
+        val includeCyclingPower = sportType != BSportType.RUN
+        val ftp = if (includeCyclingPower) effectiveInt(AthleteMetricType.FTP_WATTS) ?: settingsDataStore.getFtpSync() else null
+        val cp = if (includeCyclingPower) effectiveInt(AthleteMetricType.CP_WATTS) ?: settingsDataStore.getCpWattsSync() else null
+        val wPrime = if (includeCyclingPower) effectiveFloat(AthleteMetricType.W_PRIME_KJ) ?: settingsDataStore.getWPrimeKjSync() else null
+        val lt1Pwr = if (includeCyclingPower) effectiveInt(AthleteMetricType.LT1_PWR_BIKE_WATTS) ?: settingsDataStore.getLt1PwrBikeSync() else null
+
+        return EffectivePhysiologicalThresholds(
+            sportType = sportType,
+            timestampMs = timestampMs,
+            hrMaxBpm = hrMax,
+            hrRestBpm = hrRest,
+            lthrBpm = lthr,
+            lt1HrBpm = lt1Hr,
+            ftpWatts = ftp,
+            cpWatts = cp,
+            wPrimeKj = wPrime,
+            lt1PowerWatts = lt1Pwr
+        )
     }
 
     // --- ZONE HISTORY PERSISTENCE & RESOLUTION (REQ-SET-082) ---

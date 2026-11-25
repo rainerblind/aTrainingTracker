@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.map.TelemetryZoneMathTest" tests="22" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:21:34.780Z" hostname="rainer-HP-EliteBook-850-G5" time="1.619">
+  <properties/>
+  <testcase name="testLoadPowerThresholds_invalidValues_returnsNull" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryZoneMathTest" time="0.368"/>
+  <testcase name="testCalculateHeartRateZoneBands_fullSpanAcrossAll5Zones" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryZoneMathTest" time="0.002"/>
+  <testcase name="testLoadHeartRateThresholds_invalidValues_returnsNull" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryZoneMathTest" time="0.403"/>
+  <testcase name="testLoadPowerThresholds_loadsPwrBike" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryZoneMathTest" time="0.351"/>
+  <testcase name="testCalculateHrvRmssdYAxisBounds_dynamicOutlierResilientAndEdgeCases_TST_HRV_047" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryZoneMathTest" time="0.001"/>
+  <testcase name="testCalculatePowerZoneBands_fullSpanAcrossAll7Zones" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryZoneMathTest" time="0.001"/>
+  <testcase name="testInvalidDataRanges_returnsEmptyList" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryZoneMathTest" time="0.001"/>
+  <testcase name="testDeterminePowerZone_mapsCorrectlyAcrossAll7Zones" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryZoneMathTest" time="0.0"/>
+  <testcase name="testDetermineHrvDfaA1ZoneAndColor_preservesPolarityAndCustomThresholds" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryZoneMathTest" time="0.0"/>
+  <testcase name="testBuildHrvDfaA1VerticalGradientStops_monotonicAndBoundarySafe" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryZoneMathTest" time="0.001"/>
+  <testcase name="testCalculateHrvDfaA1ThresholdDashes_filtersOutOfRangeThresholds" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryZoneMathTest" time="0.001"/>
+  <testcase name="testShouldRenderZoneLabel_clearanceThreshold" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryZoneMathTest" time="0.0"/>
+  <testcase name="testCalculatePowerThresholdDashes_returnsAll6Thresholds_tst_ui_383_2" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryZoneMathTest" time="0.0"/>
+  <testcase name="testCalculateHrvDfaA1ZoneBands_defaultAndOutOfRangeClamping" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryZoneMathTest" time="0.001"/>
+  <testcase name="testLoadHeartRateThresholds_run_loadsHrRun" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryZoneMathTest" time="0.245"/>
+  <testcase name="testLoadHeartRateThresholds_bike_loadsHrBike" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryZoneMathTest" time="0.241"/>
+  <testcase name="testCalculateThresholdDashes_onlyIncludesVisibleRange" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryZoneMathTest" time="0.0"/>
+  <testcase name="testFormatHrvRmssdAxisLabel_cleanIntegerFractionalAndDefensive_TST_HRV_047" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryZoneMathTest" time="0.001"/>
+  <testcase name="testDetermineHeartRateZone_mapsCorrectly" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryZoneMathTest" time="0.0"/>
+  <testcase name="testCalculatePowerZoneBands_subThresholdRide_omitsZone7" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryZoneMathTest" time="0.0"/>
+  <testcase name="testCalculateHeartRateZoneBands_partialSpanClamping" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryZoneMathTest" time="0.0"/>
+  <testcase name="testIsInvertedTelemetryYAxisAndMapTelemetryValueToY_TST_HRV_046" classname="com.atrainingtracker.trainingtracker.ui.map.TelemetryZoneMathTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

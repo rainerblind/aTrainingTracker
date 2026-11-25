@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabsTest" tests="21" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:18:05.888Z" hostname="rainer-HP-EliteBook-850-G5" time="1.243">
+  <properties/>
+  <testcase name="TST-UI-464_3 active map and chart plot scrubbing isolation contract" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabsTest" time="0.464"/>
+  <testcase name="TST-UI-2787_1 v3 serialization persists unchecked sections and deleted hrv tab" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabsTest" time="0.122"/>
+  <testcase name="TST-UI-456_2 drag handle integration and pinned MAP anchor in tab config sheet" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabsTest" time="0.026"/>
+  <testcase name="TST-UI-371_2b legacy v1 wire migration auto-injects PHOTOS into overview" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabsTest" time="0.002"/>
+  <testcase name="TST-UI-371_5 dynamic empty-tab hiding when workout lacks data for all sections in tab" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabsTest" time="0.001"/>
+  <testcase name="TST-UI-371_6 gesture arbitration contract for map and chart tabs" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabsTest" time="0.142"/>
+  <testcase name="TST-UI-464_1 edge gutter default 32dp and initial down lock contract" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabsTest" time="0.0"/>
+  <testcase name="TST-UI-464_2 granular interactive canvas and non-interactive strip pass-through contract" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabsTest" time="0.154"/>
+  <testcase name="TST-UI-371_2 serialization round-trip and corrupt payload fallback" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabsTest" time="0.001"/>
+  <testcase name="TST-UI-371_3 tab CRUD and reordering invariants" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabsTest" time="0.006"/>
+  <testcase name="TST-UI-371_1 default 4-tab preset and bidirectional section enum mapping" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabsTest" time="0.006"/>
+  <testcase name="TST-UI-371_4 per-tab section toggle reordering and pinned-top MAP invariant" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabsTest" time="0.001"/>
+  <testcase name="TST-UI-371_8 9-language localization parity for workout detail tab keys" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabsTest" time="0.187"/>
+  <testcase name="TST-UI-527_2 wire migration injects tab_hrv after tab_zones when missing from wire string" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabsTest" time="0.001"/>
+  <testcase name="TST-UI-453_4b grade distribution auto-migration into tab_zones when missing from wire string" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabsTest" time="0.0"/>
+  <testcase name="TST-UI-527_3 dynamic empty-tab hiding suppresses tab_hrv when workout lacks HRV data" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabsTest" time="0.001"/>
+  <testcase name="TST-UI-453_4c rpe and feel auto-migration into tab_overview when missing from wire string" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabsTest" time="0.0"/>
+  <testcase name="TST-UI-371_7 entry point parity in TrackOnMapScreen top bar and WorkoutMasksAndCardsSection" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabsTest" time="0.111"/>
+  <testcase name="TST-UI-527_1 dedicated 5-tab preset, sizing, and bidirectional enum mapping" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabsTest" time="0.0"/>
+  <testcase name="TST-UI-2805_1 resolveTabIndexForSection handles renamed reordered deleted and unavailable tabs" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabsTest" time="0.003"/>
+  <testcase name="TST-UI-377_1 authoritative tab data availability ignores legacy detailPreferences boolean flags" classname="com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabsTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

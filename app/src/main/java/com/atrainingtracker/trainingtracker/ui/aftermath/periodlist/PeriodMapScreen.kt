@@ -272,6 +272,7 @@ fun PeriodMapScreen(
                                 recentSessions = activeAftermathState?.recentSessions ?: emptyList(),
                                 isSmoothedStream = activeAftermathState?.isSmoothedHrvStream ?: false,
                                 onUpdateFtp = trackOnMapViewModel?.let { vm -> { vm.updateFtp(it) } },
+                                onUpdatePowerThresholds = trackOnMapViewModel?.let { vm -> { ftp, lt1 -> vm.updateFtp(ftp, lt1PowerWatts = lt1) } },
                                 onUpdateHrZones = trackOnMapViewModel?.let { vm -> { t1, t2 -> vm.updateHrZones(t1, t2) } },
                                 telemetryPath = activeAftermathState?.telemetryPath ?: emptyList(),
                                 multiSensorOverlays = activeAftermathState?.multiSensorOverlays ?: emptyMap(),

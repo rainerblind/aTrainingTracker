@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.tracker.LiveWorkoutCardStateStoreTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:15:49.987Z" hostname="rainer-HP-EliteBook-850-G5" time="7.615">
+  <properties/>
+  <testcase name="applyLiveSnapshot_guardsFinishedAndMismatchedCardsAndPreservesVerticalOscillation_TST_PER_055_1" classname="com.atrainingtracker.trainingtracker.tracker.LiveWorkoutCardStateStoreTest" time="6.463"/>
+  <testcase name="activeTicksPausedTicksLapsAndClear_lifecycleIsDeterministic_TST_PER_055_1" classname="com.atrainingtracker.trainingtracker.tracker.LiveWorkoutCardStateStoreTest" time="0.122"/>
+  <testcase name="onLiveSamplePersisted_extractsCanonicalAndNamedSensorSamples_TST_PER_055_1" classname="com.atrainingtracker.trainingtracker.tracker.LiveWorkoutCardStateStoreTest" time="0.158"/>
+  <testcase name="applyLiveSnapshot_matchesExistingRowsBySensorTypeAcrossLocaleSwitchAndSetsSensorTypeOnNewRows_TST_DAT_044_5" classname="com.atrainingtracker.trainingtracker.tracker.LiveWorkoutCardStateStoreTest" time="0.214"/>
+  <testcase name="stressTest_3600TicksWith2200HistoricalWorkouts_zeroAllWorkoutsAndDownstreamChurn_TST_PER_055_2" classname="com.atrainingtracker.trainingtracker.tracker.LiveWorkoutCardStateStoreTest" time="0.541"/>
+  <testcase name="onLiveSamplePersisted_ignoresSiblingDerivedColumnsOnSensorDropout_TST_PER_055_1" classname="com.atrainingtracker.trainingtracker.tracker.LiveWorkoutCardStateStoreTest" time="0.115"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

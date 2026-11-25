@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSplitMapPreviewTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:21:26.429Z" hostname="rainer-HP-EliteBook-850-G5" time="0.013">
+  <properties/>
+  <testcase name="testWorkoutClusterSplitSheet_embedsColorCodedMapPreviewAboveSlider" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSplitMapPreviewTest" time="0.001"/>
+  <testcase name="testPathPreviewMap_supportsMultiPathAndCompositeBounds" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSplitMapPreviewTest" time="0.001"/>
+  <testcase name="testViewModel_supportsStandaloneSplitPreview" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSplitMapPreviewTest" time="0.001"/>
+  <testcase name="testClusterItem_and_WorkoutClustersScreen_excludeSplitAction_whileHeatmapRetainsIt" classname="com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSplitMapPreviewTest" time="0.01"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.integration.ViewModelRepositoryIntegrationTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-25T08:13:50.562Z" hostname="rainer-HP-EliteBook-850-G5" time="1.189">
+  <properties/>
+  <testcase name="testWorkoutRepository_directQuery_realSqliteResolution" classname="com.atrainingtracker.trainingtracker.integration.ViewModelRepositoryIntegrationTest" time="0.374"/>
+  <testcase name="testWorkoutSummariesViewModel_observesRealSqliteFlowEmissions" classname="com.atrainingtracker.trainingtracker.integration.ViewModelRepositoryIntegrationTest" time="0.469"/>
+  <testcase name="testBanalServiceRepository_reactiveStateFlows" classname="com.atrainingtracker.trainingtracker.integration.ViewModelRepositoryIntegrationTest" time="0.346"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

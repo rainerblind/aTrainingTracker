@@ -27,6 +27,7 @@ import android.provider.BaseColumns
 import com.atrainingtracker.database.inTransaction
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.zones.ZoneCalculationMath
+import com.atrainingtracker.util.safeEnumValueOfOrNull
 
 /**
  * Supported physiological and body composition metric types persisted in [AthleteMetricsDatabaseManager] (`REQ-UI-391.2`).
@@ -57,6 +58,34 @@ enum class AthleteMetricType(
     W_PRIME_KJ(
         minMetricValue = 5.0,
         maxMetricValue = 60.0
+    ),
+    HR_MAX_RUN_BPM(
+        minMetricValue = ZoneCalculationMath.MIN_HR_MAX.toDouble(),
+        maxMetricValue = ZoneCalculationMath.MAX_HR_MAX.toDouble()
+    ),
+    HR_MAX_BIKE_BPM(
+        minMetricValue = ZoneCalculationMath.MIN_HR_MAX.toDouble(),
+        maxMetricValue = ZoneCalculationMath.MAX_HR_MAX.toDouble()
+    ),
+    LTHR_RUN_BPM(
+        minMetricValue = ZoneCalculationMath.MIN_LTHR.toDouble(),
+        maxMetricValue = ZoneCalculationMath.MAX_LTHR.toDouble()
+    ),
+    LTHR_BIKE_BPM(
+        minMetricValue = ZoneCalculationMath.MIN_LTHR.toDouble(),
+        maxMetricValue = ZoneCalculationMath.MAX_LTHR.toDouble()
+    ),
+    LT1_HR_RUN_BPM(
+        minMetricValue = ZoneCalculationMath.MIN_LT1_HR.toDouble(),
+        maxMetricValue = ZoneCalculationMath.MAX_LT1_HR.toDouble()
+    ),
+    LT1_HR_BIKE_BPM(
+        minMetricValue = ZoneCalculationMath.MIN_LT1_HR.toDouble(),
+        maxMetricValue = ZoneCalculationMath.MAX_LT1_HR.toDouble()
+    ),
+    LT1_PWR_BIKE_WATTS(
+        minMetricValue = ZoneCalculationMath.MIN_LT1_PWR.toDouble(),
+        maxMetricValue = ZoneCalculationMath.MAX_LT1_PWR.toDouble()
     );
 
     /**
@@ -67,7 +96,7 @@ enum class AthleteMetricType(
 
     companion object {
         fun fromNameOrNull(name: String?): AthleteMetricType? =
-            entries.firstOrNull { it.name == name }
+            safeEnumValueOfOrNull<AthleteMetricType>(name)
     }
 }
 

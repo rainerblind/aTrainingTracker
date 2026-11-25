@@ -41,6 +41,15 @@ object ZoneCalculationMath {
     const val MIN_HR_REST = 30
     const val MAX_HR_REST = 120
 
+    const val MIN_LTHR = 80
+    const val MAX_LTHR = 230
+
+    const val MIN_LT1_HR = 60
+    const val MAX_LT1_HR = 220
+
+    const val MIN_LT1_PWR = 30
+    const val MAX_LT1_PWR = 500
+
     const val MIN_KARVONEN_RESERVE = 20
     const val ZONE_7_POWER_CEILING = 2500
 

@@ -100,6 +100,7 @@ fun TrackOnMapScreen(
     tabsConfig: List<WorkoutDetailTabConfig>? = null,
     onSaveTabsConfig: ((List<WorkoutDetailTabConfig>) -> Unit)? = null,
     onUpdateFtp: ((Int) -> Unit)? = null,
+    onUpdatePowerThresholds: ((Int, Int?) -> Unit)? = null,
     onUpdateHrZones: ((Int, Int) -> Unit)? = null,
     recentSessions: List<HrvSessionThreshold> = emptyList(),
     isSmoothedStream: Boolean = false,
@@ -323,18 +324,62 @@ fun TrackOnMapScreen(
         }
     }
 
+    val effectiveOnUpdatePowerThresholds: (Int, Int?) -> Unit = onUpdatePowerThresholds ?: { newFtp, lt1PowerWatts ->
+        if (onUpdateFtp != null && lt1PowerWatts == null) {
+            onUpdateFtp(newFtp)
+        } else {
+            coroutineScope.launch(Dispatchers.IO) {
+                try {
+                    val settingsDataStore = SettingsDataStore.getInstance(context.applicationContext)
+                    val metricsRepo = AthleteMetricsRepository.getInstance(context.applicationContext)
+                    val thresholds = ZoneCalculationMath.calculateCogganPowerZones(newFtp)
+                    val cutoffs = listOf(
+                        thresholds.z1Max, thresholds.z2Max, thresholds.z3Max,
+                        thresholds.z4Max, thresholds.z5Max, thresholds.z6Max
+                    )
+                    settingsDataStore.saveCalculatedPowerZones(newFtp, cutoffs)
+                    metricsRepo.addEntry(
+                        metricType = AthleteMetricType.FTP_WATTS,
+                        value = newFtp.toDouble()
+                    )
+                    if (lt1PowerWatts != null && AthleteMetricType.LT1_PWR_BIKE_WATTS.isValidMetricValue(lt1PowerWatts.toDouble())) {
+                        metricsRepo.addEntry(
+                            metricType = AthleteMetricType.LT1_PWR_BIKE_WATTS,
+                            value = lt1PowerWatts.toDouble()
+                        )
+                    }
+                } catch (e: Exception) {
+                    Log.e("TrackOnMapScreen", "Error updating FTP in fallback", e)
+                }
+            }
+        }
+    }
+
     val effectiveOnUpdateHrZones: (Int, Int) -> Unit = onUpdateHrZones ?: { newHrvt1, newHrvt2 ->
         coroutineScope.launch(Dispatchers.IO) {
             try {
                 val settingsDataStore = SettingsDataStore.getInstance(context.applicationContext)
-                val zoneType = if (workoutData.bSportType == BSportType.RUN) {
-                    SettingsDataStore.ZoneType.HR_RUN
-                } else {
-                    SettingsDataStore.ZoneType.HR_BIKE
+                val metricsRepo = AthleteMetricsRepository.getInstance(context.applicationContext)
+                val isRun = workoutData.bSportType == BSportType.RUN
+                val zoneType = if (isRun) SettingsDataStore.ZoneType.HR_RUN else SettingsDataStore.ZoneType.HR_BIKE
+                val lt1Type = if (isRun) AthleteMetricType.LT1_HR_RUN_BPM else AthleteMetricType.LT1_HR_BIKE_BPM
+                val lthrType = if (isRun) AthleteMetricType.LTHR_RUN_BPM else AthleteMetricType.LTHR_BIKE_BPM
+                if (lt1Type.isValidMetricValue(newHrvt1.toDouble())) {
+                    metricsRepo.addEntry(metricType = lt1Type, value = newHrvt1.toDouble())
                 }
-                val configuredHrMax = settingsDataStore.hrMaxFlow.firstOrNull() ?: SettingsDataStore.DEFAULT_HR_MAX
+                if (lthrType.isValidMetricValue(newHrvt2.toDouble())) {
+                    metricsRepo.addEntry(metricType = lthrType, value = newHrvt2.toDouble())
+                }
+                val hrMaxType = if (isRun) AthleteMetricType.HR_MAX_RUN_BPM else AthleteMetricType.HR_MAX_BIKE_BPM
+                val sportHrMax = if (isRun) settingsDataStore.hrMaxRunFlow.firstOrNull() else settingsDataStore.hrMaxBikeFlow.firstOrNull()
+                val configuredHrMax = sportHrMax
+                    ?: settingsDataStore.hrMaxFlow.firstOrNull()
+                    ?: SettingsDataStore.DEFAULT_HR_MAX
                 val hrMax = if (configuredHrMax > newHrvt2) configuredHrMax else (newHrvt2 + 10).coerceAtMost(ZoneCalculationMath.MAX_HR_MAX)
                 val hrRest = settingsDataStore.hrRestFlow.firstOrNull()
+                if ((sportHrMax == null || hrMax > configuredHrMax) && hrMaxType.isValidMetricValue(hrMax.toDouble())) {
+                    metricsRepo.addEntry(metricType = hrMaxType, value = hrMax.toDouble())
+                }
                 val thresholds = ZoneCalculationMath.calculateThresholdAnchoredHeartRateZones(
                     hrvt1 = newHrvt1,
                     hrvt2 = newHrvt2,
@@ -394,6 +439,7 @@ fun TrackOnMapScreen(
         hiddenCharts = persistedHiddenCharts,
         onToggleChartVisibility = handleToggleChartVisibility,
         onUpdateFtp = effectiveOnUpdateFtp,
+        onUpdatePowerThresholds = effectiveOnUpdatePowerThresholds,
         onUpdateHrZones = effectiveOnUpdateHrZones,
         useStatusBarsPadding = useStatusBarsPadding,
         onClusterClick = onClusterClick,
