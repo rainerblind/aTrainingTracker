@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerMigrationV15Test" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-25T12:54:03.772Z" hostname="rainer-HP-EliteBook-850-G5" time="11.614">
+  <properties/>
+  <testcase name="testDevicesDatabaseManagerWriteReadAndRawDeviceDataProvider_stripNulBytes_TST_CON_060_3" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerMigrationV15Test" time="11.383"/>
+  <testcase name="testOnCreateAndOnUpgrade14To15_identicalSchemasAndIdempotentNulSanitization_TST_CON_060_3" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerMigrationV15Test" time="0.136"/>
+  <testcase name="testDbVersion15_andSchemaRegistryParity_TST_CON_060_3" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerMigrationV15Test" time="0.095"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

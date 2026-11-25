@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerMigrationV12Test" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-25T12:53:50.065Z" hostname="rainer-HP-EliteBook-850-G5" time="0.849">
+  <properties/>
+  <testcase name="testMigrateAddAltitudeAndSlopeAttFused_whenNotExists_insertsRowWithPairedFalse" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerMigrationV12Test" time="0.278"/>
+  <testcase name="testDbVersionIs12" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerMigrationV12Test" time="0.275"/>
+  <testcase name="testMigrateAddAltitudeAndSlopeAttFused_whenAlreadyExists_isIdempotent" classname="com.atrainingtracker.banalservice.database.DevicesDatabaseManagerMigrationV12Test" time="0.296"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

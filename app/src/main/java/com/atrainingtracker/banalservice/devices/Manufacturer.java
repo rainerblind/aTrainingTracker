@@ -18,8 +18,10 @@
 
 package com.atrainingtracker.banalservice.devices;
 
+import android.os.Build;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 
@@ -41,6 +43,31 @@ import java.util.Map;
 public class Manufacturer {
     private static final String TAG = "Manufacturer";
     private static final boolean DEBUG = BANALService.getDebug(false);
+
+    public static final String MANUFACTURER_A_TRAINING_TRACKER = "a Training Tracker";
+    public static final String MANUFACTURER_GOOGLE = "Google";
+
+    /**
+     * Returns the canonical manufacturer display name for a {@code Protocol.SMARTPHONE} sensor
+     * (ATT-8111): {@code "a Training Tracker"} for virtual fused/DEM sensors, {@code "Google"}
+     * for Google Fused Location, and {@link Build#BRAND} for physical phone hardware sensors.
+     */
+    @NonNull
+    public static String getSmartphoneManufacturer(@Nullable DeviceType deviceType) {
+        if (deviceType != null) {
+            switch (deviceType) {
+                case SPEED_AND_LOCATION_ATT_FUSED:
+                case ALTITUDE_AND_SLOPE_ATT_FUSED:
+                case ALTITUDE_FROM_POSITION:
+                    return MANUFACTURER_A_TRAINING_TRACKER;
+                case SPEED_AND_LOCATION_GOOGLE_FUSED:
+                    return MANUFACTURER_GOOGLE;
+                default:
+                    break;
+            }
+        }
+        return Build.BRAND != null ? Build.BRAND : "";
+    }
 
     /**
      * Sparse overrides preserving curated capitalization/punctuation for FIT SDK entries

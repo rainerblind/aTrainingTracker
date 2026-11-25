@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepositoryTest" tests="15" skipped="0" failures="0" errors="0" timestamp="2026-11-25T13:06:00.106Z" hostname="rainer-HP-EliteBook-850-G5" time="17.917">
+  <properties/>
+  <testcase name="fetchSensorFieldConfigs_mapsColWeightSymmetrically" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepositoryTest" time="1.517"/>
+  <testcase name="updateShowLiveClimbs_delegatesToViewsDbManager" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepositoryTest" time="1.273"/>
+  <testcase name="deleteSectionDivider_delegatesToViewsDbManager" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepositoryTest" time="1.231"/>
+  <testcase name="fetchSensorFieldConfigs_handlesNullEnumValuesWithoutCrashing" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepositoryTest" time="1.131"/>
+  <testcase name="testTrackingViewsRepository_dtoMappingAndShowBikeBellUpdate" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepositoryTest" time="1.15"/>
+  <testcase name="mutateViewConfig_incrementsTriggerAndPreservesReturnValuesForMoveAndCopy" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepositoryTest" time="1.306"/>
+  <testcase name="fetchSensorFieldConfigs_handlesInvalidEnumValuesGracefully" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepositoryTest" time="1.262"/>
+  <testcase name="getSectionDividersFlow_mapsDataCorrectly" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepositoryTest" time="1.098"/>
+  <testcase name="updateShowNavigationHints_delegatesToViewsDbManager" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepositoryTest" time="1.144"/>
+  <testcase name="fetchSingleSensorFieldConfig_handlesNullEnumValues" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepositoryTest" time="1.289"/>
+  <testcase name="testInsertAndUpdateSensorFieldConfig_delegatesGraphColor" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepositoryTest" time="1.169"/>
+  <testcase name="moveTabView_delegatesToViewsDbManagerAndReturnsIndex" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepositoryTest" time="1.095"/>
+  <testcase name="fetchTrackingViewInfo_mapsLiveClimbsAndNavigationHintsCorrectly" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepositoryTest" time="1.14"/>
+  <testcase name="setSectionDivider_delegatesToViewsDbManager" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepositoryTest" time="1.204"/>
+  <testcase name="trackingViewInfo_defaultsShowLiveClimbsAndNavigationHintsToTrue" classname="com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepositoryTest" time="0.903"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

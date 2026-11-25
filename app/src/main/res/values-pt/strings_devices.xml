@@ -88,8 +88,8 @@
 
     <string name="devices_location_GPS">GPS do telefone (Satélite)</string>
     <string name="devices_location_GoogleFused">Localização Google (Fused)</string>
-    <string name="devices_location_ATT_fused">ATT Odometria fundida</string>
-    <string name="devices_altitude_slope_ATT_fused">ATT Fused (Altitude e inclinação)</string>
+    <string name="devices_location_ATT_fused">Odometria fundida</string>
+    <string name="devices_altitude_slope_ATT_fused">Fused (Altitude e inclinação)</string>
     <string name="devices_altitude_from_pressure">Altitude por pressão</string>
 
     <!-- Specialized Altitude Devices Explanations (ATT-5073, REQ-SEN-026) -->

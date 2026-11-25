@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.devices.AltitudeFromPressureDeviceTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-11-25T12:55:18.054Z" hostname="rainer-HP-EliteBook-850-G5" time="17.799">
+  <properties/>
+  <testcase name="testSetAltitudeCorrection_whenBothSensorValueAndLastRawAltitudeUnavailable_handlesGracefully" classname="com.atrainingtracker.banalservice.devices.AltitudeFromPressureDeviceTest" time="1.518"/>
+  <testcase name="testOnSensorChanged_coldStartWithKnownLocation_initializesAndEmitsWithoutCrashing" classname="com.atrainingtracker.banalservice.devices.AltitudeFromPressureDeviceTest" time="1.363"/>
+  <testcase name="testSetAltitudeCorrection_whenSensorValueNull_fallsBackToLastRawAltitude" classname="com.atrainingtracker.banalservice.devices.AltitudeFromPressureDeviceTest" time="1.298"/>
+  <testcase name="testCalibrationBaseline_anchorsToFilteredAltitudeDuringSpike" classname="com.atrainingtracker.banalservice.devices.AltitudeFromPressureDeviceTest" time="1.3"/>
+  <testcase name="testCalibrate_whenRawAltitudeUnavailable_defersCalibrationUntilFirstPressureMeasurement" classname="com.atrainingtracker.banalservice.devices.AltitudeFromPressureDeviceTest" time="1.448"/>
+  <testcase name="testReanchorSilently_beforeAndAfterFirstPressure_alignsWithoutRetroactiveBroadcast_TST_STB_025_3" classname="com.atrainingtracker.banalservice.devices.AltitudeFromPressureDeviceTest" time="1.429"/>
+  <testcase name="testSetAltitudeCorrection_whenSensorValuePresent_calculatesDeltaFromCurrentValue" classname="com.atrainingtracker.banalservice.devices.AltitudeFromPressureDeviceTest" time="1.539"/>
+  <testcase name="testCalibrate_whenRawAltitudeAvailable_setsCorrectionAndMarksCalibrated" classname="com.atrainingtracker.banalservice.devices.AltitudeFromPressureDeviceTest" time="1.261"/>
+  <testcase name="testShutDown_resetsCalibrationState" classname="com.atrainingtracker.banalservice.devices.AltitudeFromPressureDeviceTest" time="1.3"/>
+  <testcase name="testSetAltitudeCorrection_repeatedCalls_doesNotOscillate" classname="com.atrainingtracker.banalservice.devices.AltitudeFromPressureDeviceTest" time="1.339"/>
+  <testcase name="testSetAltitudeCorrection_whenCorrectionIsZero_suppressesBroadcast" classname="com.atrainingtracker.banalservice.devices.AltitudeFromPressureDeviceTest" time="1.266"/>
+  <testcase name="testCalibrate_idempotency_skipsRedundantWork" classname="com.atrainingtracker.banalservice.devices.AltitudeFromPressureDeviceTest" time="1.287"/>
+  <testcase name="testOnSensorChanged_whenKnownLocationNotFound_doesNotTriggerCorrection" classname="com.atrainingtracker.banalservice.devices.AltitudeFromPressureDeviceTest" time="1.451"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Possibly running android unit test without robolectric
+java.lang.RuntimeException: Method isLoggable in android.util.Log not mocked. See https://developer.android.com/r/studio-ui/build/not-mocked for details.
+	at android.util.Log.isLoggable(Log.java)
+	at okhttp3.internal.platform.android.AndroidLog.enableLogging(AndroidLog.kt:132)
+	at okhttp3.internal.platform.android.AndroidLog.enable(AndroidLog.kt:109)
+	at okhttp3.internal.platform.PlatformRegistry.findPlatform(PlatformRegistry.kt:25)
+	at okhttp3.internal.platform.Platform$Companion.findPlatform(Platform.kt:252)
+	at okhttp3.internal.platform.Platform$Companion.access$findPlatform(Platform.kt:230)
+	at okhttp3.internal.platform.Platform.<clinit>(Platform.kt:231)
+	at okhttp3.OkHttpClient$Builder.<init>(OkHttpClient.kt:607)
+	at okhttp3.OkHttpClient.<init>(OkHttpClient.kt:279)
+	at com.atrainingtracker.trainingtracker.util.AppHttpClient.shared_delegate$lambda$0(AppHttpClient.kt:38)
+	at kotlin.SynchronizedLazyImpl.getValue(LazyJVM.kt:86)
+	at com.atrainingtracker.trainingtracker.util.AppHttpClient.getShared(AppHttpClient.kt:37)
+	at com.atrainingtracker.trainingtracker.util.AppHttpClient.newBuilder(AppHttpClient.kt:46)
+	at com.atrainingtracker.trainingtracker.elevation.ElevationService$Companion.getInstance(ElevationService.kt:61)
+	at com.atrainingtracker.trainingtracker.elevation.ElevationService.getInstance(ElevationService.kt)
+	at com.atrainingtracker.banalservice.devices.AltitudeFromPressureDevice.lambda$healLocationAsync$0(AltitudeFromPressureDevice.java:178)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+Exception in thread "pool-13-thread-1" java.lang.NullPointerException: Cannot read field "latitude" because "current.latLng" is null
+	at com.atrainingtracker.banalservice.devices.AltitudeFromPressureDevice.lambda$healLocationAsync$0(AltitudeFromPressureDevice.java:187)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+Exception in thread "pool-25-thread-1" java.lang.RuntimeException: Method w in android.util.Log not mocked. See https://developer.android.com/r/studio-ui/build/not-mocked for details.
+	at android.util.Log.w(Log.java)
+	at com.atrainingtracker.trainingtracker.location.LocationNameResolver$resolveLocationName$2.invokeSuspend(LocationNameResolver.kt:65)
+	at com.atrainingtracker.trainingtracker.location.LocationNameResolver$resolveLocationName$2.invoke(LocationNameResolver.kt)
+	at com.atrainingtracker.trainingtracker.location.LocationNameResolver$resolveLocationName$2.invoke(LocationNameResolver.kt)
+	at kotlinx.coroutines.intrinsics.UndispatchedKt.startUndispatched(Undispatched.kt:66)
+	at kotlinx.coroutines.intrinsics.UndispatchedKt.startUndispatchedOrReturn(Undispatched.kt:43)
+	at kotlinx.coroutines.BuildersKt__Builders_commonKt.withContext(Builders.common.kt:497)
+	at kotlinx.coroutines.BuildersKt.withContext(Unknown Source)
+	at com.atrainingtracker.trainingtracker.location.LocationNameResolver.resolveLocationName(LocationNameResolver.kt:50)
+	at com.atrainingtracker.trainingtracker.location.LocationNameResolver$resolveLocationNameBlocking$1.invokeSuspend(LocationNameResolver.kt:135)
+	at _COROUTINE._BOUNDARY._(CoroutineDebugging.kt:42)
+	at com.atrainingtracker.trainingtracker.location.LocationNameResolver$resolveLocationNameBlocking$1.invokeSuspend(LocationNameResolver.kt:135)
+Caused by: java.lang.RuntimeException: Method w in android.util.Log not mocked. See https://developer.android.com/r/studio-ui/build/not-mocked for details.
+	at android.util.Log.w(Log.java)
+	at com.atrainingtracker.trainingtracker.location.LocationNameResolver$resolveLocationName$2.invokeSuspend(LocationNameResolver.kt:65)
+	at com.atrainingtracker.trainingtracker.location.LocationNameResolver$resolveLocationName$2.invoke(LocationNameResolver.kt)
+	at com.atrainingtracker.trainingtracker.location.LocationNameResolver$resolveLocationName$2.invoke(LocationNameResolver.kt)
+	at kotlinx.coroutines.intrinsics.UndispatchedKt.startUndispatched(Undispatched.kt:66)
+	at kotlinx.coroutines.intrinsics.UndispatchedKt.startUndispatchedOrReturn(Undispatched.kt:43)
+	at kotlinx.coroutines.BuildersKt__Builders_commonKt.withContext(Builders.common.kt:497)
+	at kotlinx.coroutines.BuildersKt.withContext(Unknown Source)
+	at com.atrainingtracker.trainingtracker.location.LocationNameResolver.resolveLocationName(LocationNameResolver.kt:50)
+	at com.atrainingtracker.trainingtracker.location.LocationNameResolver$resolveLocationNameBlocking$1.invokeSuspend(LocationNameResolver.kt:135)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:124)
+	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:89)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:586)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:798)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:717)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:704)
+]]></system-err>
+</testsuite>

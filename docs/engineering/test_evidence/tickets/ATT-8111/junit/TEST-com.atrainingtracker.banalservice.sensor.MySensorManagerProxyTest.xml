@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.banalservice.sensor.MySensorManagerProxyTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-25T13:03:46.645Z" hostname="rainer-HP-EliteBook-850-G5" time="3.355">
+  <properties/>
+  <testcase name="myDevice_addSensor_deactivatesAndUnregistersPreviousSameTypeSensor" classname="com.atrainingtracker.banalservice.sensor.MySensorManagerProxyTest" time="0.71"/>
+  <testcase name="registerSensor_replacesDuplicateInstanceFromSameDevice" classname="com.atrainingtracker.banalservice.sensor.MySensorManagerProxyTest" time="0.776"/>
+  <testcase name="shutDown_clearsSourceAndInternalMaps" classname="com.atrainingtracker.banalservice.sensor.MySensorManagerProxyTest" time="0.66"/>
+  <testcase name="registerAndUnregister_retainsProxySensorInMapWithNullSource" classname="com.atrainingtracker.banalservice.sensor.MySensorManagerProxyTest" time="0.574"/>
+  <testcase name="reconnectSensor_reusesRetainedProxyAndRestoresListenerUpdates" classname="com.atrainingtracker.banalservice.sensor.MySensorManagerProxyTest" time="0.633"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>

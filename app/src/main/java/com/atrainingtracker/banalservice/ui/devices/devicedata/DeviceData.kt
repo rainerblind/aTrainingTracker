@@ -26,6 +26,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.BikePowerSensorsHelper
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.devices.Manufacturer
 import com.atrainingtracker.banalservice.sensor.HrModality
 import com.atrainingtracker.banalservice.sensor.PrimaryHrSensorArbitrator
 import com.atrainingtracker.trainingtracker.database.WheelPosition
@@ -158,8 +159,7 @@ fun raw2UiDeviceData(rawData: DeviceRawData, context: Context): DeviceUiData {
         protocol = rawData.protocol,
         deviceType = rawData.deviceType,
         lastSeen = rawData.lastSeen,
-        manufacturer = (rawData.manufacturer ?: context.getString(R.string.devices_unknown_manufacturer))
-            .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() },
+        manufacturer = formatDeviceManufacturer(rawData, context),
         deviceName = rawData.deviceName ?: context.getString(R.string.devices_unknown_device),
         isPaired = rawData.isPaired,
         linkedEquipment = rawData.linkedEquipment,
@@ -188,6 +188,33 @@ fun raw2UiDeviceData(rawData: DeviceRawData, context: Context): DeviceUiData {
         btAddress = rawData.btAddress,
         hrModality = hrModality
         )
+}
+
+/**
+ * Formats the display manufacturer for [rawData], enforcing canonical virtual-sensor attribution
+ * (`"a Training Tracker"` with preserved lowercase `'a'` for fused/DEM sensors and `"Google"` for
+ * Google Fused Location) while normalizing phone OEM brands and localized unknown placeholders
+ * (`ATT-8111`).
+ */
+internal fun formatDeviceManufacturer(rawData: DeviceRawData, context: Context): String {
+    if (rawData.protocol == Protocol.SMARTPHONE) {
+        when (rawData.deviceType) {
+            DeviceType.SPEED_AND_LOCATION_ATT_FUSED,
+            DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED,
+            DeviceType.ALTITUDE_FROM_POSITION -> return Manufacturer.MANUFACTURER_A_TRAINING_TRACKER
+            DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED -> return Manufacturer.MANUFACTURER_GOOGLE
+            else -> {
+                val base = rawData.manufacturer?.takeIf { it.isNotBlank() }
+                    ?: context.getString(R.string.devices_unknown_manufacturer)
+                return base.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+            }
+        }
+    }
+    val base = rawData.manufacturer ?: context.getString(R.string.devices_unknown_manufacturer)
+    if (base == Manufacturer.MANUFACTURER_A_TRAINING_TRACKER) {
+        return base
+    }
+    return base.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
 }
 
 // Helper to get the smartphone battery percentage

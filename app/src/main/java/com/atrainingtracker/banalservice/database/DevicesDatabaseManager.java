@@ -1081,7 +1081,7 @@ public class DevicesDatabaseManager extends BaseDatabaseManager<DevicesDatabaseM
         contentValues.put(DevicesDbHelper.DEVICE_TYPE, type.name());
         contentValues.put(DevicesDbHelper.PAIRED, defaultPaired ? 1 : 0);
         contentValues.put(DevicesDbHelper.NAME, name);
-        contentValues.put(DevicesDbHelper.MANUFACTURER_NAME, android.os.Build.BRAND);
+        contentValues.put(DevicesDbHelper.MANUFACTURER_NAME, Manufacturer.getSmartphoneManufacturer(type));
         getDatabase().insert(DevicesDbHelper.DEVICES, null, contentValues);
     }
 
@@ -1173,7 +1173,8 @@ public class DevicesDatabaseManager extends BaseDatabaseManager<DevicesDatabaseM
         // static final int DB_VERSION = 12;   // upgraded at 14.11.2026: added ALTITUDE_AND_SLOPE_ATT_FUSED (ATT-6279)
         // static final int DB_VERSION = 13;   // upgraded at 15.11.2026: added polarH10OfflineRecording (ATT-7762)
         // static final int DB_VERSION = 14;   // upgraded at 16.11.2026: added polarLiveImuEnabled (ATT-8016)
-        public static final int DB_VERSION = 15;   // upgraded at 24.11.2026: sanitized NUL bytes in Devices4 (ATT-8996)
+        // static final int DB_VERSION = 15;   // upgraded at 24.11.2026: sanitized NUL bytes in Devices4 (ATT-8996)
+        public static final int DB_VERSION = 16;   // upgraded at 25.11.2026: removed 'ATT ' prefix from Fused titles and fixed smartphone manufacturers (ATT-8111)
         private static final String TAG = "DeviceDbHelper";
         private static final boolean DEBUG = BANALService.getDebug(false);
         private static final String DEVICES_V3 = "Devices";               // in version 3, the table was simply called Devices
@@ -1301,6 +1302,7 @@ public class DevicesDatabaseManager extends BaseDatabaseManager<DevicesDatabaseM
                 case 13:
                 case 14:
                 case 15:
+                case 16:
                     db.execSQL(CREATE_DEVICE_DB_14);
                     if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_DEVICE_DB_14);
                     db.execSQL(CREATE_BIKE_POWER_SENSORS_TABLE_6);
@@ -1467,6 +1469,11 @@ public class DevicesDatabaseManager extends BaseDatabaseManager<DevicesDatabaseM
                 if (DEBUG) Log.i(TAG, "onUpgrade: upgrading from Version <= 14 to 15 (sanitizing NUL bytes in Devices4)");
                 BleDisStringSanitizer.sanitizeExistingDevicesTable(db);
             }
+
+            if (oldVersion <= 15 && newVersion >= 16) {
+                if (DEBUG) Log.i(TAG, "onUpgrade: upgrading from Version <= 15 to 16 (cleaning Fused titles and smartphone manufacturers)");
+                DevicesDatabaseMigrationV16Helper.migrateAttFusedTitlesAndSmartphoneManufacturers(db, mContext);
+            }
         }
 
         private static void addColumnIfMissing(SQLiteDatabase db, String columnName, String columnDef) {
@@ -1475,7 +1482,7 @@ public class DevicesDatabaseManager extends BaseDatabaseManager<DevicesDatabaseM
 
         /**
          * Idempotent migration adding ALTITUDE_AND_SLOPE_ATT_FUSED virtual device
-         * to Devices4 table (REQ-FIL-016.3, ATT-6279).
+         * to Devices4 table (REQ-FIL-016.3, ATT-6279, ATT-8111).
          */
         public long migrateAddAltitudeAndSlopeAttFused(SQLiteDatabase db) {
             try (Cursor cursor = db.query(DEVICES, new String[]{C_ID},
@@ -1491,8 +1498,8 @@ public class DevicesDatabaseManager extends BaseDatabaseManager<DevicesDatabaseM
             contentValues.put(PROTOCOL, Protocol.SMARTPHONE.name());
             contentValues.put(DEVICE_TYPE, DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED.name());
             contentValues.put(PAIRED, false);
-            contentValues.put(NAME, getStringSafely(R.string.devices_altitude_slope_ATT_fused, "ATT Fused (Höhe und Steigung)"));
-            contentValues.put(MANUFACTURER_NAME, Build.BRAND);
+            contentValues.put(NAME, getStringSafely(R.string.devices_altitude_slope_ATT_fused, "Fused (Altitude & Slope)"));
+            contentValues.put(MANUFACTURER_NAME, Manufacturer.getSmartphoneManufacturer(DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED));
             long id = db.insert(DEVICES, null, contentValues);
             if (DEBUG) Log.i(TAG, "migrateAddAltitudeAndSlopeAttFused: inserted row id " + id);
             return id;
@@ -1500,7 +1507,7 @@ public class DevicesDatabaseManager extends BaseDatabaseManager<DevicesDatabaseM
 
         /**
          * Idempotent migration adding SPEED_AND_LOCATION_ATT_FUSED virtual device
-         * to Devices4 table (REQ-SEN-028.1, ATT-7751).
+         * to Devices4 table (REQ-SEN-028.1, ATT-7751, ATT-8111).
          */
         public long migrateAddSpeedAndLocationAttFused(SQLiteDatabase db) {
             try (Cursor cursor = db.query(DEVICES, new String[]{C_ID},
@@ -1516,8 +1523,8 @@ public class DevicesDatabaseManager extends BaseDatabaseManager<DevicesDatabaseM
             contentValues.put(PROTOCOL, Protocol.SMARTPHONE.name());
             contentValues.put(DEVICE_TYPE, DeviceType.SPEED_AND_LOCATION_ATT_FUSED.name());
             contentValues.put(PAIRED, false);
-            contentValues.put(NAME, getStringSafely(R.string.devices_location_ATT_fused, "ATT Fused"));
-            contentValues.put(MANUFACTURER_NAME, Build.BRAND);
+            contentValues.put(NAME, getStringSafely(R.string.devices_location_ATT_fused, "Odometry Fused"));
+            contentValues.put(MANUFACTURER_NAME, Manufacturer.getSmartphoneManufacturer(DeviceType.SPEED_AND_LOCATION_ATT_FUSED));
             long id = db.insert(DEVICES, null, contentValues);
             if (DEBUG) Log.i(TAG, "migrateAddSpeedAndLocationAttFused: inserted row id " + id);
             return id;
@@ -1550,19 +1557,7 @@ public class DevicesDatabaseManager extends BaseDatabaseManager<DevicesDatabaseM
                 "Ciśnienie pow.",
                 "Pressão do Ar"
             };
-            StringBuilder placeholders = new StringBuilder();
-            for (int i = 0; i < legacyNames.length; i++) {
-                if (i > 0) placeholders.append(",");
-                placeholders.append("?");
-            }
-            String whereClause = DEVICE_TYPE + " = ? AND " + NAME + " IN (" + placeholders + ")";
-            String[] whereArgs = new String[legacyNames.length + 1];
-            whereArgs[0] = DeviceType.ALTITUDE_FROM_PRESSURE.name();
-            System.arraycopy(legacyNames, 0, whereArgs, 1, legacyNames.length);
-
-            ContentValues values = new ContentValues();
-            values.put(NAME, newName);
-            int updated = db.update(DEVICES, values, whereClause, whereArgs);
+            int updated = DevicesDatabaseMigrationV16Helper.updateLegacyDeviceNames(db, DeviceType.ALTITUDE_FROM_PRESSURE, newName, legacyNames);
             if (DEBUG) Log.i(TAG, "migrateAltitudeFromPressureLegacyNames: updated " + updated + " legacy rows to " + newName);
             return updated;
         }
@@ -1618,7 +1613,7 @@ public class DevicesDatabaseManager extends BaseDatabaseManager<DevicesDatabaseM
             contentValues.put(DEVICE_TYPE, DeviceType.SPEED_AND_LOCATION_GPS.name());
             contentValues.put(PAIRED, !playServicesAvailable);
             contentValues.put(NAME, getStringSafely(R.string.devices_location_GPS, "GPS"));
-            contentValues.put(MANUFACTURER_NAME, Build.BRAND);
+            contentValues.put(MANUFACTURER_NAME, Manufacturer.getSmartphoneManufacturer(DeviceType.SPEED_AND_LOCATION_GPS));
             db.insert(DEVICES, null, contentValues);
 
             contentValues = new ContentValues();
@@ -1626,23 +1621,23 @@ public class DevicesDatabaseManager extends BaseDatabaseManager<DevicesDatabaseM
             contentValues.put(DEVICE_TYPE, DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED.name());
             contentValues.put(PAIRED, playServicesAvailable);
             contentValues.put(NAME, getStringSafely(R.string.devices_location_GoogleFused, "Google Fused"));
-            contentValues.put(MANUFACTURER_NAME, Build.BRAND);
+            contentValues.put(MANUFACTURER_NAME, Manufacturer.getSmartphoneManufacturer(DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED));
             db.insert(DEVICES, null, contentValues);
 
             contentValues = new ContentValues();
             contentValues.put(PROTOCOL, Protocol.SMARTPHONE.name());
             contentValues.put(DEVICE_TYPE, DeviceType.SPEED_AND_LOCATION_ATT_FUSED.name());
             contentValues.put(PAIRED, false);
-            contentValues.put(NAME, getStringSafely(R.string.devices_location_ATT_fused, "ATT Fused"));
-            contentValues.put(MANUFACTURER_NAME, Build.BRAND);
+            contentValues.put(NAME, getStringSafely(R.string.devices_location_ATT_fused, "Odometry Fused"));
+            contentValues.put(MANUFACTURER_NAME, Manufacturer.getSmartphoneManufacturer(DeviceType.SPEED_AND_LOCATION_ATT_FUSED));
             db.insert(DEVICES, null, contentValues);
 
             contentValues = new ContentValues();
             contentValues.put(PROTOCOL, Protocol.SMARTPHONE.name());
             contentValues.put(DEVICE_TYPE, DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED.name());
             contentValues.put(PAIRED, false);
-            contentValues.put(NAME, getStringSafely(R.string.devices_altitude_slope_ATT_fused, "ATT Fused (Höhe und Steigung)"));
-            contentValues.put(MANUFACTURER_NAME, Build.BRAND);
+            contentValues.put(NAME, getStringSafely(R.string.devices_altitude_slope_ATT_fused, "Fused (Altitude & Slope)"));
+            contentValues.put(MANUFACTURER_NAME, Manufacturer.getSmartphoneManufacturer(DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED));
             db.insert(DEVICES, null, contentValues);
 
             contentValues = new ContentValues();
@@ -1650,7 +1645,7 @@ public class DevicesDatabaseManager extends BaseDatabaseManager<DevicesDatabaseM
             contentValues.put(DEVICE_TYPE, DeviceType.ALTITUDE_FROM_POSITION.name());
             contentValues.put(PAIRED, false);
             contentValues.put(NAME, getStringSafely(R.string.devices_altitude_from_position, "GPS Altitude"));
-            contentValues.put(MANUFACTURER_NAME, Build.BRAND);
+            contentValues.put(MANUFACTURER_NAME, Manufacturer.getSmartphoneManufacturer(DeviceType.ALTITUDE_FROM_POSITION));
             db.insert(DEVICES, null, contentValues);
 
             if (HavePressureSensor.havePressureSensor(mContext)) {
@@ -1659,7 +1654,7 @@ public class DevicesDatabaseManager extends BaseDatabaseManager<DevicesDatabaseM
                 contentValues.put(DEVICE_TYPE, DeviceType.ALTITUDE_FROM_PRESSURE.name());
                 contentValues.put(PAIRED, true);
                 contentValues.put(NAME, getStringSafely(R.string.devices_altitude_from_pressure, "Barometer"));
-                contentValues.put(MANUFACTURER_NAME, Build.BRAND);
+                contentValues.put(MANUFACTURER_NAME, Manufacturer.getSmartphoneManufacturer(DeviceType.ALTITUDE_FROM_PRESSURE));
                 db.insert(DEVICES, null, contentValues);
             }
         }

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.atrainingtracker.trainingtracker.database.EquipmentDbLinkContractTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-25T13:04:18.085Z" hostname="rainer-HP-EliteBook-850-G5" time="3.313">
+  <properties/>
+  <testcase name="testSetDeviceLink_delegatesCorrectly" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbLinkContractTest" time="0.734"/>
+  <testcase name="testAddDeviceLink_whenAlreadyPresent_skipsInsert" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbLinkContractTest" time="0.452"/>
+  <testcase name="testRemoveDeviceLink_validIds_deletesMatchingRow" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbLinkContractTest" time="0.438"/>
+  <testcase name="testAddDeviceLink_whenNotPresent_insertsRow" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbLinkContractTest" time="0.423"/>
+  <testcase name="testAddDeviceLink_invalidIds_noop" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbLinkContractTest" time="0.442"/>
+  <testcase name="testGetAllRemoteSensors_queriesWithExpectedSelectionAndSortOrder" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbLinkContractTest" time="0.405"/>
+  <testcase name="testRemoveDeviceLink_invalidIds_noop" classname="com.atrainingtracker.trainingtracker.database.EquipmentDbLinkContractTest" time="0.417"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+Intent = Intent { act=com.atrainingtracker.banalservice.NEW_TIME_EVENT_INTENT pkg=com.atrainingtracker.debug }; Matching wrappers: []
+]]></system-err>
+</testsuite>
